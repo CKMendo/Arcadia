@@ -1,0 +1,32 @@
+name: arcadia
+description: "Tournament scoring and trip management app for an 8-player golf trip."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  drift: ^2.34.2
+  drift_flutter: ^0.3.1
+  path_provider: ^2.1.6
+  image_picker: ^1.2.3
+  intl: ^0.20.2
+  uuid: ^4.5.1
+  share_plus: ^10.1.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+  drift_dev: ^2.34.4
+  build_runner: ^2.15.1
+
+flutter:
+  uses-material-design: true
