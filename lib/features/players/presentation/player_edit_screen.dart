@@ -105,7 +105,7 @@ class _PlayerEditScreenState extends State<PlayerEditScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving player: $e')),
+          SnackBar(content: Text('Error saving player: $e', style: const TextStyle(fontSize: 17))),
         );
       }
     } finally {
@@ -117,17 +117,17 @@ class _PlayerEditScreenState extends State<PlayerEditScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Player?'),
-        content: Text('Remove "${widget.player?.fullName}" from the trip?'),
+        title: const Text('Delete Player?', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        content: Text('Remove "${widget.player?.fullName}" from the trip?', style: const TextStyle(fontSize: 18)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: const Text('Cancel', style: TextStyle(fontSize: 17)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: const Text('Delete', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -149,7 +149,7 @@ class _PlayerEditScreenState extends State<PlayerEditScreen> {
         actions: [
           if (isEditing)
             IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 28),
               onPressed: _delete,
             ),
         ],
@@ -157,14 +157,15 @@ class _PlayerEditScreenState extends State<PlayerEditScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(18),
           children: [
             TextFormField(
               controller: _nameController,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               decoration: const InputDecoration(
                 labelText: 'Full Name *',
                 hintText: 'e.g. Neal Patel',
-                prefixIcon: Icon(Icons.person, color: AppColors.goldLight),
+                prefixIcon: Icon(Icons.person, color: AppColors.lakeCyan, size: 26),
               ),
               validator: (val) {
                 if (val == null || val.trim().isEmpty) {
@@ -173,13 +174,14 @@ class _PlayerEditScreenState extends State<PlayerEditScreen> {
                 return null;
               },
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
                   flex: 3,
                   child: TextFormField(
                     controller: _nicknameController,
+                    style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
                     decoration: const InputDecoration(
                       labelText: 'Nickname',
                       hintText: 'e.g. Neal',
@@ -191,6 +193,7 @@ class _PlayerEditScreenState extends State<PlayerEditScreen> {
                   flex: 2,
                   child: TextFormField(
                     controller: _initialsController,
+                    style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
                     decoration: const InputDecoration(
                       labelText: 'Initials',
                       hintText: 'NP',
@@ -200,12 +203,13 @@ class _PlayerEditScreenState extends State<PlayerEditScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
                   child: TextFormField(
                     controller: _hcpController,
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                       signed: true,
@@ -213,7 +217,7 @@ class _PlayerEditScreenState extends State<PlayerEditScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Handicap Index *',
                       hintText: '8.7',
-                      prefixIcon: Icon(Icons.calculate, color: AppColors.goldLight),
+                      prefixIcon: Icon(Icons.calculate, color: AppColors.lakeCyan, size: 26),
                     ),
                     validator: (val) {
                       if (val == null || val.trim().isEmpty) {
@@ -230,57 +234,67 @@ class _PlayerEditScreenState extends State<PlayerEditScreen> {
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     initialValue: _preferredTee,
+                    style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
                     decoration: const InputDecoration(
                       labelText: 'Preferred Tee',
                     ),
                     items: _teeOptions
-                        .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                        .map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))))
                         .toList(),
                     onChanged: (val) => setState(() => _preferredTee = val),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _ghinController,
+              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w600),
               decoration: const InputDecoration(
                 labelText: 'GHIN Number',
                 hintText: 'Optional',
-                prefixIcon: Icon(Icons.badge, color: AppColors.goldLight),
+                prefixIcon: Icon(Icons.badge, color: AppColors.lakeCyan, size: 26),
               ),
               keyboardType: TextInputType.number,
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _phoneController,
+              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w600),
               decoration: const InputDecoration(
                 labelText: 'Phone Number',
                 hintText: 'For text score updates',
-                prefixIcon: Icon(Icons.phone, color: AppColors.goldLight),
+                prefixIcon: Icon(Icons.phone, color: AppColors.lakeCyan, size: 26),
               ),
               keyboardType: TextInputType.phone,
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _emailController,
+              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w600),
               decoration: const InputDecoration(
                 labelText: 'Email Address',
                 hintText: 'Optional',
-                prefixIcon: Icon(Icons.email, color: AppColors.goldLight),
+                prefixIcon: Icon(Icons.email, color: AppColors.lakeCyan, size: 26),
               ),
               keyboardType: TextInputType.emailAddress,
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 30),
             ElevatedButton(
               onPressed: _isSaving ? null : _save,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 18),
+              ),
               child: _isSaving
                   ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
                     )
-                  : Text(isEditing ? 'Save Changes' : 'Create Player'),
+                  : Text(
+                      isEditing ? 'Save Changes' : 'Create Player',
+                      style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900),
+                    ),
             ),
           ],
         ),

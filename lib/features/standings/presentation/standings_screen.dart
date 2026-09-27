@@ -35,7 +35,7 @@ class _StandingsScreenState extends State<StandingsScreen> {
         title: const Text('Trip Standings'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share, color: AppColors.goldLight),
+            icon: const Icon(Icons.share, color: AppColors.cyanLight, size: 28),
             tooltip: 'Share Standings',
             onPressed: () => _shareOverallStandings(),
           ),
@@ -52,12 +52,12 @@ class _StandingsScreenState extends State<StandingsScreen> {
           if (rounds.isEmpty) {
             return Center(
               child: Padding(
-                padding: const EdgeInsets.all(24.0),
+                padding: const EdgeInsets.all(28.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         color: AppColors.cardDark,
                         shape: BoxShape.circle,
@@ -65,24 +65,24 @@ class _StandingsScreenState extends State<StandingsScreen> {
                       ),
                       child: const Icon(
                         Icons.military_tech_outlined,
-                        size: 56,
-                        color: AppColors.gold,
+                        size: 64,
+                        color: AppColors.lakeCyan,
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
                     const Text(
                       'No Rounds Recorded Yet',
                       style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     const Text(
                       'Once you tee off and complete rounds, overall trip leaderboards, skins, and team standings will appear here.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white60, fontSize: 14),
+                      style: TextStyle(color: Colors.white70, fontSize: 18, height: 1.4),
                     ),
                   ],
                 ),
@@ -101,10 +101,10 @@ class _StandingsScreenState extends State<StandingsScreen> {
 
           return Column(
             children: [
-              // Segmented Filter
+              // Segmented Filter with Extra Large Chips
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                color: const Color(0xFF061812),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                color: AppColors.appBarDark,
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -131,16 +131,22 @@ class _StandingsScreenState extends State<StandingsScreen> {
   Widget _buildTabChip(String key, String label) {
     final isSelected = _activeTab == key;
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.only(right: 10),
       child: ChoiceChip(
         label: Text(label),
         selected: isSelected,
-        selectedColor: AppColors.gold,
-        backgroundColor: AppColors.cardDark,
-        labelStyle: TextStyle(
-          color: isSelected ? Colors.black : Colors.white70,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        selectedColor: AppColors.lakeCyan,
+        backgroundColor: AppColors.surfaceElevated,
+        side: BorderSide(
+          color: isSelected ? AppColors.lakeCyan : AppColors.cardBorder,
+          width: isSelected ? 2 : 1,
         ),
+        labelStyle: TextStyle(
+          color: isSelected ? const Color(0xFF06111D) : AppColors.textPrimary,
+          fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+          fontSize: 17,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         onSelected: (sel) {
           if (sel) setState(() => _activeTab = key);
         },
@@ -149,7 +155,6 @@ class _StandingsScreenState extends State<StandingsScreen> {
   }
 
   Widget _buildSelectedTabContent(List<ActiveRoundSession> sessions, int roundCount) {
-    // Gather all distinct players across sessions
     final playerMap = <String, PlayerSessionInfo>{};
     for (final s in sessions) {
       for (final p in s.players) {
@@ -198,34 +203,47 @@ class _StandingsScreenState extends State<StandingsScreen> {
         final avgNet = roundCount > 0 ? (totalNet / roundCount).toStringAsFixed(1) : '0';
 
         return Card(
-          child: ListTile(
-            leading: Row(
-              mainAxisSize: MainAxisSize.min,
+          margin: const EdgeInsets.only(bottom: 10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
               children: [
                 Text(
                   '${idx + 1}',
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: idx == 0 ? AppColors.gold : Colors.white70,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 26,
+                    color: idx == 0 ? AppColors.lakeCyan : Colors.white70,
                   ),
                 ),
-                const SizedBox(width: 10),
-                PlayerAvatar(initials: p.initials, radius: 18),
+                const SizedBox(width: 14),
+                PlayerAvatar(initials: p.initials, radius: 24),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        p.name,
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Avg Net: $avgNet • $roundCount rounds',
+                        style: const TextStyle(fontSize: 16, color: Colors.white70, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  'Net $totalNet',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 24,
+                    color: AppColors.lakeCyan,
+                  ),
+                ),
               ],
-            ),
-            title: Text(
-              p.name,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text('Avg Net: $avgNet across $roundCount rounds'),
-            trailing: Text(
-              'Net $totalNet',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: AppColors.goldLight,
-              ),
             ),
           ),
         );
@@ -258,34 +276,47 @@ class _StandingsScreenState extends State<StandingsScreen> {
         final totalPts = stats[p.playerId] ?? 0;
 
         return Card(
-          child: ListTile(
-            leading: Row(
-              mainAxisSize: MainAxisSize.min,
+          margin: const EdgeInsets.only(bottom: 10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
               children: [
                 Text(
                   '${idx + 1}',
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: idx == 0 ? AppColors.gold : Colors.white70,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 26,
+                    color: idx == 0 ? AppColors.duneSand : Colors.white70,
                   ),
                 ),
-                const SizedBox(width: 10),
-                PlayerAvatar(initials: p.initials, radius: 18),
+                const SizedBox(width: 14),
+                PlayerAvatar(initials: p.initials, radius: 24),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        p.name,
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Stableford Points',
+                        style: TextStyle(fontSize: 16, color: Colors.white70, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '$totalPts pts',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 24,
+                    color: AppColors.duneSand,
+                  ),
+                ),
               ],
-            ),
-            title: Text(
-              p.name,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text('Stableford Championship Points'),
-            trailing: Text(
-              '$totalPts pts',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: AppColors.goldLight,
-              ),
             ),
           ),
         );
@@ -318,34 +349,47 @@ class _StandingsScreenState extends State<StandingsScreen> {
         final totalGross = stats[p.playerId] ?? 0;
 
         return Card(
-          child: ListTile(
-            leading: Row(
-              mainAxisSize: MainAxisSize.min,
+          margin: const EdgeInsets.only(bottom: 10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
               children: [
                 Text(
                   '${idx + 1}',
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: idx == 0 ? AppColors.gold : Colors.white70,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 26,
+                    color: idx == 0 ? AppColors.lakeCyan : Colors.white70,
                   ),
                 ),
-                const SizedBox(width: 10),
-                PlayerAvatar(initials: p.initials, radius: 18),
+                const SizedBox(width: 14),
+                PlayerAvatar(initials: p.initials, radius: 24),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        p.name,
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Total Gross Strokes',
+                        style: TextStyle(fontSize: 16, color: Colors.white70, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '$totalGross',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 26,
+                    color: Colors.white,
+                  ),
+                ),
               ],
-            ),
-            title: Text(
-              p.name,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text('Gross Strokes Total'),
-            trailing: Text(
-              '$totalGross',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: AppColors.goldLight,
-              ),
             ),
           ),
         );
@@ -379,34 +423,47 @@ class _StandingsScreenState extends State<StandingsScreen> {
         final count = skinCounts[p.playerId] ?? 0;
 
         return Card(
-          child: ListTile(
-            leading: Row(
-              mainAxisSize: MainAxisSize.min,
+          margin: const EdgeInsets.only(bottom: 10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
               children: [
                 Text(
                   '${idx + 1}',
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: idx == 0 ? AppColors.gold : Colors.white70,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 26,
+                    color: idx == 0 ? AppColors.lakeCyan : Colors.white70,
                   ),
                 ),
-                const SizedBox(width: 10),
-                PlayerAvatar(initials: p.initials, radius: 18),
+                const SizedBox(width: 14),
+                PlayerAvatar(initials: p.initials, radius: 24),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        p.name,
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Cumulative Skins Won',
+                        style: TextStyle(fontSize: 16, color: Colors.white70, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '$count Skin${count == 1 ? '' : 's'}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 24,
+                    color: AppColors.lakeCyan,
+                  ),
+                ),
               ],
-            ),
-            title: Text(
-              p.name,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: const Text('Cumulative Skins Won'),
-            trailing: Text(
-              '$count Skin${count == 1 ? '' : 's'}',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 17,
-                color: AppColors.gold,
-              ),
             ),
           ),
         );
@@ -440,36 +497,36 @@ class _StandingsScreenState extends State<StandingsScreen> {
             children: [
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
                     color: AppColors.teamA.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.teamA),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.teamA, width: 2),
                   ),
                   child: Column(
                     children: [
-                      const Icon(Icons.shield, color: AppColors.teamA, size: 36),
-                      const SizedBox(height: 6),
+                      const Icon(Icons.shield, color: AppColors.teamA, size: 44),
+                      const SizedBox(height: 8),
                       const Text(
                         'TEAM BLUE',
                         style: TextStyle(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w900,
                           letterSpacing: 1.1,
-                          fontSize: 15,
+                          fontSize: 18,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
                       Text(
                         '$teamAPts',
                         style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 46,
+                          fontWeight: FontWeight.w900,
                           color: AppColors.teamA,
                         ),
                       ),
                       const Text(
                         'Total Points',
-                        style: TextStyle(fontSize: 12, color: Colors.white54),
+                        style: TextStyle(fontSize: 16, color: Colors.white70, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -478,36 +535,36 @@ class _StandingsScreenState extends State<StandingsScreen> {
               const SizedBox(width: 16),
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
                     color: AppColors.teamB.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.teamB),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.teamB, width: 2),
                   ),
                   child: Column(
                     children: [
-                      const Icon(Icons.shield, color: AppColors.teamB, size: 36),
-                      const SizedBox(height: 6),
+                      const Icon(Icons.shield, color: AppColors.teamB, size: 44),
+                      const SizedBox(height: 8),
                       const Text(
                         'TEAM RED',
                         style: TextStyle(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w900,
                           letterSpacing: 1.1,
-                          fontSize: 15,
+                          fontSize: 18,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
                       Text(
                         '$teamBPts',
                         style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 46,
+                          fontWeight: FontWeight.w900,
                           color: AppColors.teamB,
                         ),
                       ),
                       const Text(
                         'Total Points',
-                        style: TextStyle(fontSize: 12, color: Colors.white54),
+                        style: TextStyle(fontSize: 16, color: Colors.white70, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -515,11 +572,11 @@ class _StandingsScreenState extends State<StandingsScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 26),
           const Text(
             'Points are calculated from cumulative Stableford scoring across all completed trip rounds for each team roster.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white54, fontSize: 13),
+            style: TextStyle(color: Colors.white70, fontSize: 17, height: 1.4),
           ),
         ],
       ),

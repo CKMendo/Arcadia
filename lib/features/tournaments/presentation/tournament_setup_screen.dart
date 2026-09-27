@@ -45,8 +45,8 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
     _nameController = TextEditingController(
       text: t?.name ?? 'Arcadia Bluffs Trip 2026',
     );
-    _teamAController = TextEditingController(text: t?.teamAName ?? 'Team Blue');
-    _teamBController = TextEditingController(text: t?.teamBName ?? 'Team Red');
+    _teamAController = TextEditingController(text: t?.teamAName ?? 'Team Lake');
+    _teamBController = TextEditingController(text: t?.teamBName ?? 'Team Bluff');
     _startDate = t != null
         ? DateTime.fromMillisecondsSinceEpoch(t.startDate)
         : DateTime.now();
@@ -67,9 +67,10 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
         _playerTeams[tp.player.id] = tp.teamId;
       }
     } else {
-      // Default: 4 to Team A, 4 to Team B if 8 players
+      // Default: half to Team A, half to Team B
+      final half = (players.length / 2).ceil();
       for (var i = 0; i < players.length; i++) {
-        _playerTeams[players[i].id] = i < 4 ? 'a' : 'b';
+        _playerTeams[players[i].id] = i < half ? 'a' : 'b';
       }
     }
 
@@ -143,7 +144,9 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving trip: $e')),
+          SnackBar(
+            content: Text('Error saving trip: $e', style: const TextStyle(fontSize: 16)),
+          ),
         );
       }
     } finally {
@@ -169,105 +172,122 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                   Card(
                     margin: EdgeInsets.zero,
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(18),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
                             'TRIP OVERVIEW',
                             style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.1,
-                              color: AppColors.gold,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                              color: AppColors.cyanLight,
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 14),
                           TextFormField(
                             controller: _nameController,
+                            style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
                             decoration: const InputDecoration(
                               labelText: 'Trip / Event Name *',
+                              labelStyle: TextStyle(fontSize: 17),
                               hintText: 'e.g. Arcadia Bluffs Cup 2026',
                               prefixIcon:
-                                  Icon(Icons.emoji_events, color: AppColors.gold),
+                                  Icon(Icons.emoji_events, color: AppColors.duneSand, size: 26),
                             ),
                             validator: (v) =>
                                 v == null || v.trim().isEmpty ? 'Required' : null,
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 14),
                           InkWell(
                             onTap: _selectDateRange,
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
-                                vertical: 14,
+                                vertical: 16,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF09241B),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: AppColors.cardBorder),
+                                color: AppColors.surfaceElevated,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.cardBorder, width: 1.5),
                               ),
                               child: Row(
                                 children: [
                                   const Icon(Icons.date_range,
-                                      color: AppColors.goldLight),
-                                  const SizedBox(width: 12),
+                                      color: AppColors.cyanLight, size: 28),
+                                  const SizedBox(width: 14),
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       const Text(
                                         'Dates',
                                         style: TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 12,
+                                          color: AppColors.textSecondary,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
+                                      const SizedBox(height: 2),
                                       Text(
                                         '${dateFormat.format(_startDate)} - ${dateFormat.format(_endDate)}',
                                         style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 15,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 18,
+                                          color: Colors.white,
                                         ),
                                       ),
                                     ],
                                   ),
                                   const Spacer(),
                                   const Icon(Icons.chevron_right,
-                                      color: Colors.white38),
+                                      color: Colors.white54, size: 28),
                                 ],
                               ),
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 20),
                           const Text(
                             'Format Style',
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 17,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white70,
+                              color: AppColors.textSecondary,
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          SegmentedButton<String>(
-                            segments: const [
-                              ButtonSegment(
-                                value: 'hybrid',
-                                label: Text('Hybrid (Team + Skins)'),
-                              ),
-                              ButtonSegment(
-                                value: 'teams',
-                                label: Text('4v4 Teams'),
-                              ),
-                              ButtonSegment(
-                                value: 'individual',
-                                label: Text('Individual'),
-                              ),
-                            ],
-                            selected: {_formatType},
-                            onSelectionChanged: (set) {
-                              setState(() => _formatType = set.first);
-                            },
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: SegmentedButton<String>(
+                              segments: const [
+                                ButtonSegment(
+                                  value: 'hybrid',
+                                  label: Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 4),
+                                    child: Text('Hybrid', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                  ),
+                                ),
+                                ButtonSegment(
+                                  value: 'teams',
+                                  label: Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 4),
+                                    child: Text('Teams', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                  ),
+                                ),
+                                ButtonSegment(
+                                  value: 'individual',
+                                  label: Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 4),
+                                    child: Text('Individual', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                  ),
+                                ),
+                              ],
+                              selected: {_formatType},
+                              onSelectionChanged: (set) {
+                                setState(() => _formatType = set.first);
+                              },
+                            ),
                           ),
                         ],
                       ),
@@ -280,43 +300,49 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                     Card(
                       margin: EdgeInsets.zero,
                       child: Padding(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(18),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
                               'TEAM DESIGNATION',
                               style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.1,
-                                color: AppColors.gold,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.2,
+                                color: AppColors.cyanLight,
                               ),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 14),
                             Row(
                               children: [
                                 Expanded(
                                   child: TextFormField(
                                     controller: _teamAController,
-                                    decoration: InputDecoration(
+                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                    decoration: const InputDecoration(
                                       labelText: 'Team A Name',
-                                      prefixIcon: const Icon(
+                                      labelStyle: TextStyle(fontSize: 16),
+                                      prefixIcon: Icon(
                                         Icons.shield,
                                         color: AppColors.teamA,
+                                        size: 26,
                                       ),
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
+                                const SizedBox(width: 14),
                                 Expanded(
                                   child: TextFormField(
                                     controller: _teamBController,
-                                    decoration: InputDecoration(
+                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                    decoration: const InputDecoration(
                                       labelText: 'Team B Name',
-                                      prefixIcon: const Icon(
+                                      labelStyle: TextStyle(fontSize: 16),
+                                      prefixIcon: Icon(
                                         Icons.shield,
                                         color: AppColors.teamB,
+                                        size: 26,
                                       ),
                                     ),
                                   ),
@@ -334,7 +360,7 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                   Card(
                     margin: EdgeInsets.zero,
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(18),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -344,42 +370,43 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                               const Text(
                                 'PLAYER ROSTER & TEAMS',
                                 style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.1,
-                                  color: AppColors.gold,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.2,
+                                  color: AppColors.cyanLight,
                                 ),
                               ),
                               Text(
                                 '${_allPlayers.length} Players',
                                 style: const TextStyle(
-                                  color: AppColors.goldLight,
-                                  fontSize: 13,
+                                  color: AppColors.duneSand,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 14),
                           if (_allPlayers.isEmpty)
                             const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 8),
+                              padding: EdgeInsets.symmetric(vertical: 12),
                               child: Text(
                                 'No players found in roster. Add players in the Roster tab first.',
-                                style: TextStyle(color: Colors.white54),
+                                style: TextStyle(color: Colors.white54, fontSize: 16),
                               ),
                             )
                           else
                             ..._allPlayers.map((player) {
                               final currentTeam = _playerTeams[player.id] ?? 'none';
                               return Container(
-                                margin: const EdgeInsets.only(bottom: 8),
+                                margin: const EdgeInsets.only(bottom: 10),
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
+                                  horizontal: 12,
+                                  vertical: 10,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF072118),
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: AppColors.surfaceElevated,
+                                  borderRadius: BorderRadius.circular(10),
                                   border: Border.all(color: AppColors.cardBorder),
                                 ),
                                 child: Row(
@@ -387,9 +414,9 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                                     PlayerAvatar(
                                       initials: player.initials,
                                       photoPath: player.photoPath,
-                                      radius: 16,
+                                      radius: 22,
                                     ),
-                                    const SizedBox(width: 10),
+                                    const SizedBox(width: 14),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment:
@@ -398,15 +425,18 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                                           Text(
                                             player.fullName,
                                             style: const TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 14,
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 18,
+                                              color: Colors.white,
                                             ),
                                           ),
+                                          const SizedBox(height: 2),
                                           Text(
                                             'HCP ${player.handicapIndex.toStringAsFixed(1)}',
                                             style: const TextStyle(
-                                              color: Colors.white54,
-                                              fontSize: 12,
+                                              color: AppColors.textSecondary,
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w600,
                                             ),
                                           ),
                                         ],
@@ -417,18 +447,26 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                                         segments: [
                                           ButtonSegment(
                                             value: 'a',
-                                            label: Text(
-                                              _teamAController.text.isNotEmpty
-                                                  ? _teamAController.text.substring(0, 1).toUpperCase()
-                                                  : 'A',
+                                            label: Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                                              child: Text(
+                                                _teamAController.text.isNotEmpty
+                                                    ? _teamAController.text.substring(0, 1).toUpperCase()
+                                                    : 'A',
+                                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                              ),
                                             ),
                                           ),
                                           ButtonSegment(
                                             value: 'b',
-                                            label: Text(
-                                              _teamBController.text.isNotEmpty
-                                                  ? _teamBController.text.substring(0, 1).toUpperCase()
-                                                  : 'B',
+                                            label: Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                                              child: Text(
+                                                _teamBController.text.isNotEmpty
+                                                    ? _teamBController.text.substring(0, 1).toUpperCase()
+                                                    : 'B',
+                                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                              ),
                                             ),
                                           ),
                                         ],
@@ -437,9 +475,8 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                                         },
                                         showSelectedIcon: false,
                                         style: ButtonStyle(
-                                          visualDensity: VisualDensity.compact,
-                                          tapTargetSize:
-                                              MaterialTapTargetSize.shrinkWrap,
+                                          visualDensity: VisualDensity.comfortable,
+                                          tapTargetSize: MaterialTapTargetSize.padded,
                                         ),
                                         onSelectionChanged: (set) {
                                           setState(() {
@@ -457,18 +494,25 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _isSaving ? null : _save,
-                    child: _isSaving
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(widget.tournament != null
-                            ? 'Save Changes'
-                            : 'Create Trip Event'),
+                  SizedBox(
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _isSaving ? null : _save,
+                      style: ElevatedButton.styleFrom(
+                        textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                      ),
+                      child: _isSaving
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2.5),
+                            )
+                          : Text(widget.tournament != null
+                              ? 'Save Changes'
+                              : 'Create Trip Event'),
+                    ),
                   ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),

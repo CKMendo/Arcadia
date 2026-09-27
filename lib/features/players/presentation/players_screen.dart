@@ -20,30 +20,30 @@ class PlayersScreen extends StatelessWidget {
         title: const Text('Trip Roster'),
         actions: [
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: AppColors.goldLight),
+            icon: const Icon(Icons.more_vert, color: AppColors.cyanLight, size: 28),
             onSelected: (value) async {
               if (value == 'seed') {
                 await playerRepository.seedSample8Players();
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Sample 8 players loaded')),
+                    const SnackBar(content: Text('Sample 8 players loaded', style: TextStyle(fontSize: 17))),
                   );
                 }
               } else if (value == 'clear') {
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    title: const Text('Clear Roster?'),
-                    content: const Text('This will remove all players from the roster.'),
+                    title: const Text('Clear Roster?', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                    content: const Text('This will remove all players from the roster.', style: TextStyle(fontSize: 18)),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(ctx, false),
-                        child: const Text('Cancel'),
+                        child: const Text('Cancel', style: TextStyle(fontSize: 17)),
                       ),
                       TextButton(
                         onPressed: () => Navigator.pop(ctx, true),
                         style: TextButton.styleFrom(foregroundColor: Colors.red),
-                        child: const Text('Clear All'),
+                        child: const Text('Clear All', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
@@ -58,9 +58,9 @@ class PlayersScreen extends StatelessWidget {
                 value: 'seed',
                 child: Row(
                   children: [
-                    Icon(Icons.group_add, color: AppColors.gold, size: 20),
-                    SizedBox(width: 8),
-                    Text('Load Sample 8 Players'),
+                    Icon(Icons.group_add, color: AppColors.lakeCyan, size: 24),
+                    SizedBox(width: 10),
+                    Text('Load Sample 8 Players', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
                   ],
                 ),
               ),
@@ -68,9 +68,9 @@ class PlayersScreen extends StatelessWidget {
                 value: 'clear',
                 child: Row(
                   children: [
-                    Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-                    SizedBox(width: 8),
-                    Text('Clear Roster'),
+                    Icon(Icons.delete_outline, color: Colors.redAccent, size: 24),
+                    SizedBox(width: 10),
+                    Text('Clear Roster', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
                   ],
                 ),
               ),
@@ -90,12 +90,12 @@ class PlayersScreen extends StatelessWidget {
           if (players.isEmpty) {
             return Center(
               child: Padding(
-                padding: const EdgeInsets.all(24.0),
+                padding: const EdgeInsets.all(28.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         color: AppColors.cardDark,
                         shape: BoxShape.circle,
@@ -103,43 +103,44 @@ class PlayersScreen extends StatelessWidget {
                       ),
                       child: const Icon(
                         Icons.group_outlined,
-                        size: 56,
-                        color: AppColors.gold,
+                        size: 64,
+                        color: AppColors.lakeCyan,
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
                     const Text(
-                      'No Players Added Yet',
+                      'No Players in Roster',
                       style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     const Text(
                       'Add the 8 guys going on the trip, or tap below to seed sample players for quick testing.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white60, fontSize: 14),
+                      style: TextStyle(color: Colors.white70, fontSize: 18, height: 1.4),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 26),
                     ElevatedButton.icon(
                       onPressed: () => _openPlayerEditor(context),
-                      icon: const Icon(Icons.person_add),
-                      label: const Text('Add First Player'),
+                      icon: const Icon(Icons.person_add, size: 26),
+                      label: const Text('Add First Player', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16)),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     OutlinedButton.icon(
                       onPressed: () async {
                         await playerRepository.seedSample8Players();
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Sample 8 players added!')),
+                            const SnackBar(content: Text('Sample 8 players added!', style: TextStyle(fontSize: 17))),
                           );
                         }
                       },
-                      icon: const Icon(Icons.bolt, color: AppColors.gold),
-                      label: const Text('Load Sample 8 Players'),
+                      icon: const Icon(Icons.bolt, color: AppColors.lakeCyan, size: 26),
+                      label: const Text('Load Sample 8 Players', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -150,43 +151,44 @@ class PlayersScreen extends StatelessWidget {
           return Column(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                color: AppColors.darkGreen.withValues(alpha: 0.5),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                color: AppColors.appBarDark,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       'ROSTER (${players.length} / 8 PLAYERS)',
                       style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
                         letterSpacing: 1.2,
-                        color: AppColors.gold,
+                        color: AppColors.cyanLight,
                       ),
                     ),
                     Text(
                       'Avg Index: ${_calculateAvgHcp(players)}',
-                      style: const TextStyle(fontSize: 12, color: Colors.white70),
+                      style: const TextStyle(fontSize: 16, color: Colors.white70, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
               ),
               Expanded(
                 child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                   itemCount: players.length,
                   itemBuilder: (context, index) {
                     final p = players[index];
                     return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
                       child: ListTile(
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
-                          vertical: 6,
+                          vertical: 10,
                         ),
                         leading: PlayerAvatar(
                           initials: p.initials,
                           photoPath: p.photoPath,
-                          radius: 22,
+                          radius: 26,
                         ),
                         title: Row(
                           children: [
@@ -194,80 +196,89 @@ class PlayersScreen extends StatelessWidget {
                               child: Text(
                                 p.fullName,
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 22,
+                                  color: Colors.white,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             if (p.nickname.isNotEmpty && p.nickname != p.fullName) ...[
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 8),
                               Text(
                                 '"${p.nickname}"',
                                 style: const TextStyle(
                                   fontStyle: FontStyle.italic,
-                                  color: AppColors.goldLight,
-                                  fontSize: 14,
+                                  color: AppColors.duneSand,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ],
                           ],
                         ),
                         subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 4.0),
+                          padding: const EdgeInsets.only(top: 8.0),
                           child: Wrap(
                             spacing: 8,
-                            runSpacing: 4,
+                            runSpacing: 6,
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
+                                  horizontal: 10,
+                                  vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.cardBorder,
-                                  borderRadius: BorderRadius.circular(4),
+                                  color: AppColors.surfaceElevated,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: AppColors.cardBorder),
                                 ),
                                 child: Text(
                                   'HCP ${p.handicapIndex.toStringAsFixed(1)}',
                                   style: const TextStyle(
-                                    fontSize: 11,
+                                    fontSize: 15,
                                     fontWeight: FontWeight.bold,
-                                    color: AppColors.goldLight,
+                                    color: AppColors.lakeCyan,
                                   ),
                                 ),
                               ),
                               if (p.preferredTee != null && p.preferredTee!.isNotEmpty)
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
+                                    horizontal: 10,
+                                    vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: AppColors.sageGreen.withValues(alpha: 0.4),
-                                    borderRadius: BorderRadius.circular(4),
+                                    color: AppColors.lakeDeep.withValues(alpha: 0.25),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: AppColors.lakeCyan.withValues(alpha: 0.5)),
                                   ),
                                   child: Text(
                                     '${p.preferredTee} Tee',
                                     style: const TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.white70,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
                                     ),
                                   ),
                                 ),
                               if (p.ghinNumber != null && p.ghinNumber!.isNotEmpty)
-                                Text(
-                                  'GHIN: ${p.ghinNumber}',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.white38,
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 3.0),
+                                  child: Text(
+                                    'GHIN: ${p.ghinNumber}',
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      color: AppColors.textSecondary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                             ],
                           ),
                         ),
                         trailing: IconButton(
-                          icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.white70),
+                          icon: const Icon(Icons.edit_outlined, size: 26, color: AppColors.lakeCyan),
                           onPressed: () => _openPlayerEditor(context, player: p),
                         ),
                         onTap: () => _openPlayerEditor(context, player: p),
@@ -282,10 +293,10 @@ class PlayersScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openPlayerEditor(context),
-        backgroundColor: AppColors.gold,
-        foregroundColor: Colors.black,
-        icon: const Icon(Icons.add),
-        label: const Text('Add Player', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: AppColors.lakeCyan,
+        foregroundColor: const Color(0xFF06111D),
+        icon: const Icon(Icons.add, size: 28),
+        label: const Text('Add Player', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
       ),
     );
   }

@@ -58,7 +58,6 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
     final savedRounds = await widget.roundRepository.getAllSavedRounds();
     _roundNumber = savedRounds.length + 1;
 
-    // Check if tournament has team designations
     if (widget.tournamentId != null) {
       final tPlayers = await widget.tournamentRepository
           .getTournamentPlayers(widget.tournamentId!);
@@ -126,59 +125,65 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
   Future<void> _startRound() async {
     if (_selectedCourseDetails == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select or configure a course first.')),
+        const SnackBar(content: Text('Please select or configure a course first.', style: TextStyle(fontSize: 17))),
       );
       return;
     }
+
     if (_selectedPlayerIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select at least one player.')),
+        const SnackBar(content: Text('Please select at least 1 player for this round.', style: TextStyle(fontSize: 17))),
       );
       return;
     }
 
-    final cd = _selectedCourseDetails!;
-    final sessionHoles = cd.holes
-        .map((h) => HoleSessionInfo(
-              holeNumber: h.holeNumber,
-              par: h.par,
-              strokeIndex: h.strokeIndex,
-            ))
+    final selectedPlayers = _allPlayers
+        .where((p) => _selectedPlayerIds.contains(p.id))
         .toList();
 
-    final sessionPlayers = _selectedPlayerIds.map((pId) {
-      final p = _allPlayers.firstWhere((item) => item.id == pId);
-      final teeId = _playerTeeIds[pId] ?? cd.teeBoxes.first.teeBox.id;
-      final teeBox = cd.teeBoxes
-          .firstWhere((t) => t.teeBox.id == teeId)
+    final sessionPlayers = selectedPlayers.map((p) {
+      final teeId = _playerTeeIds[p.id] ??
+          _selectedCourseDetails!.teeBoxes.first.teeBox.id;
+      final teeObj = _selectedCourseDetails!.teeBoxes
+          .firstWhere((t) => t.teeBox.id == teeId,
+              orElse: () => _selectedCourseDetails!.teeBoxes.first)
           .teeBox;
+
       final courseHcp = _computeCourseHcp(p, teeId);
+      final teamId = _playerTeams[p.id] ?? 'none';
 
       return PlayerSessionInfo(
         playerId: p.id,
         name: p.fullName,
-        nickname: p.nickname,
+        nickname: p.nickname.isNotEmpty ? p.nickname : p.fullName.split(' ').first,
         initials: p.initials,
         handicapIndex: p.handicapIndex,
-        teeBoxId: teeId,
-        teeName: teeBox.name,
         courseHandicap: courseHcp,
-        teamId: _playerTeams[p.id] ?? 'none',
+        teeBoxId: teeId,
+        teeName: teeObj.name,
+        teamId: teamId,
+      );
+    }).toList();
+
+    final sessionHoles = _selectedCourseDetails!.holes.map((h) {
+      return HoleSessionInfo(
+        holeNumber: h.holeNumber,
+        par: h.par,
+        strokeIndex: h.strokeIndex,
       );
     }).toList();
 
     final session = ActiveRoundSession(
-      tournamentId: widget.tournamentId,
-      courseId: cd.course.id,
-      courseName: cd.course.name,
+      courseId: _selectedCourseDetails!.course.id,
+      courseName: _selectedCourseDetails!.course.name,
       roundNumber: _roundNumber,
       format: _format,
       pointsPerSkin: _pointsPerSkin,
-      holes: sessionHoles,
+      currentHoleNumber: 1,
       players: sessionPlayers,
+      holes: sessionHoles,
     );
 
-    // Persist as draft immediately
     await widget.roundRepository.saveActiveDraft(session);
 
     if (mounted) {
@@ -212,51 +217,57 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
           Card(
             margin: EdgeInsets.zero,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'COURSE & ROUND',
                     style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
                       letterSpacing: 1.1,
-                      color: AppColors.gold,
+                      color: AppColors.cyanLight,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   if (_courses.isEmpty)
                     const Text(
                       'No courses added yet! Go to the Courses tab to add or template a course.',
-                      style: TextStyle(color: Colors.redAccent),
+                      style: TextStyle(color: Colors.redAccent, fontSize: 17),
                     )
                   else
                     DropdownButtonFormField<String>(
                       initialValue: _selectedCourseId,
+                      style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
                       decoration: const InputDecoration(
                         labelText: 'Select Course',
-                        prefixIcon: Icon(Icons.golf_course, color: AppColors.gold),
+                        labelStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        prefixIcon: Icon(Icons.golf_course, color: AppColors.lakeCyan, size: 28),
                       ),
                       items: _courses.map((c) {
                         return DropdownMenuItem(
                           value: c.id,
-                          child: Text('${c.name} (${c.holeCount}h)'),
+                          child: Text('${c.name} (${c.holeCount}h)', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                         );
                       }).toList(),
                       onChanged: _onCourseChanged,
                     ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<int>(
                           initialValue: _roundNumber,
-                          decoration: const InputDecoration(labelText: 'Round #'),
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                          decoration: const InputDecoration(
+                            labelText: 'Round #',
+                            labelStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
                           items: [1, 2, 3, 4, 5]
                               .map((r) => DropdownMenuItem(
                                     value: r,
-                                    child: Text('Round $r'),
+                                    child: Text('Round $r', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                                   ))
                               .toList(),
                           onChanged: (v) {
@@ -264,17 +275,19 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
                           },
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 14),
                       Expanded(
                         child: DropdownButtonFormField<int>(
                           initialValue: _pointsPerSkin,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                           decoration: const InputDecoration(
                             labelText: 'Points / Skin',
+                            labelStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                           items: [1, 2, 3, 5, 10]
                               .map((p) => DropdownMenuItem(
                                     value: p,
-                                    child: Text('$p pts'),
+                                    child: Text('$p pts', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                                   ))
                               .toList(),
                           onChanged: (v) {
@@ -288,13 +301,13 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
 
           // Players & Tees Selection
           Card(
             margin: EdgeInsets.zero,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -304,26 +317,27 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
                       const Text(
                         'PLAYERS & TEES',
                         style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
                           letterSpacing: 1.1,
-                          color: AppColors.gold,
+                          color: AppColors.cyanLight,
                         ),
                       ),
                       Text(
                         '${_selectedPlayerIds.length} Selected',
                         style: const TextStyle(
-                          color: AppColors.goldLight,
-                          fontSize: 13,
+                          color: AppColors.duneSand,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   if (_allPlayers.isEmpty)
                     const Text(
                       'No players in roster. Add players in the Roster tab.',
-                      style: TextStyle(color: Colors.white54),
+                      style: TextStyle(color: Colors.white70, fontSize: 17),
                     )
                   else
                     ..._allPlayers.map((player) {
@@ -332,44 +346,49 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
                       final courseHcp = _computeCourseHcp(player, teeId ?? '');
 
                       return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
+                        margin: const EdgeInsets.only(bottom: 10),
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 6,
+                          horizontal: 10,
+                          vertical: 10,
                         ),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? const Color(0xFF0C2B20)
-                              : const Color(0xFF061812),
-                          borderRadius: BorderRadius.circular(8),
+                              ? AppColors.cardSelected
+                              : AppColors.surfaceElevated,
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: isSelected
-                                ? AppColors.gold.withValues(alpha: 0.5)
+                                ? AppColors.lakeCyan
                                 : AppColors.cardBorder,
+                            width: isSelected ? 1.8 : 1.0,
                           ),
                         ),
                         child: Row(
                           children: [
-                            Checkbox(
-                              value: isSelected,
-                              activeColor: AppColors.gold,
-                              checkColor: Colors.black,
-                              onChanged: (checked) {
-                                setState(() {
-                                  if (checked == true) {
-                                    _selectedPlayerIds.add(player.id);
-                                  } else {
-                                    _selectedPlayerIds.remove(player.id);
-                                  }
-                                });
-                              },
+                            Transform.scale(
+                              scale: 1.25,
+                              child: Checkbox(
+                                value: isSelected,
+                                activeColor: AppColors.lakeCyan,
+                                checkColor: const Color(0xFF06111D),
+                                onChanged: (checked) {
+                                  setState(() {
+                                    if (checked == true) {
+                                      _selectedPlayerIds.add(player.id);
+                                    } else {
+                                      _selectedPlayerIds.remove(player.id);
+                                    }
+                                  });
+                                },
+                              ),
                             ),
+                            const SizedBox(width: 4),
                             PlayerAvatar(
                               initials: player.initials,
                               photoPath: player.photoPath,
-                              radius: 16,
+                              radius: 22,
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -379,15 +398,18 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
                                         ? player.nickname
                                         : player.fullName,
                                     style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 20,
+                                      color: Colors.white,
                                     ),
                                   ),
+                                  const SizedBox(height: 2),
                                   Text(
-                                    'Index: ${player.handicapIndex.toStringAsFixed(1)} • Course HCP: $courseHcp',
+                                    'Index ${player.handicapIndex.toStringAsFixed(1)} • Course HCP $courseHcp',
                                     style: const TextStyle(
-                                      color: AppColors.goldLight,
-                                      fontSize: 11,
+                                      color: AppColors.duneSand,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                 ],
@@ -395,8 +417,13 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
                             ),
                             if (_selectedCourseDetails != null &&
                                 _selectedCourseDetails!.teeBoxes.isNotEmpty)
-                              SizedBox(
-                                width: 90,
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceDark,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppColors.cardBorder),
+                                ),
                                 child: DropdownButton<String>(
                                   value: teeId,
                                   isDense: true,
@@ -407,7 +434,7 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
                                             value: t.teeBox.id,
                                             child: Text(
                                               t.teeBox.name,
-                                              style: const TextStyle(fontSize: 13),
+                                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                                             ),
                                           ))
                                       .toList(),
@@ -428,13 +455,13 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 26),
           ElevatedButton.icon(
             onPressed: _startRound,
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Tee Off / Start Scoring'),
+            icon: const Icon(Icons.play_arrow, size: 30),
+            label: const Text('Tee Off / Start Scoring', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
             style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 20),
             ),
           ),
         ],

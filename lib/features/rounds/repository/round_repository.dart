@@ -39,6 +39,8 @@ class RoundRepository {
         .getSingleOrNull();
   }
 
+  Future<SavedRound?> getRoundById(String id) => getSavedRound(id);
+
   Future<String> saveCompletedRound(ActiveRoundSession session) async {
     final roundId = _uuid.v4();
     final jsonString = jsonEncode(session.toJson());

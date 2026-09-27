@@ -8,7 +8,7 @@ A tournament scoring and trip management Flutter application built for an 8-play
 - **Database**: Drift SQLite (`drift: ^2.34.2`, `drift_flutter: ^0.3.1`)
 - **State & Storage**: Offline-first reactive streams, local SQLite persistence
 - **Sharing**: `share_plus` for texting round leaderboards & overall standings to the group chat
-- **Theme**: Premium golf styling (Forest green `#0F4332`, Fairway deep `#061812`, Warm gold `#D4AF37`, high-contrast daylight scoring markers)
+- **Theme**: Lake Michigan Coastal Links aesthetic (Deep Oceanic Navy `#0A1118`, Lake Cyan `#00B4D8`, Dune Sand `#DFC19E`, modern sans-serif typography, high-contrast daylight scoring markers)
 
 ## Features Implemented
 

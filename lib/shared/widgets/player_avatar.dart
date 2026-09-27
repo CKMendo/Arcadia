@@ -13,7 +13,7 @@ class PlayerAvatar extends StatelessWidget {
     super.key,
     required this.initials,
     this.photoPath,
-    this.radius = 20,
+    this.radius = 24,
     this.backgroundColor,
     this.textColor,
   });
@@ -30,8 +30,8 @@ class PlayerAvatar extends StatelessWidget {
       }
     }
 
-    final bg = backgroundColor ?? AppColors.sageGreen;
-    final fg = textColor ?? AppColors.goldLight;
+    final bg = backgroundColor ?? AppColors.surfaceElevated;
+    final fg = textColor ?? AppColors.cyanLight;
 
     return CircleAvatar(
       radius: radius,
@@ -40,8 +40,8 @@ class PlayerAvatar extends StatelessWidget {
         initials.isNotEmpty ? initials : '?',
         style: TextStyle(
           color: fg,
-          fontWeight: FontWeight.bold,
-          fontSize: radius * 0.8,
+          fontWeight: FontWeight.w800,
+          fontSize: radius * 0.9,
         ),
       ),
     );

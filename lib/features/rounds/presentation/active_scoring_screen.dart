@@ -79,25 +79,36 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
     final hole = widget.session.getHole(_currentHole);
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.cardDark,
+      backgroundColor: AppColors.surfaceDark,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
         return Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Score for $playerName on Hole $_currentHole (Par ${hole.par})',
+                '$playerName • Hole $_currentHole (Par ${hole.par})',
+                textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.goldLight,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 6),
+              const Text(
+                'TAP SCORE',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                  color: AppColors.cyanLight,
+                ),
+              ),
+              const SizedBox(height: 18),
               Wrap(
                 spacing: 12,
                 runSpacing: 12,
@@ -106,7 +117,7 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                   final score = idx + 1;
                   final isSelected = score == currentScore;
                   final diff = score - hole.par;
-                  Color btnColor = AppColors.cardBorder;
+                  Color btnColor = AppColors.surfaceElevated;
                   if (diff <= -1) btnColor = AppColors.scoreBirdie;
                   if (diff == 0) btnColor = AppColors.scorePar;
                   if (diff == 1) btnColor = AppColors.scoreBogey;
@@ -117,32 +128,32 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                       _setScoreDirect(playerId, score);
                       Navigator.pop(ctx);
                     },
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     child: Container(
-                      width: 52,
-                      height: 52,
+                      width: 64,
+                      height: 64,
                       decoration: BoxDecoration(
-                        color: isSelected ? AppColors.gold : btnColor,
-                        borderRadius: BorderRadius.circular(10),
+                        color: isSelected ? AppColors.lakeCyan : btnColor,
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isSelected ? Colors.white : Colors.transparent,
-                          width: 2,
+                          color: isSelected ? Colors.white : AppColors.cardBorder,
+                          width: isSelected ? 2.5 : 1.2,
                         ),
                       ),
                       alignment: Alignment.center,
                       child: Text(
                         '$score',
                         style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: isSelected ? Colors.black : Colors.white,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w900,
+                          color: isSelected ? const Color(0xFF06111D) : Colors.white,
                         ),
                       ),
                     ),
                   );
                 }),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
             ],
           ),
         );
@@ -164,15 +175,15 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.cardDark,
+      backgroundColor: AppColors.surfaceDark,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
         return DraggableScrollableSheet(
-          initialChildSize: 0.65,
-          minChildSize: 0.4,
-          maxChildSize: 0.9,
+          initialChildSize: 0.70,
+          minChildSize: 0.45,
+          maxChildSize: 0.95,
           expand: false,
           builder: (context, scrollController) {
             return Padding(
@@ -182,28 +193,31 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                 children: [
                   Center(
                     child: Container(
-                      width: 40,
-                      height: 4,
+                      width: 44,
+                      height: 5,
                       decoration: BoxDecoration(
-                        color: Colors.white24,
-                        borderRadius: BorderRadius.circular(2),
+                        color: Colors.white30,
+                        borderRadius: BorderRadius.circular(3),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Live Leaderboard (${widget.session.courseName})',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.goldLight,
+                      Expanded(
+                        child: Text(
+                          'Live Leaderboard • ${widget.session.courseName}',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white70),
+                        icon: const Icon(Icons.close, color: Colors.white, size: 26),
                         onPressed: () => Navigator.pop(ctx),
                       ),
                     ],
@@ -222,20 +236,21 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                         final completed = widget.session.completedHolesCount(p.playerId);
 
                         return Container(
-                          margin: const EdgeInsets.only(bottom: 8),
+                          margin: const EdgeInsets.only(bottom: 10),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
+                            horizontal: 14,
+                            vertical: 12,
                           ),
                           decoration: BoxDecoration(
                             color: idx == 0
-                                ? AppColors.gold.withValues(alpha: 0.15)
-                                : const Color(0xFF09241B),
-                            borderRadius: BorderRadius.circular(10),
+                                ? AppColors.lakeCyan.withValues(alpha: 0.15)
+                                : AppColors.surfaceElevated,
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: idx == 0
-                                  ? AppColors.gold
+                                  ? AppColors.lakeCyan
                                   : AppColors.cardBorder,
+                              width: idx == 0 ? 1.5 : 1.0,
                             ),
                           ),
                           child: Row(
@@ -243,19 +258,19 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                               Text(
                                 '${idx + 1}',
                                 style: TextStyle(
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w900,
                                   color: idx == 0
-                                      ? AppColors.gold
+                                      ? AppColors.lakeCyan
                                       : Colors.white70,
-                                  fontSize: 16,
+                                  fontSize: 22,
                                 ),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 12),
                               PlayerAvatar(
                                 initials: p.initials,
-                                radius: 16,
+                                radius: 22,
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,14 +279,16 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                                       p.nickname,
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 15,
+                                        fontSize: 20,
+                                        color: Colors.white,
                                       ),
                                     ),
                                     Text(
-                                      '$completed / ${widget.session.holeCount} Holes Played',
+                                      '$completed / ${widget.session.holeCount} Holes',
                                       style: const TextStyle(
-                                        color: Colors.white54,
-                                        fontSize: 11,
+                                        color: AppColors.textSecondary,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ],
@@ -285,17 +302,18 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                                       Text(
                                         'Net $net',
                                         style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 15,
-                                          color: AppColors.goldLight,
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 22,
+                                          color: AppColors.lakeCyan,
                                         ),
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
                                         'Gross $gross',
                                         style: const TextStyle(
-                                          color: Colors.white60,
-                                          fontSize: 13,
+                                          color: AppColors.textSecondary,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                     ],
@@ -303,8 +321,9 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                                   Text(
                                     '$pts pts • $skinCount skins',
                                     style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 11,
+                                      color: AppColors.duneSand,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ],
@@ -328,20 +347,21 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Finish & Save Round?'),
+        title: const Text('Finish & Save Round?', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
         content: Text(
           widget.session.isRoundComplete
               ? 'All ${widget.session.holeCount} holes completed! Would you like to finalize and view the official scorecard?'
               : 'Some holes are incomplete. Are you sure you want to finish and save this round now?',
+          style: const TextStyle(fontSize: 18),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Continue Playing'),
+            child: const Text('Continue Playing', style: TextStyle(fontSize: 17)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Finalize Round'),
+            child: const Text('Finalize Round', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -368,15 +388,18 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.session.courseName} • R${widget.session.roundNumber}'),
+        title: Text(
+          '${widget.session.courseName} • R${widget.session.roundNumber}',
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.leaderboard, color: AppColors.gold),
+            icon: const Icon(Icons.leaderboard, size: 28, color: AppColors.lakeCyan),
             tooltip: 'Live Leaderboard',
             onPressed: _showLiveLeaderboardSheet,
           ),
           IconButton(
-            icon: const Icon(Icons.check_circle_outline, color: AppColors.goldLight),
+            icon: const Icon(Icons.check_circle_outline, size: 28, color: AppColors.cyanLight),
             tooltip: 'Finish Round',
             onPressed: _finishRound,
           ),
@@ -384,21 +407,22 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
       ),
       body: Column(
         children: [
-          // Hole Navigation Header
+          // Large High-Legibility Hole Navigation Header
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: const BoxDecoration(
-              color: AppColors.darkGreen,
+              color: AppColors.appBarDark,
               border: Border(
-                bottom: BorderSide(color: AppColors.cardBorder),
+                bottom: BorderSide(color: AppColors.cardBorder, width: 1.5),
               ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-                  color: _currentHole > 1 ? AppColors.gold : Colors.white24,
+                  icon: const Icon(Icons.arrow_back_ios_new, size: 30),
+                  color: _currentHole > 1 ? AppColors.lakeCyan : Colors.white24,
+                  padding: const EdgeInsets.all(12),
                   onPressed: _currentHole > 1 ? () => _goToHole(_currentHole - 1) : null,
                 ),
                 Column(
@@ -406,43 +430,45 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                     Text(
                       'HOLE $_currentHole',
                       style: const TextStyle(
-                        fontFamily: 'serif',
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.goldLight,
+                        fontSize: 34,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.0,
+                        color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 6),
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
                           decoration: BoxDecoration(
-                            color: AppColors.sageGreen.withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(4),
+                            color: AppColors.lakeCyan.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.lakeCyan, width: 1.5),
                           ),
                           child: Text(
                             'PAR ${currentHoleInfo.par}',
                             style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.lakeCyan,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 10),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
                           decoration: BoxDecoration(
-                            color: AppColors.cardBorder,
-                            borderRadius: BorderRadius.circular(4),
+                            color: AppColors.surfaceElevated,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.cardBorder, width: 1.5),
                           ),
                           child: Text(
                             'HCP ${currentHoleInfo.strokeIndex}',
                             style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.goldLight,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.duneSand,
                             ),
                           ),
                         ),
@@ -451,10 +477,11 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                   ],
                 ),
                 IconButton(
-                  icon: const Icon(Icons.arrow_forward_ios, size: 20),
+                  icon: const Icon(Icons.arrow_forward_ios, size: 30),
                   color: _currentHole < widget.session.holeCount
-                      ? AppColors.gold
+                      ? AppColors.lakeCyan
                       : Colors.white24,
+                  padding: const EdgeInsets.all(12),
                   onPressed: _currentHole < widget.session.holeCount
                       ? () => _goToHole(_currentHole + 1)
                       : null,
@@ -463,10 +490,10 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
             ),
           ),
 
-          // Horizontal Hole Selector Bar
+          // Horizontal Hole Selector Bar with Large Touch Targets
           Container(
-            height: 48,
-            color: const Color(0xFF061812),
+            height: 56,
+            color: AppColors.appBarDark,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -482,32 +509,35 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                     label: Text(
                       '$holeNum${isComplete ? ' ✓' : ''}',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 16,
                         fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.normal,
-                        color: isSelected ? Colors.black : Colors.white,
+                            isSelected ? FontWeight.w900 : FontWeight.w700,
+                        color: isSelected ? const Color(0xFF06111D) : Colors.white,
                       ),
                     ),
                     selected: isSelected,
-                    selectedColor: AppColors.gold,
+                    selectedColor: AppColors.lakeCyan,
                     backgroundColor: isComplete
-                        ? AppColors.sageGreen.withValues(alpha: 0.4)
-                        : AppColors.cardDark,
+                        ? AppColors.lakeDeep.withValues(alpha: 0.3)
+                        : AppColors.surfaceElevated,
+                    side: BorderSide(
+                      color: isSelected ? AppColors.lakeCyan : AppColors.cardBorder,
+                      width: isSelected ? 2 : 1,
+                    ),
                     onSelected: (sel) {
                       if (sel) _goToHole(holeNum);
                     },
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   ),
                 );
               },
             ),
           ),
 
-          // Player Scoring Cards List
+          // Player Scoring Cards List with Big Touch Targets
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               itemCount: widget.session.players.length,
               itemBuilder: (context, idx) {
                 final player = widget.session.players[idx];
@@ -520,29 +550,33 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                 final isSandie = widget.session.hasSandie(player.playerId, _currentHole);
 
                 return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  margin: const EdgeInsets.symmetric(vertical: 6),
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
                     child: Column(
                       children: [
                         Row(
                           children: [
                             PlayerAvatar(
                               initials: player.initials,
-                              radius: 18,
+                              radius: 24,
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
                                     children: [
-                                      Text(
-                                        player.nickname,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
+                                      Flexible(
+                                        child: Text(
+                                          player.nickname,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 22,
+                                            color: Colors.white,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                       if (strokes > 0) ...[
@@ -551,11 +585,13 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                                       ],
                                     ],
                                   ),
+                                  const SizedBox(height: 2),
                                   Text(
-                                    '${player.teeName} Tee • Course HCP ${player.courseHandicap}',
+                                    '${player.teeName} Tee • HCP ${player.courseHandicap}',
                                     style: const TextStyle(
-                                      color: Colors.white54,
-                                      fontSize: 11,
+                                      color: AppColors.textSecondary,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],
@@ -571,31 +607,31 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                                     par: currentHoleInfo.par,
                                     isNet: true,
                                   ),
-                                  const SizedBox(height: 2),
+                                  const SizedBox(height: 3),
                                   Text(
                                     '+$pts pts',
                                     style: const TextStyle(
-                                      color: AppColors.goldLight,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.duneSand,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
                                     ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 10),
                             ],
-                            // +/- Quick Adjust Buttons & Big Score Tap
+                            // +/- Quick Adjust Buttons & Huge Score Tap
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
-                                  icon: const Icon(Icons.remove_circle_outline),
-                                  color: gross > 1 ? Colors.white70 : Colors.white24,
+                                  icon: const Icon(Icons.remove_circle_outline, size: 36),
+                                  color: gross > 1 ? AppColors.lakeCyan : Colors.white24,
                                   onPressed: () => _adjustScore(player.playerId, -1),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
-                                    minWidth: 36,
-                                    minHeight: 36,
+                                    minWidth: 46,
+                                    minHeight: 46,
                                   ),
                                 ),
                                 InkWell(
@@ -604,42 +640,43 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                                     player.nickname,
                                     gross,
                                   ),
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(10),
                                   child: Container(
-                                    width: 44,
-                                    height: 44,
+                                    width: 60,
+                                    height: 56,
                                     decoration: BoxDecoration(
                                       color: gross > 0
-                                          ? AppColors.gold
-                                          : const Color(0xFF061812),
-                                      borderRadius: BorderRadius.circular(8),
+                                          ? AppColors.lakeCyan
+                                          : AppColors.backgroundDark,
+                                      borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
                                         color: gross > 0
                                             ? Colors.transparent
                                             : AppColors.cardBorder,
+                                        width: 1.5,
                                       ),
                                     ),
                                     alignment: Alignment.center,
                                     child: Text(
                                       gross > 0 ? '$gross' : '-',
                                       style: TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.w900,
                                         color: gross > 0
-                                            ? Colors.black
-                                            : Colors.white38,
+                                            ? const Color(0xFF06111D)
+                                            : AppColors.textMuted,
                                       ),
                                     ),
                                   ),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.add_circle_outline),
-                                  color: Colors.white70,
+                                  icon: const Icon(Icons.add_circle_outline, size: 36),
+                                  color: AppColors.lakeCyan,
                                   onPressed: () => _adjustScore(player.playerId, 1),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
-                                    minWidth: 36,
-                                    minHeight: 36,
+                                    minWidth: 46,
+                                    minHeight: 46,
                                   ),
                                 ),
                               ],
@@ -647,33 +684,37 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                           ],
                         ),
 
-                        // Secondary Options: Putts & Bonuses (Greenie on par 3, Sandie)
-                        const SizedBox(height: 6),
+                        // Secondary Options: Putts & Bonuses (large and clear)
+                        const SizedBox(height: 10),
                         Row(
                           children: [
                             // Putts
                             Text(
                               'Putts: $putts',
                               style: const TextStyle(
-                                color: Colors.white60,
-                                fontSize: 12,
+                                color: Colors.white,
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
+                            const SizedBox(width: 4),
                             IconButton(
-                              icon: const Icon(Icons.remove, size: 14),
+                              icon: const Icon(Icons.remove, size: 22),
+                              color: putts > 0 ? AppColors.lakeCyan : Colors.white24,
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(
-                                minWidth: 24,
-                                minHeight: 24,
+                                minWidth: 36,
+                                minHeight: 36,
                               ),
                               onPressed: () => _adjustPutts(player.playerId, -1),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.add, size: 14),
+                              icon: const Icon(Icons.add, size: 22),
+                              color: AppColors.lakeCyan,
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(
-                                minWidth: 24,
-                                minHeight: 24,
+                                minWidth: 36,
+                                minHeight: 36,
                               ),
                               onPressed: () => _adjustPutts(player.playerId, 1),
                             ),
@@ -681,9 +722,9 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                             // Greenie toggle on Par 3s
                             if (currentHoleInfo.par == 3) ...[
                               FilterChip(
-                                label: const Text('Greenie 🎯', style: TextStyle(fontSize: 11)),
+                                label: const Text('Greenie 🎯', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                                 selected: isGreenie,
-                                selectedColor: AppColors.sageGreen,
+                                selectedColor: AppColors.lakeDeep,
                                 onSelected: (sel) {
                                   setState(() {
                                     widget.session.toggleGreenie(
@@ -693,16 +734,20 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                                   });
                                   _saveDraft();
                                 },
-                                visualDensity: VisualDensity.compact,
-                                padding: EdgeInsets.zero,
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 8),
                             ],
                             // Sandie toggle
                             FilterChip(
-                              label: const Text('Sandie 🏖️', style: TextStyle(fontSize: 11)),
+                              label: const Text('Sandie 🏖️', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                               selected: isSandie,
-                              selectedColor: AppColors.warmSand,
+                              selectedColor: AppColors.duneSand,
+                              labelStyle: TextStyle(
+                                color: isSandie ? const Color(0xFF06111D) : Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
                               onSelected: (sel) {
                                 setState(() {
                                   widget.session.toggleSandie(
@@ -712,8 +757,7 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                                 });
                                 _saveDraft();
                               },
-                              visualDensity: VisualDensity.compact,
-                              padding: EdgeInsets.zero,
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             ),
                           ],
                         ),

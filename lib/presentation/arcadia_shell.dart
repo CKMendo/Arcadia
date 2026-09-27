@@ -66,6 +66,11 @@ class _ArcadiaShellState extends State<ArcadiaShell> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (idx) => setState(() => _currentIndex = idx),
+        selectedFontSize: 17,
+        unselectedFontSize: 15,
+        iconSize: 32,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.flag_outlined),

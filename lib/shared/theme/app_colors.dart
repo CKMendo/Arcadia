@@ -3,33 +3,52 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // Primary Golf Palette
-  static const Color primaryGreen = Color(0xFF0F4332);
-  static const Color darkGreen = Color(0xFF0A2E22);
-  static const Color deepForest = Color(0xFF071F17);
-  static const Color sageGreen = Color(0xFF2D6A4F);
-  static const Color lightGreen = Color(0xFFE8F5E9);
+  // Lake Michigan Coastal Links Palette
+  static const Color lakeCyan = Color(0xFF00B4D8);
+  static const Color cyanLight = Color(0xFF38BDF8);
+  static const Color cyanGlow = Color(0xFF7DD3FC);
+  static const Color lakeDeep = Color(0xFF0284C7);
+  static const Color oceanicNavy = Color(0xFF0F253E);
 
-  // Accents
-  static const Color gold = Color(0xFFD4AF37);
-  static const Color goldLight = Color(0xFFF3E5AB);
-  static const Color warmSand = Color(0xFFDFD7BF);
-  static const Color amber = Color(0xFFFFB703);
+  // Arcadia Dune & Driftwood Accents
+  static const Color duneSand = Color(0xFFDFC19E);
+  static const Color duneLight = Color(0xFFF3E5D4);
+  static const Color driftwood = Color(0xFF9E8F7D);
+  static const Color coastalAmber = Color(0xFFF59E0B);
 
   // Surfaces & Backgrounds
-  static const Color backgroundDark = Color(0xFF061812);
-  static const Color cardDark = Color(0xFF0E2E23);
-  static const Color cardBorder = Color(0xFF1B4E3C);
-  static const Color cardSelected = Color(0xFF18533F);
+  static const Color backgroundDark = Color(0xFF0A1118);
+  static const Color surfaceDark = Color(0xFF111E2E);
+  static const Color surfaceElevated = Color(0xFF16273B);
+  static const Color cardDark = Color(0xFF111E2E);
+  static const Color cardBorder = Color(0xFF1E334A);
+  static const Color cardSelected = Color(0xFF183B5E);
+  static const Color appBarDark = Color(0xFF0C1622);
 
-  // Scoring Markers
-  static const Color scoreEagle = Color(0xFFD4AF37); // Gold
-  static const Color scoreBirdie = Color(0xFFE63946); // Red
-  static const Color scorePar = Color(0xFF2A9D8F); // Teal / Green
-  static const Color scoreBogey = Color(0xFF457B9D); // Slate Blue
-  static const Color scoreDouble = Color(0xFF1D3557); // Deep Blue / Dark
+  // Text & Content
+  static const Color textPrimary = Color(0xFFF1F5F9);
+  static const Color textSecondary = Color(0xFF94A3B8);
+  static const Color textMuted = Color(0xFF64748B);
 
-  // Teams
-  static const Color teamA = Color(0xFF3A86FF); // Royal Blue
-  static const Color teamB = Color(0xFFE63946); // Crimson Red
+  // Aliases for unified consistency across codebase
+  static const Color gold = duneSand;
+  static const Color goldLight = duneLight;
+  static const Color primaryGreen = lakeCyan;
+  static const Color darkGreen = appBarDark;
+  static const Color deepForest = backgroundDark;
+  static const Color sageGreen = lakeDeep;
+  static const Color lightGreen = Color(0xFFE0F2FE);
+  static const Color warmSand = duneSand;
+  static const Color amber = coastalAmber;
+
+  // Scoring Markers (High contrast daylight readable)
+  static const Color scoreEagle = Color(0xFFF59E0B); // Amber / Sunrise
+  static const Color scoreBirdie = Color(0xFFEF4444); // Vibrant Coral Red
+  static const Color scorePar = Color(0xFF06B6D4); // Crisp Lake Cyan
+  static const Color scoreBogey = Color(0xFF64748B); // Coastal Slate
+  static const Color scoreDouble = Color(0xFF1E293B); // Deep Abyssal Slate
+
+  // Teams (Coastal Cup: Team Lake vs Team Bluff)
+  static const Color teamA = Color(0xFF0EA5E9); // Lake Azure
+  static const Color teamB = Color(0xFFF97316); // Bluff Sunset Tangerine
 }

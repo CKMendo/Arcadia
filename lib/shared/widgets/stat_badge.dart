@@ -16,7 +16,10 @@ class ScoreBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (score <= 0) {
-      return const Text('-', style: TextStyle(color: Colors.white38));
+      return const Text(
+        '-',
+        style: TextStyle(color: Colors.white38, fontSize: 19, fontWeight: FontWeight.bold),
+      );
     }
 
     final diff = score - par;
@@ -38,17 +41,17 @@ class ScoreBadge extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         label,
         style: TextStyle(
           color: textColor,
-          fontWeight: FontWeight.bold,
-          fontSize: 13,
+          fontWeight: FontWeight.w800,
+          fontSize: 18,
         ),
       ),
     );
@@ -62,7 +65,7 @@ class HandDots extends StatelessWidget {
   const HandDots({
     super.key,
     required this.count,
-    this.color = AppColors.gold,
+    this.color = AppColors.duneSand,
   });
 
   @override
@@ -73,9 +76,9 @@ class HandDots extends StatelessWidget {
       children: List.generate(
         count.clamp(1, 3),
         (i) => Container(
-          margin: const EdgeInsets.only(left: 2),
-          width: 6,
-          height: 6,
+          margin: const EdgeInsets.only(left: 3),
+          width: 8,
+          height: 8,
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,

@@ -20,31 +20,31 @@ class RoundSummaryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<SavedRound?>(
-      future: roundRepository.getSavedRound(roundId),
+      future: roundRepository.getRoundById(roundId),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
+        if (!snapshot.hasData || snapshot.data == null) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
         final round = snapshot.data!;
-        final sessionMap = jsonDecode(round.roundPayloadJson) as Map<String, dynamic>;
-        final session = ActiveRoundSession.fromJson(sessionMap);
-        final skins = session.calculateGrossSkins();
+        final map = jsonDecode(round.roundPayloadJson) as Map<String, dynamic>;
+        final session = ActiveRoundSession.fromJson(map);
 
-        // Sort players by total net score
         final sortedPlayers = List<PlayerSessionInfo>.from(session.players)
           ..sort((a, b) =>
               session.totalNet(a.playerId).compareTo(session.totalNet(b.playerId)));
 
+        final skins = session.calculateGrossSkins();
+
         return Scaffold(
           appBar: AppBar(
-            title: Text('${session.courseName} • Round ${session.roundNumber}'),
+            title: Text('Round ${session.roundNumber} Recap', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
             actions: [
               IconButton(
-                icon: const Icon(Icons.share, color: AppColors.goldLight),
-                tooltip: 'Share Round Recap',
+                icon: const Icon(Icons.share, size: 28, color: AppColors.cyanLight),
+                tooltip: 'Share Round Results',
                 onPressed: () => _shareRoundSummary(session),
               ),
             ],
@@ -52,64 +52,65 @@ class RoundSummaryScreen extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // Winner / Leader Card
+              // Winner / Leader Card with Large Fonts
               Card(
                 margin: EdgeInsets.zero,
                 color: AppColors.cardDark,
                 child: Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF0F4332), Color(0xFF072118)],
+                      colors: [Color(0xFF0F2742), Color(0xFF0A1420)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    border: Border.all(color: AppColors.gold.withValues(alpha: 0.5)),
+                    border: Border.all(color: AppColors.lakeCyan.withValues(alpha: 0.6), width: 1.5),
                   ),
                   child: Column(
                     children: [
-                      const Icon(Icons.military_tech, color: AppColors.gold, size: 40),
-                      const SizedBox(height: 6),
+                      const Icon(Icons.military_tech, color: AppColors.lakeCyan, size: 48),
+                      const SizedBox(height: 8),
                       Text(
                         round.winnerName != null
                             ? '${round.winnerName} Wins Low Net!'
                             : 'Round Complete',
                         style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.goldLight,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
                         ),
+                        textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Text(
                         '${session.courseName} • ${session.holeCount} Holes',
-                        style: const TextStyle(color: Colors.white70, fontSize: 13),
+                        style: const TextStyle(color: Colors.white70, fontSize: 18, fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
 
-              // Leaderboard Card
+              // Leaderboard Card with Large Fonts
               Card(
                 margin: EdgeInsets.zero,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
                         'ROUND RESULTS',
                         style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
                           letterSpacing: 1.1,
-                          color: AppColors.gold,
+                          color: AppColors.cyanLight,
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
                       ...sortedPlayers.asMap().entries.map((entry) {
                         final rank = entry.key + 1;
                         final p = entry.value;
@@ -119,20 +120,21 @@ class RoundSummaryScreen extends StatelessWidget {
                         final skinCount = session.playerSkinsWon()[p.playerId] ?? 0;
 
                         return Container(
-                          margin: const EdgeInsets.only(bottom: 8),
+                          margin: const EdgeInsets.only(bottom: 10),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
+                            horizontal: 14,
+                            vertical: 12,
                           ),
                           decoration: BoxDecoration(
                             color: rank == 1
-                                ? AppColors.gold.withValues(alpha: 0.12)
-                                : const Color(0xFF072118),
-                            borderRadius: BorderRadius.circular(8),
+                                ? AppColors.lakeCyan.withValues(alpha: 0.15)
+                                : AppColors.surfaceElevated,
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: rank == 1
-                                  ? AppColors.gold
+                                  ? AppColors.lakeCyan
                                   : AppColors.cardBorder,
+                              width: rank == 1 ? 1.5 : 1.0,
                             ),
                           ),
                           child: Row(
@@ -140,23 +142,24 @@ class RoundSummaryScreen extends StatelessWidget {
                               Text(
                                 '$rank',
                                 style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: rank == 1 ? AppColors.gold : Colors.white70,
-                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: rank == 1 ? AppColors.lakeCyan : Colors.white70,
+                                  fontSize: 24,
                                 ),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 12),
                               PlayerAvatar(
                                 initials: p.initials,
-                                radius: 16,
+                                radius: 22,
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
                                   p.nickname,
                                   style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 20,
+                                    color: Colors.white,
                                   ),
                                 ),
                               ),
@@ -168,26 +171,29 @@ class RoundSummaryScreen extends StatelessWidget {
                                       Text(
                                         'Net $net',
                                         style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                          color: AppColors.goldLight,
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 22,
+                                          color: AppColors.lakeCyan,
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
+                                      const SizedBox(width: 10),
                                       Text(
                                         'Gross $gross',
                                         style: const TextStyle(
-                                          color: Colors.white60,
-                                          fontSize: 12,
+                                          color: Colors.white70,
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                     ],
                                   ),
+                                  const SizedBox(height: 2),
                                   Text(
-                                    '$pts Stableford pts • $skinCount skins',
+                                    '$pts pts • $skinCount skins',
                                     style: const TextStyle(
-                                      color: Colors.white54,
-                                      fontSize: 11,
+                                      color: AppColors.duneSand,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ],
@@ -200,63 +206,64 @@ class RoundSummaryScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
 
-              // Skins Breakdown Card
+              // Skins Breakdown Card with Large Fonts
               Card(
                 margin: EdgeInsets.zero,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
                         'SKINS BREAKDOWN',
                         style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
                           letterSpacing: 1.1,
-                          color: AppColors.gold,
+                          color: AppColors.duneSand,
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
                       ...skins.entries.map((e) {
                         final holeNum = e.key;
                         final res = e.value;
                         final hole = session.getHole(holeNum);
 
                         String winnerText = 'Tied (carried)';
-                        Color textColor = Colors.white54;
+                        Color textColor = Colors.white60;
                         if (res.hasWinner) {
                           final winner = session.players
                               .where((p) => p.playerId == res.winnerPlayerId)
                               .firstOrNull;
                           winnerText =
-                              '${winner?.nickname ?? 'Won'} with ${res.winningScore} (${res.skinCount} skin${res.skinCount > 1 ? 's' : ''})';
-                          textColor = AppColors.goldLight;
+                              '${winner?.nickname ?? 'Won'} (${res.winningScore}) • ${res.skinCount} skin${res.skinCount > 1 ? 's' : ''}';
+                          textColor = AppColors.cyanLight;
                         }
 
                         return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          padding: const EdgeInsets.symmetric(vertical: 6),
                           child: Row(
                             children: [
                               Text(
                                 'Hole $holeNum (P${hole.par}):',
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 17,
+                                  color: Colors.white,
                                 ),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
                                   winnerText,
                                   style: TextStyle(
                                     color: textColor,
                                     fontWeight: res.hasWinner
-                                        ? FontWeight.bold
+                                        ? FontWeight.w800
                                         : FontWeight.normal,
-                                    fontSize: 13,
+                                    fontSize: 17,
                                   ),
                                 ),
                               ),
@@ -268,12 +275,15 @@ class RoundSummaryScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 26),
 
               ElevatedButton.icon(
                 onPressed: () => _shareRoundSummary(session),
-                icon: const Icon(Icons.share),
-                label: const Text('Share Round Results With Guys'),
+                icon: const Icon(Icons.share, size: 28),
+                label: const Text('Share Round Results', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                ),
               ),
             ],
           ),
