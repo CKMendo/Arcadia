@@ -15,6 +15,7 @@ import 'package:arcadia/features/rounds/import/services/round_scorecard_text_par
 import 'package:arcadia/features/rounds/repository/round_repository.dart';
 import 'package:arcadia/features/tournaments/repository/tournament_repository.dart';
 import 'package:arcadia/features/rounds/import/presentation/gemini_key_config_dialog.dart';
+import 'package:arcadia/features/trip/presentation/edit_website_links_dialog.dart';
 import 'package:arcadia/shared/services/app_settings_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -235,6 +236,44 @@ Neal P 4 3 5 4 4 3 5 4 4 4 3 5 4 4 3 5 4 4
       expect(find.text('Primary Key (Gemini 3.8 Flash)'), findsOneWidget);
       expect(find.text('Backup Key (Gemini 3.7 Flash Failover)'), findsOneWidget);
       expect(find.text('Verify & Save'), findsOneWidget);
+    });
+
+    test('AppSettingsService saves and retrieves custom Website URL and TinyURL', () async {
+      SharedPreferences.setMockInitialValues({});
+
+      expect(await AppSettingsService.getWebsiteUrl(), AppSettingsService.defaultWebsiteUrl);
+      expect(await AppSettingsService.getTinyUrl(), AppSettingsService.defaultTinyUrl);
+
+      await AppSettingsService.updateWebsiteLinks(
+        websiteUrl: 'https://mycustomgolfurl.com',
+        tinyUrl: 'https://tinyurl.com/customarcadia',
+      );
+
+      expect(await AppSettingsService.getWebsiteUrl(), 'https://mycustomgolfurl.com');
+      expect(await AppSettingsService.getTinyUrl(), 'https://tinyurl.com/customarcadia');
+    });
+
+    testWidgets('EditWebsiteLinksDialog renders editable fields and saves custom URLs', (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'website_url': 'https://custom-site.com',
+        'tiny_url': 'https://tinyurl.com/custom123',
+      });
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: EditWebsiteLinksDialog(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Edit Website & TinyURL'), findsOneWidget);
+      expect(find.text('Website Destination URL'), findsOneWidget);
+      expect(find.text('Custom Short Link (TinyURL)'), findsOneWidget);
+      expect(find.text('Save Links'), findsOneWidget);
+      expect(find.text('https://custom-site.com'), findsOneWidget);
+      expect(find.text('https://tinyurl.com/custom123'), findsOneWidget);
     });
   });
 }

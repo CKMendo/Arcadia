@@ -9,8 +9,8 @@ class AppSettingsService {
   static const String _keyTinyUrl = 'tiny_url';
 
   static const String defaultWebsiteUrl =
-      'https://arcadia-golf-trip.ckm-endo.chatgpt.site';
-  static const String defaultTinyUrl = 'https://tinyurl.com/2xnkqbrx';
+      'https://staying-commercial-steven-ins.trycloudflare.com';
+  static const String defaultTinyUrl = 'https://tinyurl.com/arcadia2026';
 
   static const String _keyGeminiSecondaryApiKey = 'gemini_secondary_api_key';
 
@@ -123,6 +123,41 @@ class AppSettingsService {
     } catch (e) {
       debugPrint('Error saving website URL: $e');
       return defaultTinyUrl;
+    }
+  }
+
+  /// Sets the custom TinyURL.
+  static Future<void> setTinyUrl(String tinyUrl) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (tinyUrl.trim().isEmpty) {
+        await prefs.remove(_keyTinyUrl);
+      } else {
+        await prefs.setString(_keyTinyUrl, tinyUrl.trim());
+      }
+    } catch (e) {
+      debugPrint('Error saving custom TinyURL: $e');
+    }
+  }
+
+  /// Sets both website URL and an optional custom TinyURL.
+  static Future<void> updateWebsiteLinks({
+    required String websiteUrl,
+    String? tinyUrl,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cleanWeb = websiteUrl.trim().isEmpty ? defaultWebsiteUrl : websiteUrl.trim();
+      await prefs.setString(_keyWebsiteUrl, cleanWeb);
+
+      if (tinyUrl != null && tinyUrl.trim().isNotEmpty) {
+        await prefs.setString(_keyTinyUrl, tinyUrl.trim());
+      } else {
+        final autoTiny = await shortenWithTinyUrl(cleanWeb);
+        await prefs.setString(_keyTinyUrl, autoTiny);
+      }
+    } catch (e) {
+      debugPrint('Error updating website links: $e');
     }
   }
 
