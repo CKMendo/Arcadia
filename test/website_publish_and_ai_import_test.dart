@@ -254,6 +254,16 @@ Neal P 4 3 5 4 4 3 5 4 4 4 3 5 4 4 3 5 4 4
       expect(await AppSettingsService.getTinyUrl(), 'https://tinyurl.com/customarcadia');
     });
 
+    test('AppSettingsService automatically purges legacy chatgpt.site or trycloudflare URLs', () async {
+      SharedPreferences.setMockInitialValues({
+        'website_url': 'https://arcadia-golf-trip.ckm-endo.chatgpt.site',
+        'tiny_url': 'https://tinyurl.com/2xnkqbrx',
+      });
+
+      expect(await AppSettingsService.getWebsiteUrl(), AppSettingsService.defaultWebsiteUrl);
+      expect(await AppSettingsService.getTinyUrl(), AppSettingsService.defaultTinyUrl);
+    });
+
     testWidgets('EditWebsiteLinksDialog renders editable fields and saves custom URLs', (tester) async {
       SharedPreferences.setMockInitialValues({
         'website_url': 'https://custom-site.com',

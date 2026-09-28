@@ -103,6 +103,14 @@ class AppSettingsService {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString(_keyWebsiteUrl)?.trim();
       if (saved != null && saved.isNotEmpty) {
+        // Automatically migrate any legacy domains to the current GitHub Pages site
+        if (saved.contains('chatgpt.site') ||
+            saved.contains('trycloudflare.com') ||
+            saved.contains('arcadia-golf-trip')) {
+          await prefs.setString(_keyWebsiteUrl, defaultWebsiteUrl);
+          await prefs.setString(_keyTinyUrl, defaultTinyUrl);
+          return defaultWebsiteUrl;
+        }
         return saved;
       }
     } catch (e) {
@@ -167,6 +175,10 @@ class AppSettingsService {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString(_keyTinyUrl)?.trim();
       if (saved != null && saved.isNotEmpty) {
+        if (saved.contains('2xnkqbrx') || saved.contains('arcadia2026')) {
+          await prefs.setString(_keyTinyUrl, defaultTinyUrl);
+          return defaultTinyUrl;
+        }
         return saved;
       }
     } catch (e) {
