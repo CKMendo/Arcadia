@@ -74,19 +74,26 @@ class PlayerRepository {
     return (_db.delete(_db.players)..where((t) => t.id.equals(id))).go();
   }
 
+  Future<void> updatePlayerPhoto(String id, String? photoPath) async {
+    final player = await getPlayerById(id);
+    if (player != null) {
+      await updatePlayer(player.copyWith(photoPath: Value(photoPath)));
+    }
+  }
+
   Future<void> seedSample8Players() async {
     final existing = await getAllPlayers();
     if (existing.isNotEmpty) return;
 
     final samples = [
-      {'name': 'Neal Patel', 'nick': 'Neal', 'hcp': 5.5, 'tee': 'Blue'},
-      {'name': 'Chet Mehta', 'nick': 'Chet', 'hcp': 8.7, 'tee': 'Blue'},
-      {'name': 'Raudel Sandoval', 'nick': 'Raudel', 'hcp': 12.0, 'tee': 'White'},
-      {'name': 'Vilmer Villaverde', 'nick': 'Vilmer', 'hcp': 16.5, 'tee': 'White'},
-      {'name': 'Sushil Bhakta', 'nick': 'Hany', 'hcp': 6.3, 'tee': 'Blue'},
-      {'name': 'Hiten Amin', 'nick': 'Hiten', 'hcp': 8.2, 'tee': 'Blue'},
-      {'name': 'Hitesh Patel', 'nick': 'Hitesh', 'hcp': 12.8, 'tee': 'White'},
-      {'name': 'Vinodh Rapur', 'nick': 'Vinny', 'hcp': 15.3, 'tee': 'White'},
+      {'name': 'Neal Patel', 'nick': 'Neal', 'hcp': 5.5, 'tee': 'Blue', 'phone': '(248) 555-0142'},
+      {'name': 'Chet Mehta', 'nick': 'Chet', 'hcp': 8.7, 'tee': 'Blue', 'phone': '(313) 555-0188'},
+      {'name': 'Raudel Sandoval', 'nick': 'Raudel', 'hcp': 12.0, 'tee': 'White', 'phone': '(734) 555-0193'},
+      {'name': 'Vilmer Villaverde', 'nick': 'Vilmer', 'hcp': 16.5, 'tee': 'White', 'phone': '(616) 555-0125'},
+      {'name': 'Sushil Bhakta', 'nick': 'Hany', 'hcp': 6.3, 'tee': 'Blue', 'phone': '(248) 555-0177'},
+      {'name': 'Hiten Amin', 'nick': 'Hiten', 'hcp': 8.2, 'tee': 'Blue', 'phone': '(586) 555-0164'},
+      {'name': 'Hitesh Patel', 'nick': 'Hitesh', 'hcp': 12.8, 'tee': 'White', 'phone': '(248) 555-0131'},
+      {'name': 'Vinodh Rapur', 'nick': 'Vinny', 'hcp': 15.3, 'tee': 'White', 'phone': '(734) 555-0159'},
     ];
 
     for (final s in samples) {
@@ -95,6 +102,7 @@ class PlayerRepository {
         nickname: s['nick'] as String,
         handicapIndex: s['hcp'] as double,
         preferredTee: s['tee'] as String,
+        phoneNumber: s['phone'] as String,
       );
     }
   }

@@ -65,121 +65,223 @@ class TripOverviewScreen extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // Hero Trip Card with Large Typography
+              // Hero Photographic Trip Banner with Tournament Crest
               Container(
-                padding: const EdgeInsets.all(22),
+                height: 270,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0F2742), Color(0xFF0A1420)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  border: Border.all(color: AppColors.lakeCyan.withValues(alpha: 0.5), width: 1.5),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.lakeCyan.withValues(alpha: 0.6), width: 1.5),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.35),
-                      blurRadius: 14,
-                      offset: const Offset(0, 4),
+                      color: AppColors.lakeCyan.withValues(alpha: 0.2),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
                     ),
                   ],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.lakeCyan.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppColors.lakeCyan.withValues(alpha: 0.8), width: 1.5),
-                          ),
-                          child: const Text(
-                            'ARCADIA BLUFFS 2026',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1.2,
-                              color: AppColors.lakeCyan,
-                            ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(19),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // High-res Coastal Course Photography
+                      Image.asset(
+                        'assets/images/arcadia_bluffs.jpg',
+                        fit: BoxFit.cover,
+                      ),
+
+                      // Rich Gradient Overlay for Crisp Text Readability
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.black.withValues(alpha: 0.25),
+                              const Color(0xFF07111C).withValues(alpha: 0.85),
+                              const Color(0xFF050D16).withValues(alpha: 0.98),
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            stops: const [0.0, 0.55, 1.0],
                           ),
                         ),
-                        const Icon(Icons.waves, color: AppColors.cyanLight, size: 30),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      tournament?.name ?? 'Arcadia Bluffs Trip',
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.4,
-                        color: Colors.white,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      tournament != null
-                          ? '${dateFormat.format(DateTime.fromMillisecondsSinceEpoch(tournament.startDate))} - ${dateFormat.format(DateTime.fromMillisecondsSinceEpoch(tournament.endDate))}'
-                          : 'Set up your trip dates & competition format',
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (tournament != null && tournament.formatType != 'individual') ...[
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppColors.teamA.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: AppColors.teamA, width: 1.5),
+
+                      // Content Layer
+                      Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0C1D2F).withValues(alpha: 0.85),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: AppColors.lakeCyan.withValues(alpha: 0.8), width: 1.5),
+                                  ),
+                                  child: const Row(
+                                    children: [
+                                      Icon(Icons.location_on, color: AppColors.lakeCyan, size: 16),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'ARCADIA BLUFFS 2026',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 1.2,
+                                          color: AppColors.cyanLight,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                // Tournament Crest Emblem
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: AppColors.duneSand, width: 2),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.6),
+                                        blurRadius: 8,
+                                      ),
+                                    ],
+                                  ),
+                                  child: ClipOval(
+                                    child: Image.asset(
+                                      'assets/images/arcadia_cup_crest.jpg',
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            child: Text(
-                              tournament.teamAName,
+                            const Spacer(),
+
+                            Text(
+                              tournament?.name ?? 'Arcadia Coastal Cup',
                               style: const TextStyle(
-                                color: AppColors.teamA,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
+                                fontSize: 30,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.4,
+                                color: Colors.white,
+                                shadows: [
+                                  Shadow(color: Colors.black, blurRadius: 10, offset: Offset(0, 2)),
+                                ],
                               ),
                             ),
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 12.0),
-                            child: Text(
-                              'vs',
-                              style: TextStyle(color: Colors.white70, fontSize: 18, fontWeight: FontWeight.bold),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(Icons.calendar_month, color: AppColors.duneSand, size: 18),
+                                const SizedBox(width: 6),
+                                Text(
+                                  tournament != null
+                                      ? '${dateFormat.format(DateTime.fromMillisecondsSinceEpoch(tournament.startDate))} - ${dateFormat.format(DateTime.fromMillisecondsSinceEpoch(tournament.endDate))}'
+                                      : 'Set up your trip dates & competition format',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppColors.teamB.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: AppColors.teamB, width: 1.5),
-                            ),
-                            child: Text(
-                              tournament.teamBName,
-                              style: const TextStyle(
-                                color: AppColors.teamB,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
+                            if (tournament != null && tournament.formatType != 'individual') ...[
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.teamA.withValues(alpha: 0.35),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: AppColors.teamA, width: 1.5),
+                                    ),
+                                    child: Text(
+                                      tournament.teamAName,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ),
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 10.0),
+                                    child: Text(
+                                      'VS',
+                                      style: TextStyle(color: AppColors.duneSand, fontSize: 16, fontWeight: FontWeight.w900),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.teamB.withValues(alpha: 0.35),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: AppColors.teamB, width: 1.5),
+                                    ),
+                                    child: Text(
+                                      tournament.teamBName,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ),
-                        ],
+                            ],
+                          ],
+                        ),
                       ),
                     ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Coastal Live Conditions Bar
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.cardBorder),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.air, color: AppColors.lakeCyan, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Bluffs Wind: 14 mph NW',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Icon(Icons.wb_sunny_outlined, color: AppColors.duneSand, size: 18),
+                        SizedBox(width: 6),
+                        Text(
+                          '71°F • Lake Michigan',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.duneLight),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),

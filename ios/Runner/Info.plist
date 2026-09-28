@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Arcadia requires camera access to capture player headshot photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Arcadia requires photo library access to choose player headshots.</string>
 </dict>
 </plist>

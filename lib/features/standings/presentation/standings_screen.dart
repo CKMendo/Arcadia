@@ -101,6 +101,67 @@ class _StandingsScreenState extends State<StandingsScreen> {
 
           return Column(
             children: [
+              // Championship Graphical Header Banner
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0B192A),
+                  border: const Border(
+                    bottom: BorderSide(color: AppColors.cardBorder, width: 1.2),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.duneSand, width: 1.8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.duneSand.withValues(alpha: 0.2),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/arcadia_cup_crest.jpg',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'ARCADIA COASTAL CUP',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                              color: AppColors.cyanLight,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Official Trip Standings • ${rounds.length} Round${rounds.length == 1 ? '' : 's'} Scored',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: AppColors.duneSand,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
               // Segmented Filter with Extra Large Chips
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

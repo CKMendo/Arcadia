@@ -129,46 +129,116 @@ class CoursesScreen extends StatelessWidget {
                 future: courseRepository.getCourseDetails(course.id),
                 builder: (context, detailsSnap) {
                   final details = detailsSnap.data;
+                  final imagePath = course.name.toLowerCase().contains('south')
+                      ? 'assets/images/arcadia_south.jpg'
+                      : 'assets/images/arcadia_bluffs.jpg';
+
                   return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                    child: ExpansionTile(
-                      shape: const Border(),
-                      leading: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.lakeDeep.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.cardBorder),
-                        ),
-                        child: const Icon(Icons.golf_course, color: AppColors.lakeCyan, size: 28),
-                      ),
-                      title: Text(
-                        course.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 22,
-                          color: Colors.white,
-                        ),
-                      ),
-                      subtitle: Padding(
-                        padding: const EdgeInsets.only(top: 4.0),
-                        child: Text(
-                          '${course.city}, ${course.state} • ${course.holeCount} Holes'
-                          '${details != null ? ' • Par ${details.totalPar}' : ''}',
-                          style: const TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline,
-                                color: Colors.redAccent, size: 26),
-                            onPressed: () => _confirmDelete(context, course),
-                          ),
-                        ],
-                      ),
+                    margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                    clipBehavior: Clip.antiAlias,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      side: const BorderSide(color: AppColors.cardBorder, width: 1.5),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        // Course Photo Hero Banner
+                        SizedBox(
+                          height: 160,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.asset(
+                                imagePath,
+                                fit: BoxFit.cover,
+                              ),
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.transparent,
+                                      Colors.black.withValues(alpha: 0.4),
+                                      const Color(0xFF0A1420).withValues(alpha: 0.95),
+                                    ],
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    stops: const [0.0, 0.45, 1.0],
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                top: 12,
+                                right: 12,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0A1420).withValues(alpha: 0.8),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppColors.lakeCyan.withValues(alpha: 0.6)),
+                                  ),
+                                  child: Text(
+                                    '${course.holeCount} Holes${details != null ? ' • Par ${details.totalPar}' : ''}',
+                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.cyanLight),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 12,
+                                left: 16,
+                                right: 16,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      course.name,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 24,
+                                        color: Colors.white,
+                                        letterSpacing: 0.3,
+                                        shadows: [
+                                          Shadow(color: Colors.black, blurRadius: 6),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${course.city}, ${course.state} • Coastal Championship Links',
+                                      style: const TextStyle(color: AppColors.duneSand, fontSize: 14, fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Action Bar & Tees Expansion
+                        ExpansionTile(
+                          shape: const Border(),
+                          initiallyExpanded: true,
+                          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                          title: const Text(
+                            'Course Tees & Ratings',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.cyanLight),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined, color: AppColors.lakeCyan, size: 24),
+                                tooltip: 'Edit Course',
+                                onPressed: () => _openCourseEditor(context, course: course),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 24),
+                                tooltip: 'Delete Course',
+                                onPressed: () => _confirmDelete(context, course),
+                              ),
+                            ],
+                          ),
+                          children: [
                         if (details != null && details.teeBoxes.isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
@@ -251,9 +321,11 @@ class CoursesScreen extends StatelessWidget {
                           ),
                       ],
                     ),
-                  );
-                },
+                  ],
+                ),
               );
+            },
+          );
             },
           );
         },

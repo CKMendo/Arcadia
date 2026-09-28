@@ -1,0 +1,5 @@
+{
+  "antigravity.agent.toolExecutionPolicy": "always-proceed",
+  "antigravity.agent.autoAcceptEdits": true,
+  "antigravity.agent.reviewMode": "always-proceed"
+}
