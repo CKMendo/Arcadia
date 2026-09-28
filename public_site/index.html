@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arcadia Cup 2026 — Official Tournament Summary & Live Standings</title>
+  <meta name="description" content="Live summary, cumulative standings, tee time pairings, and birdie pot breakdown for the 2026 Arcadia Bluffs Golf Trip.">
+  <link rel="icon" type="image/jpeg" href="assets/arcadia_cup_crest.jpg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- TOP LIVE STATUS BAR -->
+  <header class="live-bar">
+    <div class="live-indicator">
+      <span class="pulse-dot"></span>
+      <span>Live Tournament</span>
+      <span id="lastUpdated" style="color: var(--text-muted); font-weight: normal; margin-left: 6px;">Connecting...</span>
+    </div>
+    <button class="refresh-btn" id="refreshBtn" type="button">
+      <span id="refreshIcon">↻</span>
+      <span id="refreshText">REFRESH LIVE RESULTS</span>
+      <span id="countdownLabel" style="opacity: 0.7;">(15s)</span>
+    </button>
+  </header>
+
+  <!-- HERO SECTION WITH PROMINENT LOGO -->
+  <section class="hero">
+    <img src="assets/arcadia_bluffs.jpg" alt="Arcadia Bluffs Golf Club" class="hero-backdrop-img">
+    <div class="hero-content">
+      <div class="hero-logo-wrap">
+        <img src="assets/arcadia_cup_crest.jpg" alt="Arcadia Cup Crest" class="hero-logo">
+      </div>
+      <h1 class="hero-title">ARCADIA CUP 2026</h1>
+      <p class="hero-subtitle">Official Tournament Summary & Live Standings</p>
+      <div class="hero-meta">
+        <span>📍 Arcadia Bluffs (The Bluffs & The South Course)</span>
+        <span>📅 June 7 – June 12, 2027</span>
+        <span>⛳ 8-Player Invitational</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- HIGHLY VISIBLE BIRDIE POT BALANCES (CLICKABLE FOR BREAKDOWN) -->
+  <section class="birdie-banner" aria-label="Birdie Pot Stakes">
+    <div class="birdie-grid" id="birdiePotsGrid">
+      <!-- Injected by app.js: Course Pots + Grand Cumulative Trip Pot -->
+    </div>
+  </section>
+
+  <!-- NAVIGATION TABS -->
+  <nav class="nav-container" aria-label="Summary Navigation">
+    <div class="nav-tabs">
+      <button class="tab-btn active" data-tab="standings" type="button">Standings</button>
+      <button class="tab-btn" data-tab="pairings" type="button">Pairings & Tee Times</button>
+      <button class="tab-btn" data-tab="ledger" type="button">Birdie Pot Ledger</button>
+      <button class="tab-btn" data-tab="rules" type="button">Tournament Rules</button>
+    </div>
+  </nav>
+
+  <!-- MAIN TAB CONTENT AREA -->
+  <main class="main-wrapper" id="tabContent">
+    <!-- Dynamic content rendered by app.js based on active tab -->
+  </main>
+
+  <!-- INTERACTIVE MODAL OVERLAY FOR PLAYER / POT BREAKDOWN -->
+  <div id="modalContainer"></div>
+
+  <!-- SCRIPT -->
+  <script src="app.js"></script>
+</body>
+</html>

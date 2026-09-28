@@ -1,0 +1,354 @@
+{
+  "leagueName": "Arcadia Cup 2026",
+  "publishedAt": "2026-06-08T14:30:00Z",
+  "isLive": true,
+  "tournament": {
+    "id": "arcadia_2026",
+    "name": "Arcadia Cup 2026",
+    "dates": "June 7 - June 12, 2027",
+    "venue": "Arcadia Bluffs Golf Club",
+    "courses": [
+      {
+        "id": "the_bluffs",
+        "name": "The Bluffs Course",
+        "par": 72,
+        "rating": 74.2,
+        "slope": 140,
+        "yardage": 6815
+      },
+      {
+        "id": "the_south",
+        "name": "The South Course",
+        "par": 72,
+        "rating": 73.1,
+        "slope": 134,
+        "yardage": 6780
+      }
+    ],
+    "roster": [
+      {"id": "p1", "name": "Neal Patel", "nickname": "Neal", "handicapIndex": 5.5, "phone": "(248) 555-0142", "tee": "Blue", "photo": "assets/arcadia_icon.png"},
+      {"id": "p2", "name": "Chet Mehta", "nickname": "Chet", "handicapIndex": 8.7, "phone": "(313) 555-0188", "tee": "Blue", "photo": "assets/user_logo.jpg"},
+      {"id": "p3", "name": "Raudel Sandoval", "nickname": "Raudel", "handicapIndex": 12.0, "phone": "(734) 555-0193", "tee": "White", "photo": "assets/arcadia_icon.png"},
+      {"id": "p4", "name": "Vilmer Villaverde", "nickname": "Vilmer", "handicapIndex": 16.5, "phone": "(616) 555-0125", "tee": "White", "photo": "assets/arcadia_icon.png"},
+      {"id": "p5", "name": "Sushil Bhakta", "nickname": "Hany", "handicapIndex": 6.3, "phone": "(248) 555-0177", "tee": "Blue", "photo": "assets/arcadia_icon.png"},
+      {"id": "p6", "name": "Hiten Amin", "nickname": "Hiten", "handicapIndex": 8.2, "phone": "(586) 555-0164", "tee": "Blue", "photo": "assets/arcadia_icon.png"},
+      {"id": "p7", "name": "Hitesh Patel", "nickname": "Hitesh", "handicapIndex": 12.8, "phone": "(248) 555-0131", "tee": "White", "photo": "assets/arcadia_icon.png"},
+      {"id": "p8", "name": "Vinodh Rapur", "nickname": "Vinny", "handicapIndex": 15.3, "phone": "(734) 555-0159", "tee": "White", "photo": "assets/arcadia_icon.png"}
+    ]
+  },
+  "birdiePots": {
+    "totalBirdies": 18,
+    "entryPerBirdie": 2.0,
+    "roundPotContribution": 1.0,
+    "tripPotContribution": 1.0,
+    "cumulativeTripPot": 144.0,
+    "coursePots": [
+      {
+        "id": "cp_bluffs",
+        "courseName": "The Bluffs Course",
+        "roundNumber": 1,
+        "roundPot": 80.0,
+        "birdieCount": 10,
+        "lastBirdieHole": 17,
+        "lastBirdieGolfers": ["Chet Mehta"],
+        "isAwarded": true,
+        "winnerPayout": 80.0
+      },
+      {
+        "id": "cp_south",
+        "courseName": "The South Course",
+        "roundNumber": 2,
+        "roundPot": 64.0,
+        "birdieCount": 8,
+        "lastBirdieHole": 16,
+        "lastBirdieGolfers": ["Sushil Bhakta"],
+        "isAwarded": false,
+        "winnerPayout": 64.0
+      }
+    ],
+    "birdieEvents": [
+      {"round": 1, "course": "The Bluffs Course", "hole": 3, "golfer": "Neal Patel", "par": 4, "score": 3, "time": "9:42 AM"},
+      {"round": 1, "course": "The Bluffs Course", "hole": 5, "golfer": "Chet Mehta", "par": 5, "score": 4, "time": "10:15 AM"},
+      {"round": 1, "course": "The Bluffs Course", "hole": 6, "golfer": "Hiten Amin", "par": 3, "score": 2, "time": "10:30 AM"},
+      {"round": 1, "course": "The Bluffs Course", "hole": 8, "golfer": "Sushil Bhakta", "par": 4, "score": 3, "time": "11:05 AM"},
+      {"round": 1, "course": "The Bluffs Course", "hole": 11, "golfer": "Raudel Sandoval", "par": 4, "score": 3, "time": "12:10 PM"},
+      {"round": 1, "course": "The Bluffs Course", "hole": 12, "golfer": "Neal Patel", "par": 4, "score": 3, "time": "12:28 PM"},
+      {"round": 1, "course": "The Bluffs Course", "hole": 13, "golfer": "Vinodh Rapur", "par": 3, "score": 2, "time": "12:45 PM"},
+      {"round": 1, "course": "The Bluffs Course", "hole": 15, "golfer": "Hitesh Patel", "par": 5, "score": 4, "time": "1:22 PM"},
+      {"round": 1, "course": "The Bluffs Course", "hole": 16, "golfer": "Vilmer Villaverde", "par": 4, "score": 3, "time": "1:40 PM"},
+      {"round": 1, "course": "The Bluffs Course", "hole": 17, "golfer": "Chet Mehta", "par": 3, "score": 2, "time": "1:58 PM", "isRoundWinner": true},
+      {"round": 2, "course": "The South Course", "hole": 2, "golfer": "Neal Patel", "par": 4, "score": 3, "time": "10:05 AM"},
+      {"round": 2, "course": "The South Course", "hole": 4, "golfer": "Hiten Amin", "par": 5, "score": 4, "time": "10:38 AM"},
+      {"round": 2, "course": "The South Course", "hole": 7, "golfer": "Chet Mehta", "par": 3, "score": 2, "time": "11:22 AM"},
+      {"round": 2, "course": "The South Course", "hole": 9, "golfer": "Raudel Sandoval", "par": 4, "score": 3, "time": "11:55 AM"},
+      {"round": 2, "course": "The South Course", "hole": 11, "golfer": "Hitesh Patel", "par": 4, "score": 3, "time": "12:35 PM"},
+      {"round": 2, "course": "The South Course", "hole": 13, "golfer": "Neal Patel", "par": 3, "score": 2, "time": "1:08 PM"},
+      {"round": 2, "course": "The South Course", "hole": 14, "golfer": "Vilmer Villaverde", "par": 5, "score": 4, "time": "1:28 PM"},
+      {"round": 2, "course": "The South Course", "hole": 16, "golfer": "Sushil Bhakta", "par": 4, "score": 3, "time": "2:02 PM", "isRoundWinner": true, "isTripLeader": true}
+    ],
+    "playerLedger": [
+      {"playerId": "p1", "name": "Neal Patel", "birdiesMade": 4, "totalDues": 36.0, "potsWon": 0.0, "netBalance": -36.0},
+      {"playerId": "p2", "name": "Chet Mehta", "birdiesMade": 3, "totalDues": 36.0, "potsWon": 80.0, "netBalance": 44.0},
+      {"playerId": "p3", "name": "Raudel Sandoval", "birdiesMade": 2, "totalDues": 36.0, "potsWon": 0.0, "netBalance": -36.0},
+      {"playerId": "p4", "name": "Vilmer Villaverde", "birdiesMade": 2, "totalDues": 36.0, "potsWon": 0.0, "netBalance": -36.0},
+      {"playerId": "p5", "name": "Sushil Bhakta", "nickname": "Hany", "birdiesMade": 2, "totalDues": 36.0, "potsWon": 64.0, "netBalance": 28.0},
+      {"playerId": "p6", "name": "Hiten Amin", "birdiesMade": 2, "totalDues": 36.0, "potsWon": 0.0, "netBalance": -36.0},
+      {"playerId": "p7", "name": "Hitesh Patel", "birdiesMade": 2, "totalDues": 36.0, "potsWon": 0.0, "netBalance": -36.0},
+      {"playerId": "p8", "name": "Vinodh Rapur", "nickname": "Vinny", "birdiesMade": 1, "totalDues": 36.0, "potsWon": 0.0, "netBalance": -36.0}
+    ]
+  },
+  "standings": [
+    {
+      "rank": 1,
+      "seed": "Seed #1 Captain",
+      "playerId": "p2",
+      "name": "Chet Mehta",
+      "nickname": "Chet",
+      "handicapIndex": 8.7,
+      "roundsPlayed": 2,
+      "totalPoints": 88,
+      "birdies": 3,
+      "grossAvg": 77.5,
+      "netAvg": 69.5,
+      "partnerHistory": ["Vilmer Villaverde (R1 - 44 pts)", "Vinodh Rapur (R2 - 44 pts)"],
+      "contributionPct": 61,
+      "roundPoints": [44, 44]
+    },
+    {
+      "rank": 2,
+      "seed": "Seed #2 Captain",
+      "playerId": "p1",
+      "name": "Neal Patel",
+      "nickname": "Neal",
+      "handicapIndex": 5.5,
+      "roundsPlayed": 2,
+      "totalPoints": 86,
+      "birdies": 4,
+      "grossAvg": 75.0,
+      "netAvg": 70.0,
+      "partnerHistory": ["Vilmer Villaverde (R1 - 44 pts)", "Hiten Amin (R2 - 42 pts)"],
+      "contributionPct": 56,
+      "roundPoints": [44, 42]
+    },
+    {
+      "rank": 3,
+      "seed": "Seed #3 Captain",
+      "playerId": "p5",
+      "name": "Sushil Bhakta",
+      "nickname": "Hany",
+      "handicapIndex": 6.3,
+      "roundsPlayed": 2,
+      "totalPoints": 84,
+      "birdies": 2,
+      "grossAvg": 76.5,
+      "netAvg": 71.0,
+      "partnerHistory": ["Vinodh Rapur (R1 - 41 pts)", "Raudel Sandoval (R2 - 43 pts)"],
+      "contributionPct": 53,
+      "roundPoints": [41, 43]
+    },
+    {
+      "rank": 4,
+      "seed": "Seed #4 Captain",
+      "playerId": "p3",
+      "name": "Raudel Sandoval",
+      "nickname": "Raudel",
+      "handicapIndex": 12.0,
+      "roundsPlayed": 2,
+      "totalPoints": 83,
+      "birdies": 2,
+      "grossAvg": 83.0,
+      "netAvg": 71.5,
+      "partnerHistory": ["Chet Mehta (R1 - 40 pts)", "Sushil Bhakta (R2 - 43 pts)"],
+      "contributionPct": 49,
+      "roundPoints": [40, 43]
+    },
+    {
+      "rank": 5,
+      "seed": "Draft Pool #5",
+      "playerId": "p6",
+      "name": "Hiten Amin",
+      "nickname": "Hiten",
+      "handicapIndex": 8.2,
+      "roundsPlayed": 2,
+      "totalPoints": 82,
+      "birdies": 2,
+      "grossAvg": 80.0,
+      "netAvg": 72.5,
+      "partnerHistory": ["Hitesh Patel (R1 - 40 pts)", "Neal Patel (R2 - 42 pts)"],
+      "contributionPct": 48,
+      "roundPoints": [40, 42]
+    },
+    {
+      "rank": 6,
+      "seed": "Draft Pool #6",
+      "playerId": "p4",
+      "name": "Vilmer Villaverde",
+      "nickname": "Vilmer",
+      "handicapIndex": 16.5,
+      "roundsPlayed": 2,
+      "totalPoints": 81,
+      "birdies": 2,
+      "grossAvg": 89.0,
+      "netAvg": 72.5,
+      "partnerHistory": ["Neal Patel (R1 - 44 pts)", "Hitesh Patel (R2 - 37 pts)"],
+      "contributionPct": 45,
+      "roundPoints": [44, 37]
+    },
+    {
+      "rank": 7,
+      "seed": "Draft Pool #7",
+      "playerId": "p8",
+      "name": "Vinodh Rapur",
+      "nickname": "Vinny",
+      "handicapIndex": 15.3,
+      "roundsPlayed": 2,
+      "totalPoints": 80,
+      "birdies": 1,
+      "grossAvg": 88.5,
+      "netAvg": 73.0,
+      "partnerHistory": ["Sushil Bhakta (R1 - 41 pts)", "Chet Mehta (R2 - 44 pts)"],
+      "contributionPct": 44,
+      "roundPoints": [41, 44]
+    },
+    {
+      "rank": 8,
+      "seed": "Draft Pool #8",
+      "playerId": "p7",
+      "name": "Hitesh Patel",
+      "nickname": "Hitesh",
+      "handicapIndex": 12.8,
+      "roundsPlayed": 2,
+      "totalPoints": 77,
+      "birdies": 2,
+      "grossAvg": 86.5,
+      "netAvg": 74.0,
+      "partnerHistory": ["Hiten Amin (R1 - 40 pts)", "Vilmer Villaverde (R2 - 37 pts)"],
+      "contributionPct": 42,
+      "roundPoints": [40, 37]
+    }
+  ],
+  "pairings": [
+    {
+      "roundNumber": 1,
+      "title": "Round 1 — The Bluffs Course",
+      "courseName": "Arcadia Bluffs (The Bluffs)",
+      "date": "Monday, June 7, 2027",
+      "format": "2-Man Best Ball Net Stableford",
+      "groups": [
+        {
+          "groupNumber": 1,
+          "teeTime": "9:00 AM",
+          "teamA": {"name": "Team 1", "players": ["Neal Patel", "Vilmer Villaverde"], "score": 44},
+          "teamB": {"name": "Team 2", "players": ["Chet Mehta", "Raudel Sandoval"], "score": 40}
+        },
+        {
+          "groupNumber": 2,
+          "teeTime": "9:15 AM",
+          "teamA": {"name": "Team 3", "players": ["Sushil Bhakta", "Vinodh Rapur"], "score": 41},
+          "teamB": {"name": "Team 4", "players": ["Hiten Amin", "Hitesh Patel"], "score": 40}
+        }
+      ]
+    },
+    {
+      "roundNumber": 2,
+      "title": "Round 2 — The South Course",
+      "courseName": "Arcadia Bluffs (The South)",
+      "date": "Tuesday, June 8, 2027",
+      "format": "2-Man Best Ball Net Stableford",
+      "groups": [
+        {
+          "groupNumber": 1,
+          "teeTime": "9:30 AM",
+          "teamA": {"name": "Team 1", "players": ["Neal Patel", "Hiten Amin"], "score": 42},
+          "teamB": {"name": "Team 2", "players": ["Sushil Bhakta", "Raudel Sandoval"], "score": 43}
+        },
+        {
+          "groupNumber": 2,
+          "teeTime": "9:45 AM",
+          "teamA": {"name": "Team 3", "players": ["Chet Mehta", "Vinodh Rapur"], "score": 44},
+          "teamB": {"name": "Team 4", "players": ["Vilmer Villaverde", "Hitesh Patel"], "score": 37}
+        }
+      ]
+    },
+    {
+      "roundNumber": 3,
+      "title": "Round 3 — The Bluffs Course",
+      "courseName": "Arcadia Bluffs (The Bluffs)",
+      "date": "Wednesday, June 9, 2027",
+      "format": "2-Man Best Ball Net Stableford",
+      "groups": [
+        {
+          "groupNumber": 1,
+          "teeTime": "9:00 AM",
+          "teamA": {"name": "Team 1", "players": ["Neal Patel", "Vinodh Rapur"], "score": null},
+          "teamB": {"name": "Team 2", "players": ["Chet Mehta", "Hitesh Patel"], "score": null}
+        },
+        {
+          "groupNumber": 2,
+          "teeTime": "9:15 AM",
+          "teamA": {"name": "Team 3", "players": ["Sushil Bhakta", "Vilmer Villaverde"], "score": null},
+          "teamB": {"name": "Team 4", "players": ["Raudel Sandoval", "Hiten Amin"], "score": null}
+        }
+      ]
+    },
+    {
+      "roundNumber": 4,
+      "title": "Round 4 — Championship Final",
+      "courseName": "Arcadia Bluffs (Championship)",
+      "date": "Thursday, June 10, 2027",
+      "format": "Final Round Modified Stableford (-1 Double Bogey penalty)",
+      "isFinalDraft": true,
+      "banner": "TBD BEFORE FINAL ROUND",
+      "bannerSub": "Final 2-man teams will be selected on the trip via the Championship Draft following Round 3 standings!",
+      "draftRules": [
+        "#1 Seed Captain picks first from #5, #6, #7, or #8",
+        "#2 Seed Captain picks next from remaining 3 players",
+        "#3 Seed Captain picks next from remaining 2 players",
+        "#4 Seed Captain is paired with final remaining player"
+      ],
+      "groups": [
+        {
+          "groupNumber": 1,
+          "teeTime": "9:30 AM",
+          "flight": "Championship Flight",
+          "teamA": {"name": "Team 1", "captain": "Seed #1 Captain (Chet Mehta)", "partner": "Draft Pick (TBD from #5–#8)", "score": null},
+          "teamB": {"name": "Team 4", "captain": "Seed #4 Captain (Raudel Sandoval)", "partner": "Draft Pick (TBD Final Remaining)", "score": null}
+        },
+        {
+          "groupNumber": 2,
+          "teeTime": "9:45 AM",
+          "flight": "Consolation Flight",
+          "teamA": {"name": "Team 2", "captain": "Seed #2 Captain (Neal Patel)", "partner": "Draft Pick (TBD from #5–#8)", "score": null},
+          "teamB": {"name": "Team 3", "captain": "Seed #3 Captain (Sushil Bhakta)", "partner": "Draft Pick (TBD from #5–#8)", "score": null}
+        }
+      ]
+    }
+  ],
+  "sampleScorecards": {
+    "p2": {
+      "course": "The Bluffs Course (Round 1)",
+      "front9": [
+        {"hole": 1, "par": 5, "gross": 5, "net": 4, "strokes": 1, "points": 3, "birdie": false, "counted": true},
+        {"hole": 2, "par": 4, "gross": 4, "net": 4, "strokes": 0, "points": 2, "birdie": false, "counted": true},
+        {"hole": 3, "par": 4, "gross": 5, "net": 4, "strokes": 1, "points": 2, "birdie": false, "counted": false},
+        {"hole": 4, "par": 3, "gross": 3, "net": 3, "strokes": 0, "points": 2, "birdie": false, "counted": true},
+        {"hole": 5, "par": 5, "gross": 4, "net": 3, "strokes": 1, "points": 4, "birdie": true, "counted": true},
+        {"hole": 6, "par": 3, "gross": 4, "net": 4, "strokes": 0, "points": 1, "birdie": false, "counted": false},
+        {"hole": 7, "par": 4, "gross": 4, "net": 3, "strokes": 1, "points": 3, "birdie": false, "counted": true},
+        {"hole": 8, "par": 4, "gross": 4, "net": 4, "strokes": 0, "points": 2, "birdie": false, "counted": true},
+        {"hole": 9, "par": 4, "gross": 5, "net": 4, "strokes": 1, "points": 2, "birdie": false, "counted": true}
+      ],
+      "back9": [
+        {"hole": 10, "par": 5, "gross": 5, "net": 4, "strokes": 1, "points": 3, "birdie": false, "counted": true},
+        {"hole": 11, "par": 4, "gross": 4, "net": 4, "strokes": 0, "points": 2, "birdie": false, "counted": false},
+        {"hole": 12, "par": 4, "gross": 4, "net": 3, "strokes": 1, "points": 3, "birdie": false, "counted": true},
+        {"hole": 13, "par": 3, "gross": 3, "net": 3, "strokes": 0, "points": 2, "birdie": false, "counted": true},
+        {"hole": 14, "par": 4, "gross": 5, "net": 4, "strokes": 1, "points": 2, "birdie": false, "counted": false},
+        {"hole": 15, "par": 5, "gross": 5, "net": 4, "strokes": 1, "points": 3, "birdie": false, "counted": true},
+        {"hole": 16, "par": 4, "gross": 4, "net": 4, "strokes": 0, "points": 2, "birdie": false, "counted": false},
+        {"hole": 17, "par": 3, "gross": 2, "net": 2, "strokes": 0, "points": 3, "birdie": true, "counted": true},
+        {"hole": 18, "par": 4, "gross": 5, "net": 4, "strokes": 1, "points": 2, "birdie": false, "counted": true}
+      ]
+    }
+  }
+}

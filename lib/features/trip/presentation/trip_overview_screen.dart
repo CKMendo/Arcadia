@@ -69,7 +69,7 @@ class TripOverviewScreen extends StatelessWidget {
             children: [
               // Hero Photographic Trip Banner with Tournament Crest
               Container(
-                height: 270,
+                height: 295,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: AppColors.lakeCyan.withValues(alpha: 0.6), width: 1.5),
@@ -116,6 +116,7 @@ class TripOverviewScreen extends StatelessWidget {
                           children: [
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(
@@ -144,17 +145,23 @@ class TripOverviewScreen extends StatelessWidget {
                                   ),
                                 ),
 
-                                // Tournament Crest Emblem
+                                // Large Prominent Tournament Crest Emblem
                                 Container(
-                                  width: 48,
-                                  height: 48,
+                                  width: 82,
+                                  height: 82,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: AppColors.duneSand, width: 2),
+                                    border: Border.all(color: AppColors.duneSand, width: 2.8),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.6),
-                                        blurRadius: 8,
+                                        color: AppColors.duneSand.withValues(alpha: 0.45),
+                                        blurRadius: 16,
+                                        spreadRadius: 2,
+                                      ),
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.8),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
                                       ),
                                     ],
                                   ),
