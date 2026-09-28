@@ -45,7 +45,7 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
     super.initState();
     final t = widget.tournament;
     _nameController = TextEditingController(
-      text: t?.name ?? 'Arcadia Bluffs Trip 2026',
+      text: t?.name ?? 'Arcadia Bluffs Trip 2027',
     );
     _teamAController = TextEditingController(text: t?.teamAName ?? 'Team Lake');
     _teamBController = TextEditingController(text: t?.teamBName ?? 'Team Bluff');
@@ -194,7 +194,7 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                             decoration: const InputDecoration(
                               labelText: 'Trip / Event Name *',
                               labelStyle: TextStyle(fontSize: 17),
-                              hintText: 'e.g. Arcadia Bluffs Cup 2026',
+                              hintText: 'e.g. Arcadia Bluffs Cup 2027',
                               prefixIcon:
                                   Icon(Icons.emoji_events, color: AppColors.duneSand, size: 26),
                             ),
@@ -643,7 +643,7 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                                       ),
                                       SizedBox(height: 2),
                                       Text(
-                                        'arcadia-golf-trip.ckm-endo.chatgpt.site\nShort link: tinyurl.com/2xnkqbrx',
+                                        'ckmendo.github.io/Arcadia\nShort link: tinyurl.com/arcadia2027',
                                         style: TextStyle(
                                           color: AppColors.cyanLight,
                                           fontSize: 12,

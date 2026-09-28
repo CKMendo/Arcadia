@@ -27,6 +27,7 @@ void main() {
   late RoundRepository roundRepo;
 
   setUp(() async {
+    SharedPreferences.setMockInitialValues({});
     db = AppDatabase(NativeDatabase.memory());
     playerRepo = PlayerRepository(db);
     courseRepo = CourseRepository(db);

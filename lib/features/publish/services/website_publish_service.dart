@@ -7,6 +7,7 @@ import '../../players/repository/player_repository.dart';
 import '../../rounds/models/active_round_session.dart';
 import '../../rounds/repository/round_repository.dart';
 import '../../tournaments/repository/tournament_repository.dart';
+import '../../../shared/services/app_settings_service.dart';
 
 class PublishResult {
   final bool success;
@@ -21,7 +22,7 @@ class PublishResult {
 }
 
 class WebsitePublishService {
-  static const String publicSiteUrl = 'https://arcadia-golf-trip.ckm-endo.chatgpt.site';
+  static const String publicSiteUrl = 'https://ckmendo.github.io/Arcadia';
   static const String apiEndpoint = '$publicSiteUrl/api/publication';
 
   /// Publishes the complete, latest tournament state to the public website.
@@ -62,14 +63,20 @@ class WebsitePublishService {
         if (await localFile.exists()) {
           await localFile.writeAsString(encoded, flush: true);
         }
+        final docsFile = File('docs/tournament_data.json');
+        if (await docsFile.exists()) {
+          await docsFile.writeAsString(encoded, flush: true);
+        }
       } catch (_) {}
 
       // 2. HTTP POST to /api/publication endpoint
       bool webSuccess = false;
       String webMessage = '';
       try {
+        final currentWebUrl = await AppSettingsService.getWebsiteUrl();
+        final endpoint = '$currentWebUrl/api/publication';
         final response = await http.post(
-          Uri.parse(apiEndpoint),
+          Uri.parse(endpoint),
           headers: {'Content-Type': 'application/json'},
           body: encoded,
         ).timeout(const Duration(seconds: 12));
@@ -272,12 +279,12 @@ class WebsitePublishService {
     }
 
     return {
-      'leagueName': 'Arcadia Cup 2026',
+      'leagueName': 'Arcadia Cup 2027',
       'publishedAt': now.toIso8601String(),
       'isLive': sessions.isNotEmpty,
       'tournament': {
-        'id': tournament?.id ?? 'arcadia_2026',
-        'name': tournament?.name ?? 'Arcadia Cup 2026',
+        'id': tournament?.id ?? 'arcadia_2027',
+        'name': tournament?.name ?? 'Arcadia Cup 2027',
         'dates': 'June 7 - June 12, 2027',
         'venue': 'Arcadia Bluffs Golf Club',
         'courses': courses.map((c) => {

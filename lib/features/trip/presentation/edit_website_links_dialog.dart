@@ -160,7 +160,7 @@ class _EditWebsiteLinksDialogState extends State<EditWebsiteLinksDialog> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Enter any custom tinyurl.com link you created (e.g. https://tinyurl.com/arcadia2026)',
+                      'Enter any custom tinyurl.com link you created (e.g. https://tinyurl.com/arcadia2027)',
                       style: TextStyle(color: Colors.white60, fontSize: 11.5),
                     ),
                     const SizedBox(height: 6),

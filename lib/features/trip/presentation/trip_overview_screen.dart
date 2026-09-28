@@ -188,7 +188,7 @@ class TripOverviewScreen extends StatelessWidget {
                                       Icon(Icons.location_on, color: AppColors.lakeCyan, size: 16),
                                       SizedBox(width: 4),
                                       Text(
-                                        'ARCADIA BLUFFS 2026',
+                                        'ARCADIA BLUFFS 2027',
                                         style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w900,
@@ -971,8 +971,8 @@ class _WebsiteSummaryCardState extends State<_WebsiteSummaryCard> {
                       onPressed: () {
                         final shareUrl = tinyUrl.isNotEmpty ? tinyUrl : webUrl;
                         Share.share(
-                          'Arcadia Bluffs Trip 2026 Live Standings & Tournament Summary:\n$shareUrl',
-                          subject: 'Arcadia Bluffs Trip 2026 Standings',
+                          'Arcadia Bluffs Trip 2027 Live Standings & Tournament Summary:\n$shareUrl',
+                          subject: 'Arcadia Bluffs Trip 2027 Standings',
                         );
                       },
                     ),

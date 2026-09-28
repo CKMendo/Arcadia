@@ -9,8 +9,8 @@ class AppSettingsService {
   static const String _keyTinyUrl = 'tiny_url';
 
   static const String defaultWebsiteUrl =
-      'https://staying-commercial-steven-ins.trycloudflare.com';
-  static const String defaultTinyUrl = 'https://tinyurl.com/arcadia2026';
+      'https://ckmendo.github.io/Arcadia/';
+  static const String defaultTinyUrl = 'https://tinyurl.com/arcadia2027';
 
   static const String _keyGeminiSecondaryApiKey = 'gemini_secondary_api_key';
 

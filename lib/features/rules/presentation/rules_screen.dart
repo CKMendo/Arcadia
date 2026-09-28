@@ -649,7 +649,7 @@ class RulesScreen extends StatelessWidget {
     if (players.isEmpty) {
       Share.share(
         _officialRulesSummaryText,
-        subject: '🏌️ Arcadia Cup 2026 – Official Tournament Rules',
+        subject: '🏌️ Arcadia Cup 2027 – Official Tournament Rules',
       );
       return;
     }
@@ -868,7 +868,7 @@ class RulesScreen extends StatelessWidget {
                   Navigator.of(dialogCtx).pop();
                   Share.share(
                     _officialRulesSummaryText,
-                    subject: '🏌️ Arcadia Cup 2026 – Official Tournament Rules',
+                    subject: '🏌️ Arcadia Cup 2027 – Official Tournament Rules',
                   );
                 },
               ),
@@ -917,7 +917,7 @@ class RulesScreen extends StatelessWidget {
     );
   }
 
-  static const String _officialRulesSummaryText = '''🏌️ ARCADIA CUP 2026 – OFFICIAL RULES SUMMARY
+  static const String _officialRulesSummaryText = '''🏌️ ARCADIA CUP 2027 – OFFICIAL RULES SUMMARY
 
 🏆 TOURNAMENT FORMAT:
 • 8-Player Invitational at Arcadia Bluffs (The Bluffs & South Course)
@@ -959,8 +959,8 @@ class RulesScreen extends StatelessWidget {
 • Cumulative Pot: Won by the player with the LAST birdie made on the trip!
 
 🌐 Live Tournament Website & Standings:
-https://arcadia-golf-trip.ckm-endo.chatgpt.site
-Short Link: https://tinyurl.com/2xnkqbrx''';
+https://ckmendo.github.io/Arcadia/
+Short Link: https://tinyurl.com/arcadia2027''';
 }
 
 class PointsRow {

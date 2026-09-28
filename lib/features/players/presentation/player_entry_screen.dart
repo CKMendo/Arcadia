@@ -366,7 +366,7 @@ class _PlayerEntryScreenState extends State<PlayerEntryScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'ARCADIA COASTAL CUP 2026',
+                                    'ARCADIA COASTAL CUP 2027',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w900,
