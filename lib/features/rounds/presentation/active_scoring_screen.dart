@@ -231,7 +231,7 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                         final p = sorted[idx];
                         final gross = widget.session.totalGross(p.playerId);
                         final net = widget.session.totalNet(p.playerId);
-                        final pts = widget.session.totalStableford(p.playerId);
+                        final pts = widget.session.effectivePlayerStableford(p.playerId);
                         final skinCount = skins[p.playerId] ?? 0;
                         final completed = widget.session.completedHolesCount(p.playerId);
 
@@ -532,6 +532,53 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                 );
               },
             ),
+          ),
+
+          // Live Birdie Pot Status Bar
+          Builder(
+            builder: (context) {
+              final pot = widget.session.roundBirdiePot();
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF0D1E16),
+                  border: Border(bottom: BorderSide(color: Color(0xFF264734), width: 1)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD4AF37).withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFFD4AF37)),
+                      ),
+                      child: const Text('💰 BIRDIE POT', style: TextStyle(color: Color(0xFFE5C07B), fontWeight: FontWeight.w900, fontSize: 12)),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        pot.hasBirdies
+                            ? '\$${pot.roundPotTotal.toStringAsFixed(0)} Pot • Last: H${pot.lastBirdieHole} (${pot.winnerNames.join(', ')})'
+                            : 'No birdies yet (\$0 in pot) • \$2/birdie per player',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (widget.session.isFinalRound)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent.withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.redAccent, width: 1),
+                        ),
+                        child: const Text('FINAL', style: TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.w900)),
+                      ),
+                  ],
+                ),
+              );
+            },
           ),
 
           // Player Scoring Cards List with Big Touch Targets

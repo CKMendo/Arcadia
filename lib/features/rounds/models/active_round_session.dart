@@ -1,3 +1,4 @@
+import 'birdie_pot_models.dart';
 import 'scoring_calculator.dart';
 
 class PlayerSessionInfo {
@@ -10,6 +11,9 @@ class PlayerSessionInfo {
   final String teeName;
   final int courseHandicap;
   final String teamId; // 'a', 'b', 'none'
+  final int foursomeGroup; // 1 or 2
+  final String twoManTeamId; // 'T1', 'T2', 'T3', 'T4', or 'none'
+  final String? twoManTeamName;
 
   const PlayerSessionInfo({
     required this.playerId,
@@ -21,6 +25,9 @@ class PlayerSessionInfo {
     required this.teeName,
     required this.courseHandicap,
     this.teamId = 'none',
+    this.foursomeGroup = 1,
+    this.twoManTeamId = 'none',
+    this.twoManTeamName,
   });
 
   Map<String, dynamic> toJson() => {
@@ -33,6 +40,9 @@ class PlayerSessionInfo {
         'teeName': teeName,
         'courseHandicap': courseHandicap,
         'teamId': teamId,
+        'foursomeGroup': foursomeGroup,
+        'twoManTeamId': twoManTeamId,
+        'twoManTeamName': twoManTeamName,
       };
 
   factory PlayerSessionInfo.fromJson(Map<String, dynamic> json) =>
@@ -46,6 +56,9 @@ class PlayerSessionInfo {
         teeName: json['teeName'] as String,
         courseHandicap: (json['courseHandicap'] as num).toInt(),
         teamId: json['teamId'] as String? ?? 'none',
+        foursomeGroup: (json['foursomeGroup'] as num?)?.toInt() ?? 1,
+        twoManTeamId: json['twoManTeamId'] as String? ?? json['teamId'] as String? ?? 'none',
+        twoManTeamName: json['twoManTeamName'] as String?,
       );
 }
 
@@ -85,6 +98,7 @@ class ActiveRoundSession {
   final int roundNumber;
   final DateTime datePlayed;
   final String format; // 'stroke', 'stableford', 'hybrid', 'match'
+  final bool isFinalRound; // If true, modified Stableford rules apply (-1 double bogey, 0 bogey, +1 par, +2 birdie)
   final int pointsPerSkin;
   final List<HoleSessionInfo> holes;
   final List<PlayerSessionInfo> players;
@@ -103,6 +117,7 @@ class ActiveRoundSession {
     this.roundNumber = 1,
     DateTime? datePlayed,
     this.format = 'hybrid',
+    this.isFinalRound = false,
     this.pointsPerSkin = 1,
     required this.holes,
     required this.players,
@@ -143,7 +158,6 @@ class ActiveRoundSession {
     if (set.contains(holeNumber)) {
       set.remove(holeNumber);
     } else {
-      // Clear greenie from other players on this par 3 hole
       for (final otherP in players) {
         greenies[otherP.playerId]?.remove(holeNumber);
       }
@@ -203,6 +217,7 @@ class ActiveRoundSession {
     return ScoringCalculator.stablefordPoints(
       netScore: net,
       holePar: hole.par,
+      isModifiedFinalRound: isFinalRound,
     );
   }
 
@@ -233,6 +248,62 @@ class ActiveRoundSession {
     return sum;
   }
 
+  // --- 2-MAN TEAM STABLEFORD SCORING ---
+
+  /// Finds all players belonging to a two-man team
+  List<PlayerSessionInfo> playersForTeam(String teamId) {
+    return players
+        .where((p) =>
+            p.twoManTeamId == teamId ||
+            (p.twoManTeamId == 'none' && p.teamId == teamId))
+        .toList();
+  }
+
+  /// Calculates the 2-man team Stableford score for a hole (Best Ball Stableford)
+  int? teamStablefordForHole(String teamId, int holeNumber) {
+    final members = playersForTeam(teamId);
+    if (members.isEmpty) return null;
+
+    int? bestPts;
+    for (final m in members) {
+      final pts = stablefordForPlayer(m.playerId, holeNumber);
+      if (pts != null) {
+        if (bestPts == null || pts > bestPts) {
+          bestPts = pts;
+        }
+      }
+    }
+    return bestPts;
+  }
+
+  /// Calculates total Stableford points for the 2-man team
+  int totalTeamStableford(String teamId) {
+    var sum = 0;
+    for (var h = 1; h <= holeCount; h++) {
+      final pts = teamStablefordForHole(teamId, h);
+      if (pts != null) sum += pts;
+    }
+    return sum;
+  }
+
+  /// Effective Stableford points for this player:
+  /// Under Arcadia rules, if the player is on a 2-man team, each teammate records
+  /// the 2-man team's Stableford score for that round.
+  int effectivePlayerStableford(String playerId) {
+    final p = players.where((x) => x.playerId == playerId).firstOrNull;
+    if (p == null) return 0;
+    final teamId = p.twoManTeamId != 'none' ? p.twoManTeamId : p.teamId;
+    if (teamId != 'none') {
+      return totalTeamStableford(teamId);
+    }
+    return totalStableford(playerId);
+  }
+
+  /// Birdie Pot for this round
+  RoundBirdiePot roundBirdiePot({int totalFieldSize = 8}) {
+    return RoundBirdiePot.calculate(this, totalFieldSize: totalFieldSize);
+  }
+
   int totalPutts(String playerId) {
     var sum = 0;
     for (var h = 1; h <= holeCount; h++) {
@@ -251,64 +322,52 @@ class ActiveRoundSession {
   }
 
   bool isHoleComplete(int holeNumber) {
-    if (players.isEmpty) return false;
-    return players.every((p) => getGrossScore(p.playerId, holeNumber) > 0);
-  }
-
-  bool get isRoundComplete {
-    if (players.isEmpty) return false;
-    for (var h = 1; h <= holeCount; h++) {
-      if (!isHoleComplete(h)) return false;
+    for (final p in players) {
+      if (getGrossScore(p.playerId, holeNumber) <= 0) return false;
     }
     return true;
   }
 
-  Map<int, SkinResult> calculateGrossSkins({bool useCarryover = true}) {
+  bool get isRoundComplete {
+    for (final p in players) {
+      for (var h = 1; h <= holeCount; h++) {
+        if (getGrossScore(p.playerId, h) <= 0) return false;
+      }
+    }
+    return true;
+  }
+
+  Map<String, int> playerSkinsWon({bool netSkins = false}) => totalSkinsByPlayer();
+
+  Map<int, SkinResult> calculateSkins() {
     return ScoringCalculator.calculateSkins(
       holeCount: holeCount,
       playerIds: players.map((p) => p.playerId).toList(),
       scoresByPlayer: grossScores,
-      useCarryover: useCarryover,
+      useCarryover: true,
     );
   }
 
-  Map<int, SkinResult> calculateNetSkins({bool useCarryover = true}) {
-    final netScoresByPlayer = <String, Map<int, int>>{};
-    for (final p in players) {
-      final playerNet = <int, int>{};
-      for (var h = 1; h <= holeCount; h++) {
-        final net = netScoreForPlayer(p.playerId, h);
-        if (net != null) playerNet[h] = net;
-      }
-      netScoresByPlayer[p.playerId] = playerNet;
-    }
-
-    return ScoringCalculator.calculateSkins(
-      holeCount: holeCount,
-      playerIds: players.map((p) => p.playerId).toList(),
-      scoresByPlayer: netScoresByPlayer,
-      useCarryover: useCarryover,
-    );
-  }
-
-  Map<String, int> playerSkinsWon({bool netSkins = false}) {
-    final skins = netSkins ? calculateNetSkins() : calculateGrossSkins();
-    final counts = <String, int>{for (final p in players) p.playerId: 0};
-    for (final s in skins.values) {
-      if (s.hasWinner) {
-        counts[s.winnerPlayerId!] = (counts[s.winnerPlayerId!] ?? 0) + s.skinCount;
+  Map<String, int> totalSkinsByPlayer() {
+    final skins = calculateSkins();
+    final counts = {for (final p in players) p.playerId: 0};
+    for (final skin in skins.values) {
+      if (skin.isComplete && skin.winnerPlayerId != null) {
+        counts[skin.winnerPlayerId!] =
+            (counts[skin.winnerPlayerId!] ?? 0) + skin.skinCount;
       }
     }
     return counts;
   }
 
   Map<String, dynamic> toJson() => {
-        'tournamentId': tournamentId,
+        if (tournamentId != null) 'tournamentId': tournamentId,
         'courseId': courseId,
         'courseName': courseName,
         'roundNumber': roundNumber,
         'datePlayed': datePlayed.toIso8601String(),
         'format': format,
+        'isFinalRound': isFinalRound,
         'pointsPerSkin': pointsPerSkin,
         'currentHoleNumber': currentHoleNumber,
         'holes': holes.map((h) => h.toJson()).toList(),
@@ -386,6 +445,7 @@ class ActiveRoundSession {
       roundNumber: (json['roundNumber'] as num?)?.toInt() ?? 1,
       datePlayed: DateTime.parse(json['datePlayed'] as String),
       format: json['format'] as String? ?? 'hybrid',
+      isFinalRound: json['isFinalRound'] as bool? ?? false,
       pointsPerSkin: (json['pointsPerSkin'] as num?)?.toInt() ?? 1,
       holes: holes,
       players: players,

@@ -41,24 +41,43 @@ class ScoringCalculator {
     return grossScore - strokesReceived;
   }
 
-  /// Calculates standard USGA Stableford points based on net score vs hole par:
+  /// Calculates Stableford points based on net score vs hole par.
+  /// Standard rounds:
   /// - Double Eagle / Albatross (-3): 5
   /// - Eagle (-2): 4
   /// - Birdie (-1): 3
   /// - Par (0): 2
   /// - Bogey (+1): 1
   /// - Double Bogey or worse (+2 or more): 0
+  ///
+  /// Final Round (Modified Stableford):
+  /// - Double Eagle / Albatross (-3): 4
+  /// - Eagle (-2): 3
+  /// - Birdie (-1): 2
+  /// - Par (0): 1
+  /// - Bogey (+1): 0
+  /// - Double Bogey or worse (+2 or more): -1
   static int stablefordPoints({
     required int netScore,
     required int holePar,
+    bool isModifiedFinalRound = false,
   }) {
     final diff = netScore - holePar;
-    if (diff <= -3) return 5;
-    if (diff == -2) return 4;
-    if (diff == -1) return 3;
-    if (diff == 0) return 2;
-    if (diff == 1) return 1;
-    return 0;
+    if (isModifiedFinalRound) {
+      if (diff <= -3) return 4;
+      if (diff == -2) return 3;
+      if (diff == -1) return 2;
+      if (diff == 0) return 1;
+      if (diff == 1) return 0;
+      return -1; // double bogey or worse = -1
+    } else {
+      if (diff <= -3) return 5;
+      if (diff == -2) return 4;
+      if (diff == -1) return 3;
+      if (diff == 0) return 2;
+      if (diff == 1) return 1;
+      return 0; // double bogey or worse = 0
+    }
   }
 
   /// Calculates skins across players for completed holes.

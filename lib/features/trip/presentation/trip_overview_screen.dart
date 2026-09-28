@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../database/app_database.dart';
@@ -5,6 +6,7 @@ import '../../../shared/theme/app_colors.dart';
 import '../../courses/repository/course_repository.dart';
 import '../../players/repository/player_repository.dart';
 import '../../rounds/models/active_round_session.dart';
+import '../../rounds/models/birdie_pot_models.dart';
 import '../../rounds/presentation/active_scoring_screen.dart';
 import '../../rounds/presentation/new_round_setup_screen.dart';
 import '../../rounds/presentation/round_summary_screen.dart';
@@ -284,6 +286,88 @@ class TripOverviewScreen extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 14),
+
+              // Birdie Pot Pool Live Banner
+              StreamBuilder<List<SavedRound>>(
+                stream: roundRepository.watchSavedRounds(),
+                builder: (context, snap) {
+                  final rounds = snap.data ?? [];
+                  final sessions = <ActiveRoundSession>[];
+                  for (final r in rounds) {
+                    try {
+                      final map = jsonDecode(r.roundPayloadJson) as Map<String, dynamic>;
+                      sessions.add(ActiveRoundSession.fromJson(map));
+                    } catch (_) {}
+                  }
+                  final ledger = TripBirdiePotLedger.calculate(sessions);
+
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF261D05), Color(0xFF100C02)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE5C07B).withValues(alpha: 0.7), width: 1.4),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE5C07B).withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: const Color(0xFFE5C07B)),
+                          ),
+                          child: const Icon(Icons.monetization_on, color: Color(0xFFE5C07B), size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'BIRDIE POT POOL',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFFE5C07B),
+                                      letterSpacing: 1.1,
+                                    ),
+                                  ),
+                                  Text(
+                                    '\$${ledger.totalCumulativePot.toStringAsFixed(0)} CUMULATIVE',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFFF7D98C),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                ledger.tripWinnerNames.isNotEmpty
+                                    ? 'Reigning Leader: ${ledger.tripWinnerNames.join(' & ')} (H${ledger.tripWinningHole}, R${ledger.tripWinningRoundNumber})'
+                                    : '\$2/birdie per player • \$1 Round Pot, \$1 Cumulative • Last birdie wins!',
+                                style: const TextStyle(fontSize: 13, color: Colors.white70),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 18),
 
