@@ -523,11 +523,34 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                           const SizedBox(height: 14),
 
                           // Gemini API Key row
-                          FutureBuilder<String?>(
-                            future: AppSettingsService.getGeminiApiKey(),
+                          FutureBuilder<List<String?>>(
+                            future: Future.wait([
+                              AppSettingsService.getGeminiPrimaryApiKey(),
+                              AppSettingsService.getGeminiSecondaryApiKey(),
+                            ]),
                             builder: (context, snapshot) {
-                              final key = snapshot.data;
-                              final hasKey = key != null && key.isNotEmpty;
+                              final keys = snapshot.data ?? [null, null];
+                              final primaryKey = keys[0];
+                              final secondaryKey = keys[1];
+                              final hasPrimary = primaryKey != null && primaryKey.isNotEmpty;
+                              final hasSecondary = secondaryKey != null && secondaryKey.isNotEmpty;
+                              final hasAny = hasPrimary || hasSecondary;
+
+                              final title = (hasPrimary && hasSecondary)
+                                  ? 'Gemini 3.8 + 3.7 Dual Keys Active'
+                                  : hasPrimary
+                                      ? 'Gemini 3.8 Flash API Key'
+                                      : hasSecondary
+                                          ? 'Gemini 3.7 Backup Key Active'
+                                          : 'Gemini Keys Not Configured';
+
+                              final subtitle = (hasPrimary && hasSecondary)
+                                  ? 'Primary 3.8 (...${primaryKey.length > 4 ? primaryKey.substring(primaryKey.length - 4) : primaryKey}) • Backup 3.7 (...${secondaryKey.length > 4 ? secondaryKey.substring(secondaryKey.length - 4) : secondaryKey})'
+                                  : hasPrimary
+                                      ? 'Primary active (...${primaryKey.length > 4 ? primaryKey.substring(primaryKey.length - 4) : primaryKey}). Tap to add a 3.7 backup key.'
+                                      : hasSecondary
+                                          ? 'Backup active (...${secondaryKey.length > 4 ? secondaryKey.substring(secondaryKey.length - 4) : secondaryKey}). Tap to add 3.8 primary key.'
+                                          : 'Required for automatic scorecard vision scanning.';
 
                               return Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -535,7 +558,7 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                                   color: AppColors.surfaceElevated,
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
-                                    color: hasKey
+                                    color: hasAny
                                         ? Colors.greenAccent.withValues(alpha: 0.5)
                                         : AppColors.duneSand.withValues(alpha: 0.5),
                                   ),
@@ -543,8 +566,8 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                                 child: Row(
                                   children: [
                                     Icon(
-                                      hasKey ? Icons.check_circle_outline : Icons.vpn_key_outlined,
-                                      color: hasKey ? Colors.greenAccent : AppColors.duneSand,
+                                      hasAny ? Icons.check_circle_outline : Icons.vpn_key_outlined,
+                                      color: hasAny ? Colors.greenAccent : AppColors.duneSand,
                                       size: 22,
                                     ),
                                     const SizedBox(width: 12),
@@ -553,18 +576,16 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            hasKey ? 'Gemini 3.8 Flash API Key' : 'Gemini Key Not Configured',
+                                            title,
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 14,
-                                              color: hasKey ? Colors.greenAccent : AppColors.duneSand,
+                                              color: hasAny ? Colors.greenAccent : AppColors.duneSand,
                                             ),
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
-                                            hasKey
-                                                ? 'Active (ends in ...${key.length > 4 ? key.substring(key.length - 4) : key})'
-                                                : 'Required for automatic scorecard vision scanning.',
+                                            subtitle,
                                             style: const TextStyle(color: Colors.white70, fontSize: 12),
                                           ),
                                         ],
@@ -572,10 +593,10 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                                     ),
                                     FilledButton.tonal(
                                       style: FilledButton.styleFrom(
-                                        backgroundColor: hasKey
+                                        backgroundColor: hasAny
                                             ? AppColors.lakeCyan.withValues(alpha: 0.25)
                                             : AppColors.duneSand,
-                                        foregroundColor: hasKey ? AppColors.cyanLight : Colors.black,
+                                        foregroundColor: hasAny ? AppColors.cyanLight : Colors.black,
                                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                       ),
                                       onPressed: () async {
@@ -585,7 +606,7 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                                         }
                                       },
                                       child: Text(
-                                        hasKey ? 'Change' : 'Configure',
+                                        hasAny ? 'Configure' : 'Add Keys',
                                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                                       ),
                                     ),

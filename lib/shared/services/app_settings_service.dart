@@ -12,14 +12,21 @@ class AppSettingsService {
       'https://arcadia-golf-trip.ckm-endo.chatgpt.site';
   static const String defaultTinyUrl = 'https://tinyurl.com/2xnkqbrx';
 
+  static const String _keyGeminiSecondaryApiKey = 'gemini_secondary_api_key';
+
   /// Compile-time fallback key passed via --dart-define=GEMINI_API_KEY=...
   static const String _compileTimeGeminiKey = String.fromEnvironment(
     'GEMINI_API_KEY',
     defaultValue: '',
   );
 
-  /// Retrieves the saved Gemini API key, falling back to compile-time env define.
+  /// Retrieves the Primary Gemini API key (for Gemini 3.8 Flash).
   static Future<String?> getGeminiApiKey() async {
+    return getGeminiPrimaryApiKey();
+  }
+
+  /// Retrieves the Primary Gemini API key.
+  static Future<String?> getGeminiPrimaryApiKey() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString(_keyGeminiApiKey)?.trim();
@@ -27,7 +34,7 @@ class AppSettingsService {
         return saved;
       }
     } catch (e) {
-      debugPrint('Error reading SharedPreferences for Gemini key: $e');
+      debugPrint('Error reading SharedPreferences for Gemini primary key: $e');
     }
     if (_compileTimeGeminiKey.isNotEmpty) {
       return _compileTimeGeminiKey;
@@ -35,8 +42,35 @@ class AppSettingsService {
     return null;
   }
 
-  /// Saves the Gemini API key. Passing null or empty removes it.
+  /// Retrieves the Secondary Gemini API key (for Gemini 3.7 Flash fallback).
+  static Future<String?> getGeminiSecondaryApiKey() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString(_keyGeminiSecondaryApiKey)?.trim();
+      if (saved != null && saved.isNotEmpty) {
+        return saved;
+      }
+    } catch (e) {
+      debugPrint('Error reading SharedPreferences for Gemini secondary key: $e');
+    }
+    return null;
+  }
+
+  /// Checks if either Primary or Secondary Gemini API key is configured.
+  static Future<bool> hasAnyGeminiApiKey() async {
+    final primary = await getGeminiPrimaryApiKey();
+    if (primary != null && primary.isNotEmpty) return true;
+    final secondary = await getGeminiSecondaryApiKey();
+    return secondary != null && secondary.isNotEmpty;
+  }
+
+  /// Saves the Primary Gemini API key.
   static Future<void> setGeminiApiKey(String? key) async {
+    return setGeminiPrimaryApiKey(key);
+  }
+
+  /// Saves the Primary Gemini API key. Passing null or empty removes it.
+  static Future<void> setGeminiPrimaryApiKey(String? key) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       if (key == null || key.trim().isEmpty) {
@@ -45,7 +79,21 @@ class AppSettingsService {
         await prefs.setString(_keyGeminiApiKey, key.trim());
       }
     } catch (e) {
-      debugPrint('Error saving Gemini API key to SharedPreferences: $e');
+      debugPrint('Error saving Gemini primary API key to SharedPreferences: $e');
+    }
+  }
+
+  /// Saves the Secondary Gemini API key. Passing null or empty removes it.
+  static Future<void> setGeminiSecondaryApiKey(String? key) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (key == null || key.trim().isEmpty) {
+        await prefs.remove(_keyGeminiSecondaryApiKey);
+      } else {
+        await prefs.setString(_keyGeminiSecondaryApiKey, key.trim());
+      }
+    } catch (e) {
+      debugPrint('Error saving Gemini secondary API key to SharedPreferences: $e');
     }
   }
 
@@ -111,17 +159,24 @@ class AppSettingsService {
     return defaultTinyUrl;
   }
 
-  /// Tests a Gemini API key by making a lightweight ping to Gemini 3.8 Flash,
-  /// falling back to Gemini 3.6 Flash if Google servers report high demand (503).
-  static Future<bool> validateGeminiApiKey(String apiKey) async {
+  /// Tests a Gemini API key by making a lightweight ping to a specified model
+  /// (defaulting to Gemini 3.8 Flash, or specified model such as Gemini 3.7 Flash).
+  static Future<bool> validateGeminiApiKey(
+    String apiKey, {
+    String model = 'gemini-3.8-flash',
+  }) async {
     final trimmedKey = apiKey.trim();
     if (trimmedKey.isEmpty) return false;
 
-    final models = ['gemini-3.8-flash', 'gemini-3.6-flash'];
-    for (final model in models) {
+    final modelsToTry = [
+      model,
+      if (model != 'gemini-3.7-flash') 'gemini-3.7-flash',
+      'gemini-3.6-flash',
+    ];
+    for (final m in modelsToTry) {
       try {
         final url = Uri.parse(
-          'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$trimmedKey',
+          'https://generativelanguage.googleapis.com/v1beta/models/$m:generateContent?key=$trimmedKey',
         );
         final payload = {
           'contents': [
@@ -149,7 +204,7 @@ class AppSettingsService {
           return true;
         }
       } catch (e) {
-        debugPrint('Gemini key validation attempt on $model failed: $e');
+        debugPrint('Gemini key validation attempt on $m failed: $e');
       }
     }
     return false;

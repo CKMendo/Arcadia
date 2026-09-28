@@ -313,8 +313,8 @@ class _RoundScorecardImportScreenState
     if (image == null || _isReading) return;
 
     if (reader == _RoundImportReader.gemini) {
-      final key = await AppSettingsService.getGeminiApiKey();
-      if (key == null || key.trim().isEmpty) {
+      final hasKey = await AppSettingsService.hasAnyGeminiApiKey();
+      if (!hasKey) {
         if (!mounted) return;
         final configured = await GeminiKeyConfigDialog.show(context);
         if (configured != true) {
@@ -840,27 +840,50 @@ class _RoundScorecardImportScreenState
   }
 
   Widget _buildGeminiKeyStatusCard() {
-    return FutureBuilder<String?>(
-      future: AppSettingsService.getGeminiApiKey(),
+    return FutureBuilder<List<String?>>(
+      future: Future.wait([
+        AppSettingsService.getGeminiPrimaryApiKey(),
+        AppSettingsService.getGeminiSecondaryApiKey(),
+      ]),
       builder: (context, snapshot) {
-        final key = snapshot.data;
-        final hasKey = key != null && key.isNotEmpty;
+        final keys = snapshot.data ?? [null, null];
+        final primaryKey = keys[0];
+        final secondaryKey = keys[1];
+        final hasPrimary = primaryKey != null && primaryKey.isNotEmpty;
+        final hasSecondary = secondaryKey != null && secondaryKey.isNotEmpty;
+        final hasAny = hasPrimary || hasSecondary;
+
+        final title = (hasPrimary && hasSecondary)
+            ? 'Gemini 3.8 + 3.7 Ready (Dual Keys)'
+            : hasPrimary
+                ? 'Gemini 3.8 Flash Ready'
+                : hasSecondary
+                    ? 'Gemini 3.7 Backup Key Ready'
+                    : 'Gemini API Key Required';
+
+        final subtitle = (hasPrimary && hasSecondary)
+            ? 'Primary 3.8 (...${primaryKey.length > 4 ? primaryKey.substring(primaryKey.length - 4) : primaryKey}) • Backup 3.7 (...${secondaryKey.length > 4 ? secondaryKey.substring(secondaryKey.length - 4) : secondaryKey})'
+            : hasPrimary
+                ? 'Primary active (...${primaryKey.length > 4 ? primaryKey.substring(primaryKey.length - 4) : primaryKey}). Tap to add a 3.7 backup key.'
+                : hasSecondary
+                    ? 'Backup active (...${secondaryKey.length > 4 ? secondaryKey.substring(secondaryKey.length - 4) : secondaryKey}). Tap to configure 3.8 primary key.'
+                    : 'Configure Primary (3.8) & Backup (3.7) keys for AI scorecard scan, or use FREE ON-DEVICE OCR.';
 
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: hasKey ? const Color(0xFF0D251C) : const Color(0xFF2E1C0A),
+            color: hasAny ? const Color(0xFF0D251C) : const Color(0xFF2E1C0A),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: hasKey ? Colors.greenAccent.withValues(alpha: 0.6) : AppColors.duneSand,
+              color: hasAny ? Colors.greenAccent.withValues(alpha: 0.6) : AppColors.duneSand,
               width: 1.5,
             ),
           ),
           child: Row(
             children: [
               Icon(
-                hasKey ? Icons.check_circle_outline : Icons.vpn_key_outlined,
-                color: hasKey ? Colors.greenAccent : AppColors.duneSand,
+                hasAny ? Icons.check_circle_outline : Icons.vpn_key_outlined,
+                color: hasAny ? Colors.greenAccent : AppColors.duneSand,
                 size: 24,
               ),
               const SizedBox(width: 12),
@@ -869,18 +892,16 @@ class _RoundScorecardImportScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      hasKey ? 'Gemini 3.8 Flash Ready' : 'Gemini API Key Required',
+                      title,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
-                        color: hasKey ? Colors.greenAccent : AppColors.duneSand,
+                        color: hasAny ? Colors.greenAccent : AppColors.duneSand,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      hasKey
-                          ? 'Key active (ends in ...${key.length > 4 ? key.substring(key.length - 4) : key})'
-                          : 'Configure API key for direct AI scorecard vision scan or use FREE ON-DEVICE OCR.',
+                      subtitle,
                       style: const TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                   ],
@@ -889,10 +910,10 @@ class _RoundScorecardImportScreenState
               const SizedBox(width: 8),
               FilledButton.tonal(
                 style: FilledButton.styleFrom(
-                  backgroundColor: hasKey
+                  backgroundColor: hasAny
                       ? AppColors.lakeCyan.withValues(alpha: 0.25)
                       : AppColors.duneSand,
-                  foregroundColor: hasKey ? AppColors.cyanLight : Colors.black,
+                  foregroundColor: hasAny ? AppColors.cyanLight : Colors.black,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
                 onPressed: () async {
@@ -902,7 +923,7 @@ class _RoundScorecardImportScreenState
                   }
                 },
                 child: Text(
-                  hasKey ? 'Change' : 'Configure',
+                  hasAny ? 'Configure' : 'Add Keys',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                 ),
               ),

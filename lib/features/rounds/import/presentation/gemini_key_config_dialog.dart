@@ -19,24 +19,29 @@ class GeminiKeyConfigDialog extends StatefulWidget {
 }
 
 class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
-  final _controller = TextEditingController();
+  final _primaryController = TextEditingController();
+  final _secondaryController = TextEditingController();
+
   bool _isLoading = true;
   bool _isValidating = false;
-  bool _obscureText = true;
+  bool _obscurePrimary = true;
+  bool _obscureSecondary = true;
   String? _statusMessage;
   bool _isSuccess = false;
 
   @override
   void initState() {
     super.initState();
-    _loadKey();
+    _loadKeys();
   }
 
-  Future<void> _loadKey() async {
-    final key = await AppSettingsService.getGeminiApiKey();
+  Future<void> _loadKeys() async {
+    final primary = await AppSettingsService.getGeminiPrimaryApiKey();
+    final secondary = await AppSettingsService.getGeminiSecondaryApiKey();
     if (mounted) {
       setState(() {
-        _controller.text = key ?? '';
+        _primaryController.text = primary ?? '';
+        _secondaryController.text = secondary ?? '';
         _isLoading = false;
       });
     }
@@ -44,25 +49,29 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    _primaryController.dispose();
+    _secondaryController.dispose();
     super.dispose();
   }
 
-  Future<void> _pasteFromClipboard() async {
+  Future<void> _pasteInto(TextEditingController controller) async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     final text = data?.text?.trim();
     if (text != null && text.isNotEmpty) {
       setState(() {
-        _controller.text = text;
+        controller.text = text;
         _statusMessage = null;
       });
     }
   }
 
-  Future<void> _saveKey({bool validate = true}) async {
-    final key = _controller.text.trim();
-    if (key.isEmpty) {
-      await AppSettingsService.setGeminiApiKey(null);
+  Future<void> _saveKeys({bool validate = true}) async {
+    final primary = _primaryController.text.trim();
+    final secondary = _secondaryController.text.trim();
+
+    if (primary.isEmpty && secondary.isEmpty) {
+      await AppSettingsService.setGeminiPrimaryApiKey(null);
+      await AppSettingsService.setGeminiSecondaryApiKey(null);
       if (mounted) Navigator.of(context).pop(true);
       return;
     }
@@ -70,29 +79,46 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
     if (validate) {
       setState(() {
         _isValidating = true;
-        _statusMessage = 'Testing key with Gemini 3.8 Flash...';
+        _statusMessage = 'Validating keys with Google Gemini...';
         _isSuccess = false;
       });
 
-      final isValid = await AppSettingsService.validateGeminiApiKey(key);
+      bool primaryValid = true;
+      if (primary.isNotEmpty) {
+        setState(() => _statusMessage = 'Testing Primary Key with Gemini 3.8 Flash...');
+        primaryValid = await AppSettingsService.validateGeminiApiKey(primary, model: 'gemini-3.8-flash');
+      }
+
+      bool secondaryValid = true;
+      if (secondary.isNotEmpty) {
+        setState(() => _statusMessage = 'Testing Backup Key with Gemini 3.7 Flash...');
+        secondaryValid = await AppSettingsService.validateGeminiApiKey(secondary, model: 'gemini-3.7-flash');
+      }
+
       if (!mounted) return;
 
-      if (!isValid) {
+      if (!primaryValid || !secondaryValid) {
         setState(() {
           _isValidating = false;
-          _statusMessage =
-              'Key could not reach Gemini API. Ensure generativelanguage API is enabled in Google Cloud Console or choose "Save Anyway".';
+          final failedDesc = !primaryValid && !secondaryValid
+              ? 'Both Primary and Backup keys'
+              : !primaryValid
+                  ? 'Primary Key (Gemini 3.8)'
+                  : 'Backup Key (Gemini 3.7)';
+          _statusMessage = '$failedDesc could not reach Google API. Ensure API is enabled or choose "Save Anyway".';
           _isSuccess = false;
         });
         return;
       }
     }
 
-    await AppSettingsService.setGeminiApiKey(key);
+    await AppSettingsService.setGeminiPrimaryApiKey(primary.isEmpty ? null : primary);
+    await AppSettingsService.setGeminiSecondaryApiKey(secondary.isEmpty ? null : secondary);
+
     if (mounted) {
       setState(() {
         _isValidating = false;
-        _statusMessage = '✅ Gemini API Key verified and saved!';
+        _statusMessage = '✅ Gemini API keys verified and saved!';
         _isSuccess = true;
       });
       await Future.delayed(const Duration(milliseconds: 700));
@@ -113,105 +139,210 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
           Icon(Icons.auto_awesome, color: AppColors.lakeCyan, size: 24),
           SizedBox(width: 10),
           Text(
-            'Configure Gemini Key',
+            'Configure Gemini AI Keys',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
         ],
       ),
       content: _isLoading
           ? const SizedBox(
-              height: 120,
+              height: 140,
               child: Center(
                 child: CircularProgressIndicator(color: AppColors.lakeCyan),
               ),
             )
-          : SizedBox(
-              width: 480,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Direct scorecard vision scanning uses Google Gemini 3.8 Flash. '
-                    'Enter your Gemini API key below.',
-                    style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: _controller,
-                    obscureText: _obscureText,
-                    style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 14,
-                      color: Colors.white,
+          : SingleChildScrollView(
+              child: SizedBox(
+                width: 500,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Arcadia uses Gemini 3.8 Flash as the primary OCR engine. '
+                      'If 3.8 is unavailable or experiencing high demand (503), '
+                      'the app automatically fails over to Gemini 3.7 Flash.',
+                      style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
                     ),
-                    decoration: InputDecoration(
-                      labelText: 'Gemini API Key',
-                      hintText: 'AIzaSy...',
-                      filled: true,
-                      fillColor: AppColors.surfaceElevated,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: AppColors.cardBorder),
-                      ),
-                      prefixIcon: const Icon(Icons.key, color: AppColors.lakeCyan),
-                      suffixIcon: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(
-                              _obscureText
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
-                              color: Colors.white60,
-                            ),
-                            tooltip: _obscureText ? 'Show Key' : 'Hide Key',
-                            onPressed: () =>
-                                setState(() => _obscureText = !_obscureText),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.content_paste, color: AppColors.cyanLight),
-                            tooltip: 'Paste from Clipboard',
-                            onPressed: _pasteFromClipboard,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (_statusMessage != null) ...[
-                    const SizedBox(height: 10),
-                    Text(
-                      _statusMessage!,
-                      style: TextStyle(
-                        color: _isSuccess ? Colors.greenAccent : Colors.amber,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  InkWell(
-                    onTap: () => launchUrl(
-                      Uri.parse('https://aistudio.google.com/app/apikey'),
-                      mode: LaunchMode.externalApplication,
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
+                    const SizedBox(height: 16),
+
+                    // Primary Key Field
+                    const Row(
                       children: [
-                        Icon(Icons.open_in_new, size: 14, color: AppColors.cyanLight),
+                        Icon(Icons.looks_one, color: AppColors.lakeCyan, size: 18),
                         SizedBox(width: 6),
-                        Text(
-                          'Get a free Gemini API Key at aistudio.google.com',
-                          style: TextStyle(
-                            color: AppColors.cyanLight,
-                            fontSize: 12,
-                            decoration: TextDecoration.underline,
+                        Expanded(
+                          child: Text(
+                            'Primary Key (Gemini 3.8 Flash)',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: AppColors.lakeCyan,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _primaryController,
+                      obscureText: _obscurePrimary,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 13.5,
+                        color: Colors.white,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'AIzaSy... (Gemini 3.8 Flash)',
+                        filled: true,
+                        fillColor: AppColors.surfaceElevated,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: AppColors.cardBorder),
+                        ),
+                        suffixIcon: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(
+                                _obscurePrimary
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                                color: Colors.white60,
+                                size: 20,
+                              ),
+                              tooltip: _obscurePrimary ? 'Show Key' : 'Hide Key',
+                              onPressed: () =>
+                                  setState(() => _obscurePrimary = !_obscurePrimary),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.content_paste, color: AppColors.cyanLight, size: 20),
+                              tooltip: 'Paste from Clipboard',
+                              onPressed: () => _pasteInto(_primaryController),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Backup Key Field
+                    const Row(
+                      children: [
+                        Icon(Icons.looks_two, color: AppColors.duneSand, size: 18),
+                        SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Backup Key (Gemini 3.7 Flash Failover)',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: AppColors.duneSand,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Used for Gemini 3.7 Flash if 3.8 is busy or quota is reached. Can be from a second Google project or account.',
+                      style: TextStyle(color: Colors.white60, fontSize: 11.5),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _secondaryController,
+                      obscureText: _obscureSecondary,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 13.5,
+                        color: Colors.white,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'AIzaSy... (optional secondary project)',
+                        filled: true,
+                        fillColor: AppColors.surfaceElevated,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: AppColors.cardBorder),
+                        ),
+                        suffixIcon: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(
+                                _obscureSecondary
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                                color: Colors.white60,
+                                size: 20,
+                              ),
+                              tooltip: _obscureSecondary ? 'Show Key' : 'Hide Key',
+                              onPressed: () =>
+                                  setState(() => _obscureSecondary = !_obscureSecondary),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.content_paste, color: AppColors.cyanLight, size: 20),
+                              tooltip: 'Paste from Clipboard',
+                              onPressed: () => _pasteInto(_secondaryController),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    if (_statusMessage != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: _isSuccess
+                              ? Colors.green.withValues(alpha: 0.15)
+                              : Colors.amber.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: _isSuccess ? Colors.greenAccent : Colors.amber,
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          _statusMessage!,
+                          style: TextStyle(
+                            color: _isSuccess ? Colors.greenAccent : Colors.amber,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 14),
+                    InkWell(
+                      onTap: () => launchUrl(
+                        Uri.parse('https://aistudio.google.com/app/apikey'),
+                        mode: LaunchMode.externalApplication,
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.open_in_new, size: 14, color: AppColors.cyanLight),
+                          SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Get free Gemini API Keys at aistudio.google.com',
+                              style: TextStyle(
+                                color: AppColors.cyanLight,
+                                fontSize: 12,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
       actions: [
@@ -221,7 +352,7 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
         ),
         if (_statusMessage != null && !_isSuccess)
           TextButton(
-            onPressed: _isValidating ? null : () => _saveKey(validate: false),
+            onPressed: _isValidating ? null : () => _saveKeys(validate: false),
             child: const Text('Save Anyway', style: TextStyle(color: Colors.amber)),
           ),
         FilledButton.icon(
@@ -229,7 +360,7 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
             backgroundColor: AppColors.lakeCyan,
             foregroundColor: const Color(0xFF04110A),
           ),
-          onPressed: _isValidating ? null : () => _saveKey(validate: true),
+          onPressed: _isValidating ? null : () => _saveKeys(validate: true),
           icon: _isValidating
               ? const SizedBox(
                   width: 16,

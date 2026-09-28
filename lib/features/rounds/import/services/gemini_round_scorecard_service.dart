@@ -10,16 +10,9 @@ class GeminiRoundScorecardService {
   static String? apiKey;
 
   static const String defaultModel = 'gemini-3.8-flash';
-
-  /// Prioritized candidate models in the Gemini 3 family.
-  /// If 3.8 encounters Google server 503 high-demand spikes, the service
-  /// automatically retries and seamlessly fails over to sibling models in the fleet.
-  static const List<String> candidateModels = [
-    'gemini-3.8-flash',
-    'gemini-3.6-flash',
-    'gemini-3.7-flash',
-    'gemini-3.5-flash',
-  ];
+  static const String primaryModel = 'gemini-3.8-flash';
+  static const String fallbackModel = 'gemini-3.7-flash';
+  static const String emergencyModel = 'gemini-3.6-flash';
 
   Future<RoundScoreImportDraft> analyze(
     String imagePath, {
@@ -30,11 +23,14 @@ class GeminiRoundScorecardService {
     final bytes = await File(imagePath).readAsBytes();
     if (bytes.isEmpty) throw const FormatException('The image file is empty.');
 
-    final key = apiKey ?? await AppSettingsService.getGeminiApiKey();
-    if (key == null || key.isEmpty) {
+    final primaryKey = apiKey ?? await AppSettingsService.getGeminiPrimaryApiKey();
+    final secondaryKey = await AppSettingsService.getGeminiSecondaryApiKey();
+
+    if ((primaryKey == null || primaryKey.isEmpty) &&
+        (secondaryKey == null || secondaryKey.isEmpty)) {
       throw const FormatException(
-        'Gemini API key not configured. Tap Configure Key below, use FREE ON-DEVICE, or select '
-        'GEMINI in the External AI assistant to copy prompt and paste response.',
+        'Gemini API key not configured. Tap Configure Key below to set your Primary and Backup Gemini keys, '
+        'or use FREE ON-DEVICE OCR.',
       );
     }
 
@@ -73,97 +69,101 @@ class GeminiRoundScorecardService {
       }
     };
 
+    // Execution plan:
+    // 1) Gemini 3.8 Flash with Primary Key
+    // 2) Gemini 3.8 Flash with Secondary Key (if Primary hits 503/429)
+    // 3) Gemini 3.7 Flash with Secondary Key (as requested: "if 3.8 is not working, 3.7 should be used")
+    // 4) Gemini 3.7 Flash with Primary Key
+    // 5) Gemini 3.6 Flash (emergency fleet fallback)
+    final plan = <_GeminiAttemptPlan>[
+      if (primaryKey != null && primaryKey.isNotEmpty)
+        _GeminiAttemptPlan(model: primaryModel, apiKey: primaryKey, label: 'Gemini 3.8 (Primary Key)'),
+      if (secondaryKey != null && secondaryKey.isNotEmpty && secondaryKey != primaryKey)
+        _GeminiAttemptPlan(model: primaryModel, apiKey: secondaryKey, label: 'Gemini 3.8 (Secondary Key)'),
+      if (secondaryKey != null && secondaryKey.isNotEmpty)
+        _GeminiAttemptPlan(model: fallbackModel, apiKey: secondaryKey, label: 'Gemini 3.7 (Secondary Key)'),
+      if (primaryKey != null && primaryKey.isNotEmpty)
+        _GeminiAttemptPlan(model: fallbackModel, apiKey: primaryKey, label: 'Gemini 3.7 (Primary Key)'),
+      if (secondaryKey != null && secondaryKey.isNotEmpty)
+        _GeminiAttemptPlan(model: emergencyModel, apiKey: secondaryKey, label: 'Gemini 3.6 (Secondary Key)'),
+      if (primaryKey != null && primaryKey.isNotEmpty)
+        _GeminiAttemptPlan(model: emergencyModel, apiKey: primaryKey, label: 'Gemini 3.6 (Primary Key)'),
+    ];
+
     String? lastErrorDetail;
     int lastStatusCode = 0;
 
-    for (final model in candidateModels) {
-      // Allow up to 2 attempts per model for transient errors
-      for (var attempt = 1; attempt <= 2; attempt++) {
-        final url = Uri.parse(
-          'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$key',
-        );
+    for (final step in plan) {
+      final url = Uri.parse(
+        'https://generativelanguage.googleapis.com/v1beta/models/${step.model}:generateContent?key=${step.apiKey}',
+      );
 
-        try {
-          final response = await http
-              .post(
-                url,
-                headers: {'Content-Type': 'application/json'},
-                body: jsonEncode(payload),
-              )
-              .timeout(const Duration(seconds: 40));
+      try {
+        final response = await http
+            .post(
+              url,
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode(payload),
+            )
+            .timeout(const Duration(seconds: 40));
 
-          if (response.statusCode == 200) {
-            final data = jsonDecode(response.body) as Map<String, dynamic>;
-            final candidates = data['candidates'] as List?;
-            if (candidates == null || candidates.isEmpty) {
-              throw const FormatException('Gemini did not return any candidates.');
-            }
-
-            final firstCandidate = candidates.first as Map<String, dynamic>;
-            final content = firstCandidate['content'] as Map<String, dynamic>?;
-            final parts = content?['parts'] as List?;
-            final text = parts?.first?['text'] as String?;
-
-            if (text == null || text.trim().isEmpty) {
-              throw const FormatException('Gemini returned empty text.');
-            }
-
-            final draft = parseResponse(text, holeCount: holeCount);
-            if (model != defaultModel) {
-              draft.warnings.insert(
-                0,
-                'Gemini 3.8 Flash had high demand on Google servers; automatically read using $model.',
-              );
-            }
-            return draft;
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          final candidates = data['candidates'] as List?;
+          if (candidates == null || candidates.isEmpty) {
+            throw const FormatException('Gemini did not return any candidates.');
           }
 
-          lastStatusCode = response.statusCode;
-          final errorBody = response.body;
-          String extractedMsg = errorBody;
-          try {
-            final parsed = jsonDecode(errorBody);
-            if (parsed is Map && parsed['error'] is Map) {
-              extractedMsg = parsed['error']['message'] ?? errorBody;
-            }
-          } catch (_) {}
-          lastErrorDetail = extractedMsg;
+          final firstCandidate = candidates.first as Map<String, dynamic>;
+          final content = firstCandidate['content'] as Map<String, dynamic>?;
+          final parts = content?['parts'] as List?;
+          final text = parts?.first?['text'] as String?;
 
-          // If unauthorized or bad key, fail immediately without looping
-          if (response.statusCode == 400 || response.statusCode == 403) {
-            throw FormatException('Gemini API authentication failed (${response.statusCode}): $extractedMsg');
+          if (text == null || text.trim().isEmpty) {
+            throw const FormatException('Gemini returned empty text.');
           }
 
-          // If 503 (high demand) or 429 (rate limit), wait briefly if retrying same model
-          if ((response.statusCode == 503 || response.statusCode == 429) && attempt < 2) {
-            await Future.delayed(const Duration(milliseconds: 1200));
-            continue;
-          } else {
-            // Move to next candidate model in the fallback chain
-            break;
+          final draft = parseResponse(text, holeCount: holeCount);
+          if (step.model != primaryModel) {
+            draft.warnings.insert(
+              0,
+              'Gemini 3.8 Flash was unavailable; automatically analyzed using ${step.model == fallbackModel ? 'Gemini 3.7 Flash' : 'Gemini 3.6 Flash'}.',
+            );
           }
-        } catch (e) {
-          if (e is FormatException && (lastStatusCode == 400 || lastStatusCode == 403)) {
-            rethrow;
-          }
-          lastErrorDetail = e.toString();
-          if (attempt < 2) {
-            await Future.delayed(const Duration(milliseconds: 1000));
-          }
+          return draft;
         }
+
+        lastStatusCode = response.statusCode;
+        final errorBody = response.body;
+        String extractedMsg = errorBody;
+        try {
+          final parsed = jsonDecode(errorBody);
+          if (parsed is Map && parsed['error'] is Map) {
+            extractedMsg = parsed['error']['message'] ?? errorBody;
+          }
+        } catch (_) {}
+        lastErrorDetail = extractedMsg;
+
+        // If 503 or 429, wait briefly before next step
+        if (response.statusCode == 503 || response.statusCode == 429) {
+          await Future.delayed(const Duration(milliseconds: 600));
+        }
+      } catch (e) {
+        lastErrorDetail = e.toString();
+        await Future.delayed(const Duration(milliseconds: 400));
       }
     }
 
     if (lastStatusCode == 503) {
       throw const FormatException(
-        'Google Gemini is currently experiencing temporary high demand (503 UNAVAILABLE) on Google servers. '
-        'The app automatically attempted retries and model failover. '
+        'Google Gemini is currently experiencing high demand (503 UNAVAILABLE). '
+        'Tried Gemini 3.8 and Gemini 3.7 with both configured API keys. '
         'Please wait a moment and tap RE-READ WITH GEMINI, or switch to FREE ON-DEVICE OCR.',
       );
     } else if (lastStatusCode == 429) {
       throw const FormatException(
-        'Gemini API request limit reached (429 RESOURCE_EXHAUSTED). '
-        'Please wait a few moments and tap RE-READ WITH GEMINI, or switch to FREE ON-DEVICE OCR.',
+        'Gemini API request rate limit reached (429 RESOURCE_EXHAUSTED). '
+        'Tried both configured API keys. Please wait a moment and tap RE-READ WITH GEMINI.',
       );
     } else {
       throw FormatException(
@@ -228,4 +228,16 @@ class GeminiRoundScorecardService {
       warnings: warnings,
     );
   }
+}
+
+class _GeminiAttemptPlan {
+  const _GeminiAttemptPlan({
+    required this.model,
+    required this.apiKey,
+    required this.label,
+  });
+
+  final String model;
+  final String apiKey;
+  final String label;
 }

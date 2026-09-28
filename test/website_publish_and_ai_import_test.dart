@@ -14,6 +14,9 @@ import 'package:arcadia/features/rounds/import/services/player_score_row_matcher
 import 'package:arcadia/features/rounds/import/services/round_scorecard_text_parser.dart';
 import 'package:arcadia/features/rounds/repository/round_repository.dart';
 import 'package:arcadia/features/tournaments/repository/tournament_repository.dart';
+import 'package:arcadia/features/rounds/import/presentation/gemini_key_config_dialog.dart';
+import 'package:arcadia/shared/services/app_settings_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   late AppDatabase db;
@@ -191,5 +194,48 @@ Neal P 4 3 5 4 4 3 5 4 4 4 3 5 4 4 3 5 4 4
       expect(find.text('PASTE CHATGPT RESPONSE'), findsOneWidget);
       expect(find.text('COPY PROMPT AGAIN'), findsOneWidget);
     });
+
+    test('AppSettingsService stores and retrieves Primary (3.8) and Secondary (3.7) keys', () async {
+      SharedPreferences.setMockInitialValues({});
+
+      expect(await AppSettingsService.hasAnyGeminiApiKey(), isFalse);
+
+      await AppSettingsService.setGeminiPrimaryApiKey('key-primary-38');
+      expect(await AppSettingsService.getGeminiPrimaryApiKey(), 'key-primary-38');
+      expect(await AppSettingsService.getGeminiApiKey(), 'key-primary-38');
+      expect(await AppSettingsService.hasAnyGeminiApiKey(), isTrue);
+
+      await AppSettingsService.setGeminiSecondaryApiKey('key-secondary-37');
+      expect(await AppSettingsService.getGeminiSecondaryApiKey(), 'key-secondary-37');
+
+      await AppSettingsService.setGeminiPrimaryApiKey(null);
+      expect(await AppSettingsService.getGeminiPrimaryApiKey(), isNull);
+      expect(await AppSettingsService.hasAnyGeminiApiKey(), isTrue); // Secondary still present
+
+      await AppSettingsService.setGeminiSecondaryApiKey(null);
+      expect(await AppSettingsService.hasAnyGeminiApiKey(), isFalse);
+    });
+
+    testWidgets('GeminiKeyConfigDialog renders both Primary (3.8) and Backup (3.7) key fields', (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'gemini_api_key': 'AIzaSyPrimary123',
+        'gemini_secondary_api_key': 'AIzaSySecondary456',
+      });
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: GeminiKeyConfigDialog(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Configure Gemini AI Keys'), findsOneWidget);
+      expect(find.text('Primary Key (Gemini 3.8 Flash)'), findsOneWidget);
+      expect(find.text('Backup Key (Gemini 3.7 Flash Failover)'), findsOneWidget);
+      expect(find.text('Verify & Save'), findsOneWidget);
+    });
   });
 }
+
