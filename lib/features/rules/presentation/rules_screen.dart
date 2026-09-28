@@ -638,6 +638,10 @@ class RulesScreen extends StatelessWidget {
     List<Player> players = [];
     if (playerRepository != null) {
       players = await playerRepository!.getAllPlayers();
+      if (players.isEmpty) {
+        await playerRepository!.seedSample8Players();
+        players = await playerRepository!.getAllPlayers();
+      }
     }
 
     if (!context.mounted) return;
