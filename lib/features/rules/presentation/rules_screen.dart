@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../../database/app_database.dart';
+import '../../../shared/services/device_communication_service.dart';
 import '../../../shared/theme/app_colors.dart';
+import '../../players/repository/player_repository.dart';
 
 class RulesScreen extends StatelessWidget {
-  const RulesScreen({super.key});
+  final PlayerRepository? playerRepository;
+
+  const RulesScreen({super.key, this.playerRepository});
 
   @override
   Widget build(BuildContext context) {
@@ -10,10 +16,42 @@ class RulesScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Tournament Rules'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share, color: AppColors.cyanLight, size: 24),
+            tooltip: 'Share Rules to Players / Group',
+            onPressed: () => _openShareRulesDialog(context),
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         children: [
+          // Prominent Button at Top: Share Rules to Players / Entire Group
+          Container(
+            margin: const EdgeInsets.only(bottom: 14),
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.sms_outlined, size: 20, color: Color(0xFF04110A)),
+              label: const Text(
+                'SHARE RULES TO PLAYERS / GROUP',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF04110A),
+                  fontSize: 13.5,
+                  letterSpacing: 0.8,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.cyanLight,
+                elevation: 4,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onPressed: () => _openShareRulesDialog(context),
+            ),
+          ),
+
           // Crest & Tournament Header Card
           Container(
             padding: const EdgeInsets.all(18),
@@ -595,6 +633,329 @@ class RulesScreen extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _openShareRulesDialog(BuildContext context) async {
+    List<Player> players = [];
+    if (playerRepository != null) {
+      players = await playerRepository!.getAllPlayers();
+    }
+
+    if (!context.mounted) return;
+
+    if (players.isEmpty) {
+      Share.share(
+        _officialRulesSummaryText,
+        subject: '🏌️ Arcadia Cup 2026 – Official Tournament Rules',
+      );
+      return;
+    }
+
+    final selectedIds = players.map((p) => p.id).toSet();
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final allSelected = selectedIds.length == players.length;
+          final selectedPlayers = players.where((p) => selectedIds.contains(p.id)).toList();
+          final validPhoneCount = selectedPlayers
+              .where((p) => p.phoneNumber != null && p.phoneNumber!.trim().isNotEmpty)
+              .length;
+
+          return AlertDialog(
+            backgroundColor: const Color(0xFF071520),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: BorderSide(color: AppColors.lakeCyan.withValues(alpha: 0.7), width: 1.5),
+            ),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.lakeCyan.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.share, color: AppColors.lakeCyan, size: 22),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'SHARE TOURNAMENT RULES',
+                    style: TextStyle(
+                      color: AppColors.cyanLight,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: 440,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Choose active players from the roster or select the entire group. Send directly via SMS or share to your group chat (WhatsApp, GroupMe, Messages).',
+                      style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.35),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceElevated,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.cardBorder),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${selectedIds.length} of ${players.length} selected',
+                              style: const TextStyle(
+                                color: AppColors.cyanLight,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                            ),
+                            onPressed: () {
+                              setDialogState(() {
+                                if (allSelected) {
+                                  selectedIds.clear();
+                                } else {
+                                  selectedIds.addAll(players.map((p) => p.id));
+                                }
+                              });
+                            },
+                            child: Text(
+                              allSelected ? 'Clear All' : 'Select All',
+                              style: const TextStyle(
+                                color: AppColors.duneSand,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    ...players.map((player) {
+                      final isSelected = selectedIds.contains(player.id);
+                      final hasPhone = player.phoneNumber != null && player.phoneNumber!.trim().isNotEmpty;
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.lakeCyan.withValues(alpha: 0.6)
+                                : Colors.white12,
+                          ),
+                        ),
+                        child: Material(
+                          color: isSelected
+                              ? AppColors.lakeCyan.withValues(alpha: 0.12)
+                              : Colors.black.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(9),
+                          child: CheckboxListTile(
+                            dense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                            activeColor: AppColors.lakeCyan,
+                            checkColor: const Color(0xFF04110A),
+                            value: isSelected,
+                            onChanged: (val) {
+                              setDialogState(() {
+                                if (val == true) {
+                                  selectedIds.add(player.id);
+                                } else {
+                                  selectedIds.remove(player.id);
+                                }
+                              });
+                            },
+                            secondary: CircleAvatar(
+                              radius: 16,
+                              backgroundColor: isSelected ? AppColors.lakeCyan : AppColors.surfaceElevated,
+                              child: Text(
+                                player.initials.isNotEmpty
+                                    ? player.initials
+                                    : (player.fullName.isNotEmpty ? player.fullName[0] : '?'),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: isSelected ? const Color(0xFF04110A) : Colors.white,
+                                ),
+                              ),
+                            ),
+                            title: Text(
+                              player.fullName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                            subtitle: Row(
+                              children: [
+                                Icon(
+                                  hasPhone ? Icons.phone_android : Icons.phone_disabled,
+                                  size: 13,
+                                  color: hasPhone ? AppColors.cyanLight : Colors.white38,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    hasPhone ? player.phoneNumber! : 'No phone number entered',
+                                    style: TextStyle(
+                                      color: hasPhone ? Colors.white70 : Colors.white38,
+                                      fontSize: 12,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                    if (selectedPlayers.any((p) => p.phoneNumber == null || p.phoneNumber!.trim().isEmpty))
+                      const Padding(
+                        padding: EdgeInsets.only(top: 6),
+                        child: Text(
+                          'ℹ️ For players without a phone number, use "Share via Apps" to message them in your group chat.',
+                          style: TextStyle(color: AppColors.duneSand, fontSize: 11.5),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(),
+                child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+              ),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.share, size: 16, color: AppColors.cyanLight),
+                label: const Text(
+                  'Share via Apps',
+                  style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.cyanLight, fontSize: 12.5),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.lakeCyan),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                ),
+                onPressed: () {
+                  Navigator.of(dialogCtx).pop();
+                  Share.share(
+                    _officialRulesSummaryText,
+                    subject: '🏌️ Arcadia Cup 2026 – Official Tournament Rules',
+                  );
+                },
+              ),
+              FilledButton.icon(
+                icon: const Icon(Icons.sms_outlined, size: 16, color: Color(0xFF04110A)),
+                label: Text(
+                  'Compose Text ($validPhoneCount)',
+                  style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF04110A), fontSize: 12.5),
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.lakeCyan,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+                onPressed: validPhoneCount == 0
+                    ? null
+                    : () async {
+                        Navigator.of(dialogCtx).pop();
+                        final phoneNumbers = selectedPlayers
+                            .where((p) => p.phoneNumber != null && p.phoneNumber!.trim().isNotEmpty)
+                            .map((p) => p.phoneNumber!.trim())
+                            .toList();
+
+                        try {
+                          const service = DeviceCommunicationService();
+                          await service.sendSms(
+                            phoneNumbers: phoneNumbers,
+                            message: _officialRulesSummaryText,
+                          );
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Could not launch SMS app: $e'),
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            );
+                          }
+                        }
+                      },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  static const String _officialRulesSummaryText = '''🏌️ ARCADIA CUP 2026 – OFFICIAL RULES SUMMARY
+
+🏆 TOURNAMENT FORMAT:
+• 8-Player Invitational at Arcadia Bluffs (The Bluffs & South Course)
+• 2-Man Best Ball Stableford (Net Adjusted with GHIN handicaps)
+
+1️⃣ AI 4-SOMES & PARTNER ROTATION:
+• AI engine maximizes randomness while guaranteeing equal playing time with all 7 other golfers over the trip.
+
+2️⃣ 2-MAN BEST BALL STABLEFORD:
+• AI-randomized 2-man teams compete each round.
+• Team hole score = higher Stableford points between the 2 partners.
+• Points Scale (Rounds 1 to N-1):
+  - Double Eagle / Albatross: +5 pts
+  - Eagle: +4 pts
+  - Birdie: +3 pts
+  - Par: +2 pts
+  - Bogey: +1 pt
+  - Double Bogey or worse: 0 pts (Max 0)
+
+3️⃣ END OF ROUND SCORE RECORDING:
+• Both partners record the team's total Stableford points for their individual tournament standing (e.g. 45 pts earned = 45 pts to each player).
+
+4️⃣ FINAL ROUND PARTNER SELECTION DRAFT:
+• Cumulative scores rank golfers #1 thru #8.
+• Captains #1, #2, #3 pick partners from the lower pool (#5–#8). #4 is paired with the last player.
+• Team 1 vs Team 4 face off in Foursome 1; Team 2 vs Team 3 face off in Foursome 2.
+
+5️⃣ FINAL ROUND MODIFIED STABLEFORD:
+• Penalizes bad play down the stretch!
+  - Albatross: +4 | Eagle: +3 | Birdie: +2 | Par: +1 | Bogey: 0 | Double Bogey or worse: -1 pt
+
+6️⃣ ARCADIA CUP CHAMPION:
+• Highest cumulative Stableford points across all rounds wins the trophy!
+
+💰 THE BIRDIE POT BETTING GAME:
+• Entry: \$2.00 per birdie made across all 8 golfers.
+• Split: \$1.00 to Round Pot, \$1.00 to Trip Cumulative Pot.
+• Round Pot: Won by the player with the LAST birdie made in that round!
+• Cumulative Pot: Won by the player with the LAST birdie made on the trip!
+
+🌐 Live Tournament Website & Standings:
+https://staying-commercial-steven-ins.trycloudflare.com''';
 }
 
 class PointsRow {

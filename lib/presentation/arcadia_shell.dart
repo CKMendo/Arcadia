@@ -57,7 +57,7 @@ class _ArcadiaShellState extends State<ArcadiaShell> {
       ),
       CoursesScreen(courseRepository: widget.courseRepository),
       PlayersScreen(playerRepository: widget.playerRepository),
-      const RulesScreen(),
+      RulesScreen(playerRepository: widget.playerRepository),
     ];
 
     return Scaffold(
