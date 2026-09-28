@@ -7,6 +7,7 @@ import '../features/courses/presentation/courses_screen.dart';
 import '../features/rounds/presentation/active_scoring_screen.dart';
 import '../features/rounds/presentation/new_round_setup_screen.dart';
 import '../features/rounds/repository/round_repository.dart';
+import '../features/rules/presentation/rules_screen.dart';
 import '../features/standings/presentation/standings_screen.dart';
 import '../features/tournaments/repository/tournament_repository.dart';
 import '../features/trip/presentation/trip_overview_screen.dart';
@@ -56,6 +57,7 @@ class _ArcadiaShellState extends State<ArcadiaShell> {
       ),
       CoursesScreen(courseRepository: widget.courseRepository),
       PlayersScreen(playerRepository: widget.playerRepository),
+      const RulesScreen(),
     ];
 
     return Scaffold(
@@ -64,13 +66,14 @@ class _ArcadiaShellState extends State<ArcadiaShell> {
         children: screens,
       ),
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
         currentIndex: _currentIndex,
         onTap: (idx) => setState(() => _currentIndex = idx),
-        selectedFontSize: 17,
-        unselectedFontSize: 15,
-        iconSize: 32,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
-        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+        selectedFontSize: 13,
+        unselectedFontSize: 11,
+        iconSize: 26,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.flag_outlined),
@@ -96,6 +99,11 @@ class _ArcadiaShellState extends State<ArcadiaShell> {
             icon: Icon(Icons.group_outlined),
             activeIcon: Icon(Icons.group),
             label: 'Roster',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.menu_book_outlined),
+            activeIcon: Icon(Icons.menu_book),
+            label: 'Rules',
           ),
         ],
       ),
