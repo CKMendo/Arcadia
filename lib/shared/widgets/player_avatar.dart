@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../utils/player_initials_helper.dart';
 
 class PlayerAvatar extends StatelessWidget {
   final String initials;
+  final String? name;
   final String? photoPath;
   final double radius;
   final Color? backgroundColor;
@@ -15,7 +17,8 @@ class PlayerAvatar extends StatelessWidget {
 
   const PlayerAvatar({
     super.key,
-    required this.initials,
+    this.initials = '',
+    this.name,
     this.photoPath,
     this.radius = 24,
     this.backgroundColor,
@@ -42,6 +45,8 @@ class PlayerAvatar extends StatelessWidget {
     final size = radius * 2;
 
     Widget avatarContent;
+
+    final displayInitials = PlayerInitialsHelper.compute(name, initials);
 
     if (hasPhoto) {
       avatarContent = Container(
@@ -93,7 +98,7 @@ class PlayerAvatar extends StatelessWidget {
                 color: Colors.white.withValues(alpha: 0.12),
               ),
             Text(
-              initials.isNotEmpty ? initials : '?',
+              displayInitials,
               style: TextStyle(
                 color: fg,
                 fontWeight: FontWeight.w900,

@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../database/app_database.dart';
 import '../../../shared/theme/app_colors.dart';
+import '../../../shared/utils/course_handicap_calculator.dart';
+import '../../../shared/utils/player_initials_helper.dart';
 import '../../../shared/widgets/player_avatar.dart';
 import '../repository/player_repository.dart';
 
@@ -55,11 +57,18 @@ class _PlayerEntryScreenState extends State<PlayerEntryScreen> {
     _preferredTee = p?.preferredTee ?? 'White';
     _photoPath = p?.photoPath;
 
+    _nameController.addListener(_onFieldChanged);
+    _hcpController.addListener(_onFieldChanged);
+
     if (isEditing &&
         ((p?.nickname != null && p!.nickname.isNotEmpty && p.nickname != p.fullName.split(' ').first) ||
             (p?.ghinNumber != null && p!.ghinNumber!.isNotEmpty))) {
       _showAdditionalDetails = true;
     }
+  }
+
+  void _onFieldChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -241,6 +250,7 @@ class _PlayerEntryScreenState extends State<PlayerEntryScreen> {
         final updated = widget.player!.copyWith(
           fullName: fullName,
           nickname: nickname.isNotEmpty ? nickname : fullName.split(' ').first,
+          initials: PlayerInitialsHelper.compute(fullName),
           handicapIndex: hcp,
           preferredTee: Value(_preferredTee),
           ghinNumber: Value(ghin.isNotEmpty ? ghin : null),
@@ -297,12 +307,7 @@ class _PlayerEntryScreenState extends State<PlayerEntryScreen> {
   }
 
   String _computeInitials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty || name.trim().isEmpty) return '?';
-    if (parts.length == 1) {
-      return parts.first.substring(0, parts.first.length.clamp(1, 2)).toUpperCase();
-    }
-    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+    return PlayerInitialsHelper.compute(name);
   }
 
   @override
@@ -474,7 +479,101 @@ class _PlayerEntryScreenState extends State<PlayerEntryScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 18),
+
+                      // Live Calculated Course Handicaps
+                      Builder(builder: (context) {
+                        final hcp = double.tryParse(_hcpController.text.trim());
+                        if (hcp == null) return const SizedBox(height: 18);
+                        final tee = _preferredTee ?? 'White';
+                        final bluffsCh = CourseHandicapCalculator.forBluffs(hcp, tee);
+                        final southCh = CourseHandicapCalculator.forSouth(hcp, tee);
+                        return Container(
+                          margin: const EdgeInsets.only(top: 14, bottom: 18),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0C1F33),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppColors.lakeCyan.withValues(alpha: 0.5), width: 1.4),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.golf_course, color: AppColors.cyanLight, size: 20),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'COURSE HANDICAPS ($tee Tee)',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 1.0,
+                                        color: AppColors.cyanLight,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceElevated,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: AppColors.cardBorder),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'The Bluffs',
+                                            style: TextStyle(fontSize: 14, color: AppColors.textSecondary, fontWeight: FontWeight.bold),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'HCP $bluffsCh',
+                                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceElevated,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: AppColors.cardBorder),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'The South',
+                                            style: TextStyle(fontSize: 14, color: AppColors.textSecondary, fontWeight: FontWeight.bold),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'HCP $southCh',
+                                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.duneSand),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
 
                       // PHONE NUMBER Field (Required)
                       TextFormField(
@@ -869,6 +968,7 @@ class _PlayerEntryScreenState extends State<PlayerEntryScreen> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         // Headshot space left for player
         leading: PlayerAvatar(
+          name: p.fullName,
           initials: p.initials,
           photoPath: p.photoPath,
           radius: 26,
@@ -928,6 +1028,24 @@ class _PlayerEntryScreenState extends State<PlayerEntryScreen> {
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: AppColors.lakeCyan,
+                      ),
+                    ),
+                  ),
+
+                  // Course Handicaps for Bluffs and South
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0C1F33),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppColors.cyanLight.withValues(alpha: 0.4)),
+                    ),
+                    child: Text(
+                      'Bluffs: ${CourseHandicapCalculator.forBluffs(p.handicapIndex, p.preferredTee ?? 'White')} • South: ${CourseHandicapCalculator.forSouth(p.handicapIndex, p.preferredTee ?? 'White')}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.cyanLight,
                       ),
                     ),
                   ),

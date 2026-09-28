@@ -30,6 +30,36 @@ class PlayerSessionInfo {
     this.twoManTeamName,
   });
 
+  PlayerSessionInfo copyWith({
+    String? playerId,
+    String? name,
+    String? nickname,
+    String? initials,
+    double? handicapIndex,
+    String? teeBoxId,
+    String? teeName,
+    int? courseHandicap,
+    String? teamId,
+    int? foursomeGroup,
+    String? twoManTeamId,
+    String? twoManTeamName,
+  }) {
+    return PlayerSessionInfo(
+      playerId: playerId ?? this.playerId,
+      name: name ?? this.name,
+      nickname: nickname ?? this.nickname,
+      initials: initials ?? this.initials,
+      handicapIndex: handicapIndex ?? this.handicapIndex,
+      teeBoxId: teeBoxId ?? this.teeBoxId,
+      teeName: teeName ?? this.teeName,
+      courseHandicap: courseHandicap ?? this.courseHandicap,
+      teamId: teamId ?? this.teamId,
+      foursomeGroup: foursomeGroup ?? this.foursomeGroup,
+      twoManTeamId: twoManTeamId ?? this.twoManTeamId,
+      twoManTeamName: twoManTeamName ?? this.twoManTeamName,
+    );
+  }
+
   Map<String, dynamic> toJson() => {
         'playerId': playerId,
         'name': name,
@@ -93,6 +123,7 @@ class HoleSessionInfo {
 
 class ActiveRoundSession {
   final String? tournamentId;
+  String? savedRoundId; // If non-null, editing an existing saved round
   final String courseId;
   final String courseName;
   final int roundNumber;
@@ -112,6 +143,7 @@ class ActiveRoundSession {
 
   ActiveRoundSession({
     this.tournamentId,
+    this.savedRoundId,
     required this.courseId,
     required this.courseName,
     this.roundNumber = 1,
@@ -131,6 +163,25 @@ class ActiveRoundSession {
         putts = putts ?? {for (final p in players) p.playerId: {}},
         greenies = greenies ?? {for (final p in players) p.playerId: {}},
         sandies = sandies ?? {for (final p in players) p.playerId: {}};
+
+  void updatePlayerTeeAndHandicap({
+    required String playerId,
+    required String teeName,
+    required double handicapIndex,
+    required int newCourseHandicap,
+    String? teeBoxId,
+  }) {
+    final idx = players.indexWhere((p) => p.playerId == playerId);
+    if (idx != -1) {
+      final p = players[idx];
+      players[idx] = p.copyWith(
+        teeName: teeName,
+        teeBoxId: teeBoxId ?? teeName.toLowerCase(),
+        handicapIndex: handicapIndex,
+        courseHandicap: newCourseHandicap,
+      );
+    }
+  }
 
   int get holeCount => holes.length;
 
@@ -224,6 +275,25 @@ class ActiveRoundSession {
   int totalGross(String playerId) {
     var sum = 0;
     for (var h = 1; h <= holeCount; h++) {
+      final s = getGrossScore(playerId, h);
+      if (s > 0) sum += s;
+    }
+    return sum;
+  }
+
+  int frontNineGross(String playerId) {
+    var sum = 0;
+    final end = holeCount >= 9 ? 9 : holeCount;
+    for (var h = 1; h <= end; h++) {
+      final s = getGrossScore(playerId, h);
+      if (s > 0) sum += s;
+    }
+    return sum;
+  }
+
+  int backNineGross(String playerId) {
+    var sum = 0;
+    for (var h = 10; h <= holeCount; h++) {
       final s = getGrossScore(playerId, h);
       if (s > 0) sum += s;
     }
@@ -362,6 +432,7 @@ class ActiveRoundSession {
 
   Map<String, dynamic> toJson() => {
         if (tournamentId != null) 'tournamentId': tournamentId,
+        if (savedRoundId != null) 'savedRoundId': savedRoundId,
         'courseId': courseId,
         'courseName': courseName,
         'roundNumber': roundNumber,
@@ -440,6 +511,7 @@ class ActiveRoundSession {
 
     return ActiveRoundSession(
       tournamentId: json['tournamentId'] as String?,
+      savedRoundId: json['savedRoundId'] as String?,
       courseId: json['courseId'] as String,
       courseName: json['courseName'] as String,
       roundNumber: (json['roundNumber'] as num?)?.toInt() ?? 1,

@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../database/app_database.dart';
 import '../../../shared/theme/app_colors.dart';
+import '../../../shared/utils/course_handicap_calculator.dart';
 import '../../../shared/widgets/player_avatar.dart';
 import '../repository/player_repository.dart';
 import 'player_entry_screen.dart';
@@ -243,6 +244,7 @@ class PlayersScreen extends StatelessWidget {
                         leading: Tooltip(
                           message: p.photoPath != null ? 'Tap to change photo' : 'Headshot space (Tap to add photo)',
                           child: PlayerAvatar(
+                            name: p.fullName,
                             initials: p.initials,
                             photoPath: p.photoPath,
                             radius: 28,
@@ -361,6 +363,36 @@ class PlayersScreen extends StatelessWidget {
                                       ),
                                     ),
                                 ],
+                              ),
+                              const SizedBox(height: 6),
+                              // Course Handicaps display
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0C1F33),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppColors.cyanLight.withValues(alpha: 0.35)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.golf_course, size: 16, color: AppColors.cyanLight),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Course HCP (${p.preferredTee ?? 'White'} Tee): ',
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+                                    ),
+                                    Text(
+                                      'Bluffs: ${CourseHandicapCalculator.forBluffs(p.handicapIndex, p.preferredTee ?? 'White')}',
+                                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.white),
+                                    ),
+                                    const Text(' • ', style: TextStyle(color: Colors.white38)),
+                                    Text(
+                                      'South: ${CourseHandicapCalculator.forSouth(p.handicapIndex, p.preferredTee ?? 'White')}',
+                                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: AppColors.duneSand),
+                                    ),
+                                  ],
+                                ),
                               ),
                               const SizedBox(height: 4),
                               // Headshot hint

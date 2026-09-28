@@ -6,6 +6,7 @@ import '../../../shared/theme/app_colors.dart';
 import '../../../shared/widgets/player_avatar.dart';
 import '../models/active_round_session.dart';
 import '../repository/round_repository.dart';
+import 'active_scoring_screen.dart';
 
 class RoundSummaryScreen extends StatelessWidget {
   final RoundRepository roundRepository;
@@ -48,6 +49,16 @@ class RoundSummaryScreen extends StatelessWidget {
                 icon: const Icon(Icons.share, size: 28, color: AppColors.cyanLight),
                 tooltip: 'Share Round Results',
                 onPressed: () => _shareRoundSummary(session),
+              ),
+              IconButton(
+                icon: const Icon(Icons.lock_open, size: 26, color: AppColors.duneSand),
+                tooltip: 'Unlock & Edit Round',
+                onPressed: () => _unlockAndEdit(context, session),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, size: 26, color: Colors.redAccent),
+                tooltip: 'Delete Round',
+                onPressed: () => _confirmDeleteRound(context, session),
               ),
             ],
           ),
@@ -418,11 +429,110 @@ class RoundSummaryScreen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 18),
                 ),
               ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => _unlockAndEdit(context, session),
+                icon: const Icon(Icons.lock_open, color: AppColors.duneSand, size: 24),
+                label: const Text(
+                  'Unlock & Edit This Round',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.duneSand),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.duneSand, width: 1.5),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+              const SizedBox(height: 20),
             ],
           ),
         );
       },
     );
+  }
+
+  Future<void> _unlockAndEdit(BuildContext context, ActiveRoundSession session) async {
+    final activeDraft = await roundRepository.getActiveDraft();
+    if (activeDraft != null && context.mounted) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Replace Active Draft?', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: Text(
+            'You currently have a round in progress (${activeDraft.courseName}, Hole ${activeDraft.currentHoleNumber}).\n\nUnlocking Round ${session.roundNumber} will replace the active draft. Do you want to continue?',
+            style: const TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.duneSand, foregroundColor: Colors.black),
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Unlock & Edit', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true) return;
+    }
+
+    final unlocked = await roundRepository.unlockSavedRound(roundId);
+    if (unlocked != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('🔓 Round ${session.roundNumber} unlocked! You can now edit scores, tees, and player handicaps.'),
+          backgroundColor: const Color(0xFF0F3224),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => ActiveScoringScreen(
+            roundRepository: roundRepository,
+            session: unlocked,
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _confirmDeleteRound(BuildContext context, ActiveRoundSession session) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete Round ${session.roundNumber}?', style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(
+          'Are you sure you want to delete Round ${session.roundNumber} (${session.courseName})? This cannot be undone.',
+          style: const TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete Round', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await roundRepository.deleteSavedRound(roundId);
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Round ${session.roundNumber} deleted'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
   }
 
   void _shareRoundSummary(ActiveRoundSession session) {

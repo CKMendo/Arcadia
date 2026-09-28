@@ -86,29 +86,14 @@ class TripOverviewScreen extends StatelessWidget {
               }
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.auto_awesome, color: AppColors.duneSand, size: 26),
-            tooltip: 'Configure Gemini AI Key',
-            onPressed: () => GeminiKeyConfigDialog.show(context),
-          ),
           StreamBuilder<Tournament?>(
             stream: tournamentRepository.watchActiveTournament(),
             builder: (context, snap) {
               final tournament = snap.data;
               return IconButton(
                 icon: const Icon(Icons.settings_outlined, color: AppColors.cyanLight, size: 28),
-                tooltip: 'Trip Settings',
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => TournamentSetupScreen(
-                        tournamentRepository: tournamentRepository,
-                        playerRepository: playerRepository,
-                        tournament: tournament,
-                      ),
-                    ),
-                  );
-                },
+                tooltip: 'Settings & Options',
+                onPressed: () => _showSettingsModal(context, tournament),
               );
             },
           ),
@@ -494,23 +479,15 @@ class TripOverviewScreen extends StatelessWidget {
                             ],
                           ),
                         ),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => ActiveScoringScreen(
-                                  roundRepository: roundRepository,
-                                  session: draft,
-                                ),
-                              ),
-                            );
-                          },
+                        ElevatedButton.icon(
+                          onPressed: () => _showActiveRoundOptions(context, draft),
+                          icon: const Icon(Icons.more_horiz, size: 22),
+                          label: const Text('Options', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.lakeCyan,
                             foregroundColor: const Color(0xFF06111D),
-                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
-                          child: const Text('Resume', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
                         ),
                       ],
                     ),
@@ -628,8 +605,93 @@ class TripOverviewScreen extends StatelessWidget {
                               style: const TextStyle(fontSize: 16, color: Colors.white70, fontWeight: FontWeight.w600),
                             ),
                           ),
-                          trailing: const Icon(Icons.chevron_right,
-                              color: Colors.white60, size: 28),
+                          trailing: PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert, color: Colors.white70, size: 26),
+                            color: const Color(0xFF0F1E2E),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: const BorderSide(color: AppColors.cardBorder),
+                            ),
+                            onSelected: (val) async {
+                              if (val == 'view') {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => RoundSummaryScreen(
+                                      roundRepository: roundRepository,
+                                      roundId: r.id,
+                                    ),
+                                  ),
+                                );
+                              } else if (val == 'unlock') {
+                                await _performUnlock(context, r);
+                              } else if (val == 'delete') {
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: Text('Delete Round ${r.roundNumber}?', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    content: Text(
+                                      'Are you sure you want to delete Round ${r.roundNumber} (${r.courseName})? This will remove all saved scores and cannot be undone.',
+                                      style: const TextStyle(fontSize: 16),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(ctx).pop(false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                                        onPressed: () => Navigator.of(ctx).pop(true),
+                                        child: const Text('Delete Round', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirmed == true) {
+                                  await roundRepository.deleteSavedRound(r.id);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Round ${r.roundNumber} deleted'),
+                                        backgroundColor: Colors.redAccent,
+                                      ),
+                                    );
+                                  }
+                                }
+                              }
+                            },
+                            itemBuilder: (ctx) => [
+                              const PopupMenuItem(
+                                value: 'view',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.visibility_outlined, color: AppColors.lakeCyan, size: 20),
+                                    SizedBox(width: 10),
+                                    Text('View Scorecard', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuItem(
+                                value: 'unlock',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.lock_open, color: AppColors.duneSand, size: 20),
+                                    SizedBox(width: 10),
+                                    Text('Unlock & Edit Round', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                                    SizedBox(width: 10),
+                                    Text('Delete Round', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                           onTap: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
@@ -651,6 +713,502 @@ class TripOverviewScreen extends StatelessWidget {
         },
       ),
     );
+  }
+
+  void _showSettingsModal(BuildContext context, Tournament? tournament) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF0C1927),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (bottomSheetCtx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.settings, color: AppColors.lakeCyan, size: 26),
+                        SizedBox(width: 10),
+                        Text(
+                          'Trip & App Settings',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white70),
+                      onPressed: () => Navigator.of(bottomSheetCtx).pop(),
+                    ),
+                  ],
+                ),
+                const Divider(color: AppColors.cardBorder, height: 24),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.lakeCyan.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.tune, color: AppColors.lakeCyan, size: 26),
+                  ),
+                  title: const Text(
+                    'Trip & Tournament Setup',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  subtitle: const Text(
+                    'Dates, rules, 8-player roster & team pairings',
+                    style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.white60),
+                  onTap: () {
+                    Navigator.of(bottomSheetCtx).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => TournamentSetupScreen(
+                          tournamentRepository: tournamentRepository,
+                          playerRepository: playerRepository,
+                          tournament: tournament,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.duneSand.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.lock_open, color: AppColors.duneSand, size: 26),
+                  ),
+                  title: const Text(
+                    'Unlock a Round',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  subtitle: const Text(
+                    'Reopen a finalized round to edit scores, tees, or handicaps',
+                    style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.white60),
+                  onTap: () {
+                    Navigator.of(bottomSheetCtx).pop();
+                    _showUnlockRoundDialog(context);
+                  },
+                ),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.auto_awesome, color: Colors.amberAccent, size: 26),
+                  ),
+                  title: const Text(
+                    'Configure Gemini AI API Key',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  subtitle: const Text(
+                    'OCR scorecard scanner primary & backup keys',
+                    style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.white60),
+                  onTap: () {
+                    Navigator.of(bottomSheetCtx).pop();
+                    GeminiKeyConfigDialog.show(context);
+                  },
+                ),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.public, color: Colors.greenAccent, size: 26),
+                  ),
+                  title: const Text(
+                    'Website & Public Live Links',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  subtitle: const Text(
+                    'Manage live leaderboard address & TinyURL',
+                    style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.white60),
+                  onTap: () {
+                    Navigator.of(bottomSheetCtx).pop();
+                    EditWebsiteLinksDialog.show(context);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showActiveRoundOptions(BuildContext context, ActiveRoundSession draft) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF0C1927),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (bottomSheetCtx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'ROUND ${draft.roundNumber} IN PROGRESS',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.1,
+                              color: AppColors.cyanLight,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${draft.courseName} • Hole ${draft.currentHoleNumber}',
+                            style: const TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white70),
+                      onPressed: () => Navigator.of(bottomSheetCtx).pop(),
+                    ),
+                  ],
+                ),
+                const Divider(color: AppColors.cardBorder, height: 24),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.lakeCyan.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.play_circle_fill, color: AppColors.lakeCyan, size: 28),
+                  ),
+                  title: const Text(
+                    'RESUME ROUND',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
+                  ),
+                  subtitle: Text(
+                    'Continue scoring from Hole ${draft.currentHoleNumber}',
+                    style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.white60),
+                  onTap: () {
+                    Navigator.of(bottomSheetCtx).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ActiveScoringScreen(
+                          roundRepository: roundRepository,
+                          session: draft,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.duneSand.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.table_chart_outlined, color: AppColors.duneSand, size: 28),
+                  ),
+                  title: const Text(
+                    'EDIT ROUND',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
+                  ),
+                  subtitle: const Text(
+                    'Open 8-player grid to edit scores, tees, or handicaps',
+                    style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.white60),
+                  onTap: () {
+                    Navigator.of(bottomSheetCtx).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ActiveScoringScreen(
+                          roundRepository: roundRepository,
+                          session: draft,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.delete_forever, color: Colors.redAccent, size: 28),
+                  ),
+                  title: const Text(
+                    'DELETE ROUND',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.redAccent),
+                  ),
+                  subtitle: const Text(
+                    'Discard in-progress round and clear active draft',
+                    style: TextStyle(fontSize: 14, color: Colors.white60),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.white60),
+                  onTap: () async {
+                    Navigator.of(bottomSheetCtx).pop();
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Delete Active Round?', style: TextStyle(fontWeight: FontWeight.bold)),
+                        content: const Text(
+                          'Are you sure you want to delete this round in progress? All un-finalized scores will be permanently discarded.',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                            onPressed: () => Navigator.of(ctx).pop(true),
+                            child: const Text('Delete Round', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirmed == true) {
+                      await roundRepository.clearActiveDraft();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Active round deleted'),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showUnlockRoundDialog(BuildContext context) async {
+    final dateFormat = DateFormat('MMM d, yyyy');
+    final savedRounds = await roundRepository.getAllSavedRounds();
+
+    if (!context.mounted) return;
+
+    if (savedRounds.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Unlock a Round', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: const Text(
+            'There are no finalized rounds yet to unlock.\n\nOnce a round is completed and finalized, you can reopen it here to edit scores, tee selections, or player handicaps.',
+            style: TextStyle(fontSize: 16, height: 1.4),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF0C1927),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (bottomSheetCtx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.lock_open, color: AppColors.duneSand, size: 26),
+                        SizedBox(width: 10),
+                        Text(
+                          'Unlock a Finalized Round',
+                          style: TextStyle(
+                            fontSize: 19,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white70),
+                      onPressed: () => Navigator.of(bottomSheetCtx).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Select a round to unlock. This restores the 8-player scoring grid so you can adjust scores, player tees, and handicaps:',
+                  style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                ),
+                const Divider(color: AppColors.cardBorder, height: 20),
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: savedRounds.length,
+                    itemBuilder: (ctx, i) {
+                      final r = savedRounds[i];
+                      final playedDate = DateTime.fromMillisecondsSinceEpoch(r.datePlayed);
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 6),
+                        child: ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceElevated,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.sports_golf, color: AppColors.lakeCyan, size: 24),
+                          ),
+                          title: Text(
+                            'Round ${r.roundNumber}: ${r.courseName}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                          ),
+                          subtitle: Text(
+                            '${dateFormat.format(playedDate)} • ${r.winnerName ?? 'Completed'}',
+                            style: const TextStyle(fontSize: 14, color: Colors.white70),
+                          ),
+                          trailing: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.duneSand,
+                              foregroundColor: const Color(0xFF0C1927),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            ),
+                            icon: const Icon(Icons.lock_open, size: 18),
+                            label: const Text('Unlock', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            onPressed: () async {
+                              Navigator.of(bottomSheetCtx).pop();
+                              await _performUnlock(context, r);
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _performUnlock(BuildContext context, SavedRound r) async {
+    final activeDraft = await roundRepository.getActiveDraft();
+    if (activeDraft != null && context.mounted) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Replace Active Draft?', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: Text(
+            'You currently have a round in progress (${activeDraft.courseName}, Hole ${activeDraft.currentHoleNumber}).\n\nUnlocking Round ${r.roundNumber} will replace the active draft. Do you want to continue?',
+            style: const TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.duneSand, foregroundColor: Colors.black),
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Unlock & Replace Draft', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true) return;
+    }
+
+    final session = await roundRepository.unlockSavedRound(r.id);
+    if (session != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('🔓 Round ${r.roundNumber} unlocked! You can now edit scores, tees, and player handicaps.'),
+          backgroundColor: const Color(0xFF0F3224),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ActiveScoringScreen(
+            roundRepository: roundRepository,
+            session: session,
+          ),
+        ),
+      );
+    }
   }
 }
 

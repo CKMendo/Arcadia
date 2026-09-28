@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../../database/app_database.dart';
 import '../../../shared/services/app_settings_service.dart';
 import '../../../shared/theme/app_colors.dart';
+import '../../../shared/utils/course_handicap_calculator.dart';
 import '../../../shared/widgets/player_avatar.dart';
 import '../../players/repository/player_repository.dart';
 import '../../rounds/import/presentation/gemini_key_config_dialog.dart';
@@ -250,45 +251,50 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                             ),
                           ),
                           const SizedBox(height: 20),
-                          const Text(
-                            'Format Style',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textSecondary,
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0C1F33),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppColors.lakeCyan.withValues(alpha: 0.5), width: 1.3),
                             ),
-                          ),
-                          const SizedBox(height: 10),
-                          SizedBox(
-                            width: double.infinity,
-                            child: SegmentedButton<String>(
-                              segments: const [
-                                ButtonSegment(
-                                  value: 'hybrid',
-                                  label: Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 4),
-                                    child: Text('Hybrid', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            child: const Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.lock_outline, color: AppColors.cyanLight, size: 20),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'COMPETITION FORMAT (FIXED)',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 1.1,
+                                        color: AppColors.cyanLight,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 6),
+                                Text(
+                                  '2-Man Best Ball Net Stableford',
+                                  style: TextStyle(
+                                    fontSize: 19,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
                                   ),
                                 ),
-                                ButtonSegment(
-                                  value: 'teams',
-                                  label: Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 4),
-                                    child: Text('Teams', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                                  ),
-                                ),
-                                ButtonSegment(
-                                  value: 'individual',
-                                  label: Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 4),
-                                    child: Text('Individual', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Fixed tournament format for Arcadia Cup 2027. All rounds pair golfers into 2-man teams competing for points with individual Net Stableford tracked concurrently.',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.white70,
+                                    height: 1.35,
                                   ),
                                 ),
                               ],
-                              selected: {_formatType},
-                              onSelectionChanged: (set) {
-                                setState(() => _formatType = set.first);
-                              },
                             ),
                           ),
                         ],
@@ -296,67 +302,6 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-
-                  // Teams Card (if hybrid or teams)
-                  if (_formatType != 'individual') ...[
-                    Card(
-                      margin: EdgeInsets.zero,
-                      child: Padding(
-                        padding: const EdgeInsets.all(18),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'TEAM DESIGNATION',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.2,
-                                color: AppColors.cyanLight,
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _teamAController,
-                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                                    decoration: const InputDecoration(
-                                      labelText: 'Team A Name',
-                                      labelStyle: TextStyle(fontSize: 16),
-                                      prefixIcon: Icon(
-                                        Icons.shield,
-                                        color: AppColors.teamA,
-                                        size: 26,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _teamBController,
-                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                                    decoration: const InputDecoration(
-                                      labelText: 'Team B Name',
-                                      labelStyle: TextStyle(fontSize: 16),
-                                      prefixIcon: Icon(
-                                        Icons.shield,
-                                        color: AppColors.teamB,
-                                        size: 26,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
 
                   // Player Rostering Card
                   Card(
@@ -370,7 +315,7 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               const Text(
-                                'PLAYER ROSTER & TEAMS',
+                                'PLAYER ROSTER',
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w900,
@@ -379,7 +324,7 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                                 ),
                               ),
                               Text(
-                                '${_allPlayers.length} Players',
+                                '${_allPlayers.length} / 8 Golfers',
                                 style: const TextStyle(
                                   color: AppColors.duneSand,
                                   fontSize: 16,
@@ -399,7 +344,10 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                             )
                           else
                             ..._allPlayers.map((player) {
-                              final currentTeam = _playerTeams[player.id] ?? 'none';
+                              final tee = player.preferredTee ?? 'White';
+                              final bluffsCh = CourseHandicapCalculator.forBluffs(player.handicapIndex, tee);
+                              final southCh = CourseHandicapCalculator.forSouth(player.handicapIndex, tee);
+
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 10),
                                 padding: const EdgeInsets.symmetric(
@@ -414,6 +362,7 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                                 child: Row(
                                   children: [
                                     PlayerAvatar(
+                                      name: player.fullName,
                                       initials: player.initials,
                                       photoPath: player.photoPath,
                                       radius: 22,
@@ -421,8 +370,7 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                                     const SizedBox(width: 14),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             player.fullName,
@@ -433,60 +381,39 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                                             ),
                                           ),
                                           const SizedBox(height: 2),
-                                          Text(
-                                            'HCP ${player.handicapIndex.toStringAsFixed(1)}',
-                                            style: const TextStyle(
-                                              color: AppColors.textSecondary,
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w600,
-                                            ),
+                                          Wrap(
+                                            spacing: 8,
+                                            runSpacing: 4,
+                                            children: [
+                                              Text(
+                                                'HCP ${player.handicapIndex.toStringAsFixed(1)} ($tee)',
+                                                style: const TextStyle(
+                                                  color: AppColors.lakeCyan,
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              Text(
+                                                '• Bluffs CH: $bluffsCh',
+                                                style: const TextStyle(
+                                                  color: Colors.white70,
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              Text(
+                                                '• South CH: $southCh',
+                                                style: const TextStyle(
+                                                  color: AppColors.duneSand,
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ],
                                       ),
                                     ),
-                                    if (_formatType != 'individual') ...[
-                                      SegmentedButton<String>(
-                                        segments: [
-                                          ButtonSegment(
-                                            value: 'a',
-                                            label: Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: 4),
-                                              child: Text(
-                                                _teamAController.text.isNotEmpty
-                                                    ? _teamAController.text.substring(0, 1).toUpperCase()
-                                                    : 'A',
-                                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                              ),
-                                            ),
-                                          ),
-                                          ButtonSegment(
-                                            value: 'b',
-                                            label: Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: 4),
-                                              child: Text(
-                                                _teamBController.text.isNotEmpty
-                                                    ? _teamBController.text.substring(0, 1).toUpperCase()
-                                                    : 'B',
-                                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                        selected: {
-                                          currentTeam == 'b' ? 'b' : 'a'
-                                        },
-                                        showSelectedIcon: false,
-                                        style: ButtonStyle(
-                                          visualDensity: VisualDensity.comfortable,
-                                          tapTargetSize: MaterialTapTargetSize.padded,
-                                        ),
-                                        onSelectionChanged: (set) {
-                                          setState(() {
-                                            _playerTeams[player.id] = set.first;
-                                          });
-                                        },
-                                      ),
-                                    ],
                                   ],
                                 ),
                               );
@@ -495,6 +422,11 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
+
+                  // TEAMS & PAIRINGS PER COURSE SECTION
+                  _buildTeamsPerCourseCard(),
+                  const SizedBox(height: 16),
                   const SizedBox(height: 16),
 
                   // AI Integration & Website Card
@@ -683,6 +615,252 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildTeamsPerCourseCard() {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.golf_course, color: AppColors.cyanLight, size: 22),
+                    SizedBox(width: 8),
+                    Text(
+                      'ESTABLISHED TEAMS PER COURSE',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                        color: AppColors.cyanLight,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceElevated,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.cardBorder),
+                  ),
+                  child: const Text(
+                    '2 Courses',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.duneSand),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            if (_allPlayers.length < 4)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  'Add at least 4 golfers to generate course pairings and 2-man teams.',
+                  style: TextStyle(color: Colors.white60, fontSize: 15),
+                ),
+              )
+            else ...[
+              _buildCoursePairingsBlock(
+                courseName: 'Arcadia Bluffs (The Bluffs)',
+                subtitle: 'Par 72 • Championship Links',
+                isSouth: false,
+                players: _allPlayers,
+              ),
+              const SizedBox(height: 14),
+              _buildCoursePairingsBlock(
+                courseName: 'Arcadia Bluffs (The South)',
+                subtitle: 'Par 72 • C.B. Macdonald Geometric Classic',
+                isSouth: true,
+                players: _allPlayers,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCoursePairingsBlock({
+    required String courseName,
+    required String subtitle,
+    required bool isSouth,
+    required List<Player> players,
+  }) {
+    // Generate pairings for this course
+    final pList = List<Player>.from(players);
+    // On South, rearrange partner pairings so players play with different partners
+    final ordered = isSouth && pList.length >= 8
+        ? [pList[0], pList[2], pList[1], pList[3], pList[4], pList[6], pList[5], pList[7]]
+        : pList;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isSouth ? const Color(0xFF26190C) : const Color(0xFF0F2B3E),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.sports_golf,
+                  color: isSouth ? AppColors.duneSand : AppColors.lakeCyan,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      courseName,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Group 1
+          _buildPairingGroup(
+            groupNum: 1,
+            p1: ordered[0],
+            p2: ordered[1],
+            p3: ordered.length > 2 ? ordered[2] : null,
+            p4: ordered.length > 3 ? ordered[3] : null,
+            isSouth: isSouth,
+          ),
+          if (ordered.length >= 8) ...[
+            const SizedBox(height: 10),
+            _buildPairingGroup(
+              groupNum: 2,
+              p1: ordered[4],
+              p2: ordered[5],
+              p3: ordered[6],
+              p4: ordered[7],
+              isSouth: isSouth,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPairingGroup({
+    required int groupNum,
+    required Player p1,
+    required Player p2,
+    Player? p3,
+    Player? p4,
+    required bool isSouth,
+  }) {
+    final t1Ch1 = isSouth
+        ? CourseHandicapCalculator.forSouth(p1.handicapIndex, p1.preferredTee ?? 'White')
+        : CourseHandicapCalculator.forBluffs(p1.handicapIndex, p1.preferredTee ?? 'White');
+    final t1Ch2 = isSouth
+        ? CourseHandicapCalculator.forSouth(p2.handicapIndex, p2.preferredTee ?? 'White')
+        : CourseHandicapCalculator.forBluffs(p2.handicapIndex, p2.preferredTee ?? 'White');
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundDark,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.cardBorder.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Foursome $groupNum',
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.cyanLight),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.teamA.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.teamA.withValues(alpha: 0.5)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Team 1', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.teamA)),
+                      const SizedBox(height: 2),
+                      Text('${p1.nickname} (HCP $t1Ch1)', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                      Text('${p2.nickname} (HCP $t1Ch2)', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                    ],
+                  ),
+                ),
+              ),
+              if (p3 != null && p4 != null) ...[
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Text('VS', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: AppColors.duneSand)),
+                ),
+                Expanded(
+                  child: Builder(builder: (context) {
+                    final t2Ch1 = isSouth
+                        ? CourseHandicapCalculator.forSouth(p3.handicapIndex, p3.preferredTee ?? 'White')
+                        : CourseHandicapCalculator.forBluffs(p3.handicapIndex, p3.preferredTee ?? 'White');
+                    final t2Ch2 = isSouth
+                        ? CourseHandicapCalculator.forSouth(p4.handicapIndex, p4.preferredTee ?? 'White')
+                        : CourseHandicapCalculator.forBluffs(p4.handicapIndex, p4.preferredTee ?? 'White');
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.teamB.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.teamB.withValues(alpha: 0.5)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Team 2', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.teamB)),
+                          const SizedBox(height: 2),
+                          Text('${p3.nickname} (HCP $t2Ch1)', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                          Text('${p4.nickname} (HCP $t2Ch2)', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                        ],
+                      ),
+                    );
+                  }),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

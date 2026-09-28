@@ -43,6 +43,12 @@ class RoundRepository {
   Future<SavedRound?> getRoundById(String id) => getSavedRound(id);
 
   Future<String> saveCompletedRound(ActiveRoundSession session) async {
+    final existingId = session.savedRoundId;
+    if (existingId != null && existingId.isNotEmpty) {
+      await updateSavedRound(existingId, session);
+      return existingId;
+    }
+
     final roundId = _uuid.v4();
     final jsonString = jsonEncode(session.toJson());
 
@@ -80,6 +86,54 @@ class RoundRepository {
     onDataChanged?.call();
 
     return roundId;
+  }
+
+  Future<void> updateSavedRound(String roundId, ActiveRoundSession session) async {
+    final jsonString = jsonEncode(session.toJson());
+
+    String? winnerName;
+    if (session.players.isNotEmpty) {
+      var minNet = 999;
+      for (final p in session.players) {
+        final net = session.totalNet(p.playerId);
+        if (net > 0 && net < minNet) {
+          minNet = net;
+          winnerName = p.name;
+        }
+      }
+    }
+
+    await (_db.update(_db.savedRounds)..where((t) => t.id.equals(roundId))).write(
+          SavedRoundsCompanion(
+            courseId: Value(session.courseId),
+            courseName: Value(session.courseName),
+            roundNumber: Value(session.roundNumber),
+            datePlayed: Value(session.datePlayed.millisecondsSinceEpoch),
+            format: Value(session.format),
+            isComplete: Value(session.isRoundComplete),
+            winnerName: Value(winnerName),
+            roundPayloadJson: Value(jsonString),
+          ),
+        );
+
+    await clearActiveDraft();
+    onDataChanged?.call();
+  }
+
+  /// Unlocks a finalized round so it can be edited, modifying scores, tee selections, and handicaps.
+  Future<ActiveRoundSession?> unlockSavedRound(String roundId) async {
+    final saved = await getSavedRound(roundId);
+    if (saved == null) return null;
+    try {
+      final map = jsonDecode(saved.roundPayloadJson) as Map<String, dynamic>;
+      final session = ActiveRoundSession.fromJson(map);
+      session.savedRoundId = roundId;
+      await saveActiveDraft(session);
+      onDataChanged?.call();
+      return session;
+    } catch (e) {
+      return null;
+    }
   }
 
   Future<void> deleteSavedRound(String id) async {

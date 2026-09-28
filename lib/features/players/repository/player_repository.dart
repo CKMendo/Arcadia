@@ -2,6 +2,8 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 import '../../../database/app_database.dart';
 
+import '../../../shared/utils/player_initials_helper.dart';
+
 class PlayerRepository {
   final AppDatabase _db;
   final Uuid _uuid = const Uuid();
@@ -16,12 +18,22 @@ class PlayerRepository {
         .watch();
   }
 
-  Future<List<Player>> getAllPlayers() {
-    return (_db.select(_db.players)
+  Future<List<Player>> getAllPlayers() async {
+    final players = await (_db.select(_db.players)
           ..orderBy([
             (t) => OrderingTerm(expression: t.fullName, mode: OrderingMode.asc)
           ]))
         .get();
+
+    // Self-healing: ensure all players have true first and last name initials
+    for (final p in players) {
+      final trueInitials = PlayerInitialsHelper.compute(p.fullName);
+      if (p.initials != trueInitials) {
+        await _db.update(_db.players).replace(p.copyWith(initials: trueInitials));
+      }
+    }
+
+    return players;
   }
 
   Future<Player?> getPlayerById(String id) {
@@ -41,9 +53,7 @@ class PlayerRepository {
     String? photoPath,
   }) async {
     final id = _uuid.v4();
-    final effectiveInitials = (initials != null && initials.trim().isNotEmpty)
-        ? initials.trim()
-        : _computeInitials(fullName);
+    final effectiveInitials = PlayerInitialsHelper.compute(fullName, initials);
     final effectiveNickname = (nickname != null && nickname.trim().isNotEmpty)
         ? nickname.trim()
         : fullName.split(' ').first;
@@ -53,7 +63,7 @@ class PlayerRepository {
             id: Value(id),
             fullName: Value(fullName.trim()),
             nickname: Value(effectiveNickname),
-            initials: Value(effectiveInitials.toUpperCase()),
+            initials: Value(effectiveInitials),
             handicapIndex: Value(handicapIndex),
             preferredTee: Value(preferredTee),
             ghinNumber: Value(ghinNumber),
@@ -67,7 +77,9 @@ class PlayerRepository {
   }
 
   Future<void> updatePlayer(Player player) {
-    return _db.update(_db.players).replace(player);
+    final trueInitials = PlayerInitialsHelper.compute(player.fullName, player.initials);
+    final updated = player.copyWith(initials: trueInitials);
+    return _db.update(_db.players).replace(updated);
   }
 
   Future<void> deletePlayer(String id) {
@@ -109,14 +121,5 @@ class PlayerRepository {
 
   Future<void> clearAllPlayers() async {
     await _db.delete(_db.players).go();
-  }
-
-  String _computeInitials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty) return '??';
-    if (parts.length == 1) {
-      return parts.first.substring(0, parts.first.length.clamp(1, 2));
-    }
-    return '${parts.first[0]}${parts.last[0]}';
   }
 }
