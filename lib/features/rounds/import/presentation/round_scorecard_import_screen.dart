@@ -869,7 +869,7 @@ class _RoundScorecardImportScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      hasKey ? 'Gemini 2.5 Flash Ready' : 'Gemini API Key Required',
+                      hasKey ? 'Gemini 3.8 Flash Ready' : 'Gemini API Key Required',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,

@@ -111,11 +111,11 @@ class AppSettingsService {
     return defaultTinyUrl;
   }
 
-  /// Tests a Gemini API key by making a lightweight ping to gemini-2.5-flash.
+  /// Tests a Gemini API key by making a lightweight ping to gemini-3.8-flash.
   static Future<bool> validateGeminiApiKey(String apiKey) async {
     try {
       final url = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey.trim()}',
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey.trim()}',
       );
       final payload = {
         'contents': [

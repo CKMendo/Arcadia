@@ -70,7 +70,7 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
     if (validate) {
       setState(() {
         _isValidating = true;
-        _statusMessage = 'Testing key with Gemini 2.5 Flash...';
+        _statusMessage = 'Testing key with Gemini 3.8 Flash...';
         _isSuccess = false;
       });
 
@@ -132,7 +132,7 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Direct scorecard vision scanning uses Google Gemini 2.5 Flash. '
+                    'Direct scorecard vision scanning uses Google Gemini 3.8 Flash. '
                     'Enter your Gemini API key below.',
                     style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
                   ),

@@ -9,7 +9,7 @@ class GeminiRoundScorecardService {
   // Built-in API key support or system property
   static String? apiKey;
 
-  static const String defaultModel = 'gemini-2.5-flash';
+  static const String defaultModel = 'gemini-3.8-flash';
 
   Future<RoundScoreImportDraft> analyze(
     String imagePath, {

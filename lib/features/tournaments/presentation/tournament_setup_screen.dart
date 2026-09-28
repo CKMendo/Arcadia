@@ -553,7 +553,7 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            hasKey ? 'Gemini 2.5 Flash API Key' : 'Gemini Key Not Configured',
+                                            hasKey ? 'Gemini 3.8 Flash API Key' : 'Gemini Key Not Configured',
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 14,
