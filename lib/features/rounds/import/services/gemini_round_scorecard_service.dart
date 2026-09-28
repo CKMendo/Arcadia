@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import '../../../../shared/services/app_settings_service.dart';
 import '../models/round_score_import_draft.dart';
 import 'ai_response_json_decoder.dart';
 
@@ -19,10 +20,10 @@ class GeminiRoundScorecardService {
     final bytes = await File(imagePath).readAsBytes();
     if (bytes.isEmpty) throw const FormatException('The image file is empty.');
 
-    final key = apiKey;
+    final key = apiKey ?? await AppSettingsService.getGeminiApiKey();
     if (key == null || key.isEmpty) {
       throw const FormatException(
-        'Gemini API key not configured. You can use FREE ON-DEVICE, or select '
+        'Gemini API key not configured. Tap Configure Key below, use FREE ON-DEVICE, or select '
         'GEMINI in the External AI assistant to copy prompt and paste response.',
       );
     }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../shared/services/app_settings_service.dart';
 import '../../../../shared/theme/app_colors.dart';
 import '../models/round_score_import_draft.dart';
 import '../services/external_ai_import_service.dart';
@@ -11,6 +12,7 @@ import '../services/on_device_text_recognition_service.dart';
 import '../services/player_score_row_matcher.dart';
 import '../services/round_import_validator.dart';
 import '../services/round_scorecard_text_parser.dart';
+import 'gemini_key_config_dialog.dart';
 
 enum _RoundImportReader { offline, gemini }
 
@@ -309,6 +311,22 @@ class _RoundScorecardImportScreenState
   Future<void> _analyze(_RoundImportReader reader) async {
     final image = _selectedImage;
     if (image == null || _isReading) return;
+
+    if (reader == _RoundImportReader.gemini) {
+      final key = await AppSettingsService.getGeminiApiKey();
+      if (key == null || key.trim().isEmpty) {
+        if (!mounted) return;
+        final configured = await GeminiKeyConfigDialog.show(context);
+        if (configured != true) {
+          setState(() {
+            _importError =
+                'Gemini API key is required to scan scorecards. Tap Configure Key below, or select FREE ON-DEVICE.';
+          });
+          return;
+        }
+      }
+    }
+
     setState(() {
       _isReading = true;
       _activeReader = reader;
@@ -507,6 +525,10 @@ class _RoundScorecardImportScreenState
           }),
           onExternalSelected: _selectExternalAssistant,
         ),
+        if (_selectedReader == _RoundImportReader.gemini && _externalAssistant == null) ...[
+          const SizedBox(height: 12),
+          _buildGeminiKeyStatusCard(),
+        ],
         const SizedBox(height: 16),
         if (_externalAssistant != null) ...[
           _buildExternalAiCard(),
@@ -815,6 +837,80 @@ class _RoundScorecardImportScreenState
         ? '+$difference'
         : '$difference';
     return '${row.enteredScoreCount}/${widget.holeCount} scores • Gross ${row.totalScore} • $relative';
+  }
+
+  Widget _buildGeminiKeyStatusCard() {
+    return FutureBuilder<String?>(
+      future: AppSettingsService.getGeminiApiKey(),
+      builder: (context, snapshot) {
+        final key = snapshot.data;
+        final hasKey = key != null && key.isNotEmpty;
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: hasKey ? const Color(0xFF0D251C) : const Color(0xFF2E1C0A),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: hasKey ? Colors.greenAccent.withValues(alpha: 0.6) : AppColors.duneSand,
+              width: 1.5,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                hasKey ? Icons.check_circle_outline : Icons.vpn_key_outlined,
+                color: hasKey ? Colors.greenAccent : AppColors.duneSand,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      hasKey ? 'Gemini 2.5 Flash Ready' : 'Gemini API Key Required',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: hasKey ? Colors.greenAccent : AppColors.duneSand,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      hasKey
+                          ? 'Key active (ends in ...${key.length > 4 ? key.substring(key.length - 4) : key})'
+                          : 'Configure API key for direct AI scorecard vision scan or use FREE ON-DEVICE OCR.',
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.tonal(
+                style: FilledButton.styleFrom(
+                  backgroundColor: hasKey
+                      ? AppColors.lakeCyan.withValues(alpha: 0.25)
+                      : AppColors.duneSand,
+                  foregroundColor: hasKey ? AppColors.cyanLight : Colors.black,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                onPressed: () async {
+                  final changed = await GeminiKeyConfigDialog.show(context);
+                  if (changed == true) {
+                    setState(() {});
+                  }
+                },
+                child: Text(
+                  hasKey ? 'Change' : 'Configure',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 

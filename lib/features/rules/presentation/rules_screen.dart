@@ -959,7 +959,8 @@ class RulesScreen extends StatelessWidget {
 • Cumulative Pot: Won by the player with the LAST birdie made on the trip!
 
 🌐 Live Tournament Website & Standings:
-https://staying-commercial-steven-ins.trycloudflare.com''';
+https://arcadia-golf-trip.ckm-endo.chatgpt.site
+Short Link: https://tinyurl.com/2xnkqbrx''';
 }
 
 class PointsRow {

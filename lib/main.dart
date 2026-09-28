@@ -6,7 +6,7 @@ import 'features/players/repository/player_repository.dart';
 import 'features/publish/services/website_publish_service.dart';
 import 'features/rounds/repository/round_repository.dart';
 import 'features/tournaments/repository/tournament_repository.dart';
-import 'presentation/arcadia_shell.dart';
+import 'presentation/splash_screen.dart';
 import 'shared/theme/app_theme.dart';
 
 void main() async {
@@ -78,7 +78,7 @@ class ArcadiaApp extends StatelessWidget {
       title: 'Arcadia Golf Trip',
       debugShowCheckedModeBanner: false,
       theme: buildArcadiaTheme(),
-      home: ArcadiaShell(
+      home: ArcadiaSplashScreen(
         database: database,
         playerRepository: playerRepository,
         courseRepository: courseRepository,

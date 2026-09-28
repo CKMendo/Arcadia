@@ -21,7 +21,7 @@ class PublishResult {
 }
 
 class WebsitePublishService {
-  static const String publicSiteUrl = 'https://staying-commercial-steven-ins.trycloudflare.com';
+  static const String publicSiteUrl = 'https://arcadia-golf-trip.ckm-endo.chatgpt.site';
   static const String apiEndpoint = '$publicSiteUrl/api/publication';
 
   /// Publishes the complete, latest tournament state to the public website.

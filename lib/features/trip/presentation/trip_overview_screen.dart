@@ -5,10 +5,12 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../database/app_database.dart';
+import '../../../shared/services/app_settings_service.dart';
 import '../../../shared/theme/app_colors.dart';
 import '../../courses/repository/course_repository.dart';
 import '../../players/repository/player_repository.dart';
 import '../../publish/services/website_publish_service.dart';
+import '../../rounds/import/presentation/gemini_key_config_dialog.dart';
 import '../../rounds/models/active_round_session.dart';
 import '../../rounds/models/birdie_pot_models.dart';
 import '../../rounds/presentation/active_scoring_screen.dart';
@@ -83,6 +85,11 @@ class TripOverviewScreen extends StatelessWidget {
               }
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.auto_awesome, color: AppColors.duneSand, size: 26),
+            tooltip: 'Configure Gemini AI Key',
+            onPressed: () => GeminiKeyConfigDialog.show(context),
+          ),
           StreamBuilder<Tournament?>(
             stream: tournamentRepository.watchActiveTournament(),
             builder: (context, snap) {
@@ -116,7 +123,7 @@ class TripOverviewScreen extends StatelessWidget {
             children: [
               // Hero Photographic Trip Banner with Tournament Crest
               Container(
-                height: 295,
+                height: 310,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: AppColors.lakeCyan.withValues(alpha: 0.6), width: 1.5),
@@ -192,30 +199,36 @@ class TripOverviewScreen extends StatelessWidget {
                                   ),
                                 ),
 
-                                // Large Prominent Tournament Crest Emblem
-                                Container(
-                                  width: 82,
-                                  height: 82,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: AppColors.duneSand, width: 2.8),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppColors.duneSand.withValues(alpha: 0.45),
-                                        blurRadius: 16,
-                                        spreadRadius: 2,
+                                // Large Prominent Tournament Crest Emblem with Hero Morph
+                                Hero(
+                                  tag: 'arcadia_cup_crest_hero',
+                                  child: Material(
+                                    type: MaterialType.transparency,
+                                    child: Container(
+                                      width: 96,
+                                      height: 96,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: AppColors.duneSand, width: 3.2),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppColors.duneSand.withValues(alpha: 0.5),
+                                            blurRadius: 18,
+                                            spreadRadius: 2,
+                                          ),
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.8),
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
                                       ),
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.8),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
+                                      child: ClipOval(
+                                        child: Image.asset(
+                                          'assets/images/arcadia_cup_crest.jpg',
+                                          fit: BoxFit.cover,
+                                        ),
                                       ),
-                                    ],
-                                  ),
-                                  child: ClipOval(
-                                    child: Image.asset(
-                                      'assets/images/arcadia_cup_crest.jpg',
-                                      fit: BoxFit.cover,
                                     ),
                                   ),
                                 ),
@@ -512,26 +525,56 @@ class TripOverviewScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.35),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: AppColors.lakeCyan.withValues(alpha: 0.3)),
                       ),
-                      child: const Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.link, size: 16, color: AppColors.lakeCyan),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'https://staying-commercial-steven-ins.trycloudflare.com',
-                              style: TextStyle(
-                                color: AppColors.cyanLight,
-                                fontFamily: 'monospace',
-                                fontSize: 11.5,
+                          Row(
+                            children: [
+                              const Icon(Icons.public, size: 16, color: AppColors.lakeCyan),
+                              const SizedBox(width: 8),
+                              const Expanded(
+                                child: Text(
+                                  AppSettingsService.defaultWebsiteUrl,
+                                  style: TextStyle(
+                                    color: AppColors.cyanLight,
+                                    fontFamily: 'monospace',
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Icon(Icons.bolt, size: 16, color: AppColors.duneSand),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Short Link: ',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                AppSettingsService.defaultTinyUrl,
+                                style: const TextStyle(
+                                  color: AppColors.duneSand,
+                                  fontFamily: 'monospace',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -557,8 +600,7 @@ class TripOverviewScreen extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         onPressed: () async {
-                          const siteUrl = 'https://staying-commercial-steven-ins.trycloudflare.com';
-                          final uri = Uri.parse(siteUrl);
+                          final uri = Uri.parse(AppSettingsService.defaultWebsiteUrl);
                           try {
                             final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
                             if (!launched && context.mounted) {
@@ -598,8 +640,9 @@ class TripOverviewScreen extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(vertical: 11),
                             ),
                             onPressed: () async {
-                              const siteUrl = 'https://staying-commercial-steven-ins.trycloudflare.com';
-                              await Clipboard.setData(const ClipboardData(text: siteUrl));
+                              await Clipboard.setData(
+                                const ClipboardData(text: AppSettingsService.defaultTinyUrl),
+                              );
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
@@ -608,7 +651,7 @@ class TripOverviewScreen extends StatelessWidget {
                                         Icon(Icons.check_circle_outline, color: Colors.greenAccent, size: 20),
                                         SizedBox(width: 8),
                                         Expanded(
-                                          child: Text('Website URL copied to clipboard!'),
+                                          child: Text('Short URL (https://tinyurl.com/2xnkqbrx) copied to clipboard!'),
                                         ),
                                       ],
                                     ),
@@ -635,7 +678,9 @@ class TripOverviewScreen extends StatelessWidget {
                             ),
                             onPressed: () {
                               Share.share(
-                                '🏌️ Arcadia Cup 2026 Live Standings & Tournament Summary:\nhttps://staying-commercial-steven-ins.trycloudflare.com',
+                                '🏌️ Arcadia Cup 2026 Live Standings & Tournament Summary:\n'
+                                '${AppSettingsService.defaultWebsiteUrl}\n\n'
+                                'Short link: ${AppSettingsService.defaultTinyUrl}',
                                 subject: 'Arcadia Cup 2026 Live Tournament Summary',
                               );
                             },

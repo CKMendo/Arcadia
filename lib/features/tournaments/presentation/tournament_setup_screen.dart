@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../database/app_database.dart';
+import '../../../shared/services/app_settings_service.dart';
 import '../../../shared/theme/app_colors.dart';
 import '../../../shared/widgets/player_avatar.dart';
 import '../../players/repository/player_repository.dart';
+import '../../rounds/import/presentation/gemini_key_config_dialog.dart';
 import '../repository/tournament_repository.dart';
 
 class TournamentSetupScreen extends StatefulWidget {
@@ -489,6 +491,150 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                                 ),
                               );
                             }),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // AI Integration & Website Card
+                  Card(
+                    margin: EdgeInsets.zero,
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'AI INTEGRATION & WEBSITE',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.2,
+                                  color: AppColors.cyanLight,
+                                ),
+                              ),
+                              Icon(Icons.auto_awesome, color: AppColors.duneSand, size: 20),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+
+                          // Gemini API Key row
+                          FutureBuilder<String?>(
+                            future: AppSettingsService.getGeminiApiKey(),
+                            builder: (context, snapshot) {
+                              final key = snapshot.data;
+                              final hasKey = key != null && key.isNotEmpty;
+
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceElevated,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: hasKey
+                                        ? Colors.greenAccent.withValues(alpha: 0.5)
+                                        : AppColors.duneSand.withValues(alpha: 0.5),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      hasKey ? Icons.check_circle_outline : Icons.vpn_key_outlined,
+                                      color: hasKey ? Colors.greenAccent : AppColors.duneSand,
+                                      size: 22,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            hasKey ? 'Gemini 2.5 Flash API Key' : 'Gemini Key Not Configured',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              color: hasKey ? Colors.greenAccent : AppColors.duneSand,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            hasKey
+                                                ? 'Active (ends in ...${key.length > 4 ? key.substring(key.length - 4) : key})'
+                                                : 'Required for automatic scorecard vision scanning.',
+                                            style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    FilledButton.tonal(
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: hasKey
+                                            ? AppColors.lakeCyan.withValues(alpha: 0.25)
+                                            : AppColors.duneSand,
+                                        foregroundColor: hasKey ? AppColors.cyanLight : Colors.black,
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      ),
+                                      onPressed: () async {
+                                        final changed = await GeminiKeyConfigDialog.show(context);
+                                        if (changed == true) {
+                                          setState(() {});
+                                        }
+                                      },
+                                      child: Text(
+                                        hasKey ? 'Change' : 'Configure',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Website info
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceElevated,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppColors.cardBorder),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.public, color: AppColors.lakeCyan, size: 22),
+                                SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Live Tournament Website',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      SizedBox(height: 2),
+                                      Text(
+                                        'arcadia-golf-trip.ckm-endo.chatgpt.site\nShort link: tinyurl.com/2xnkqbrx',
+                                        style: TextStyle(
+                                          color: AppColors.cyanLight,
+                                          fontSize: 12,
+                                          fontFamily: 'monospace',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
