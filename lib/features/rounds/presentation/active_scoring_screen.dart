@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../shared/theme/app_colors.dart';
 import '../../../shared/widgets/player_avatar.dart';
 import '../../../shared/widgets/stat_badge.dart';
+import '../import/presentation/round_scorecard_import_screen.dart';
+import '../import/services/player_score_row_matcher.dart';
 import '../models/active_round_session.dart';
 import '../repository/round_repository.dart';
 import 'round_summary_screen.dart';
@@ -382,6 +384,53 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
     }
   }
 
+  Future<void> _openScorecardImport() async {
+    final candidates = widget.session.players
+        .map((p) => ImportPlayerCandidate(
+              id: p.playerId,
+              fullName: p.name,
+              nickname: p.nickname,
+              initials: p.initials,
+            ))
+        .toList();
+
+    final parByHole = <int, int>{
+      for (final h in widget.session.holes) h.holeNumber: h.par,
+    };
+
+    final result = await Navigator.of(context).push<RoundScorecardImportResult>(
+      MaterialPageRoute(
+        builder: (_) => RoundScorecardImportScreen(
+          players: candidates,
+          holeCount: widget.session.holeCount,
+          parByHole: parByHole,
+        ),
+      ),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        for (final entry in result.scoresByPlayerId.entries) {
+          final pid = entry.key;
+          final scores = entry.value;
+          for (var i = 0; i < scores.length; i++) {
+            final s = scores[i];
+            if (s != null) {
+              widget.session.setGrossScore(pid, i + 1, s);
+            }
+          }
+        }
+      });
+      _saveDraft();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Scores imported and applied! Standings updated.'),
+          backgroundColor: Color(0xFF0F382A),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentHoleInfo = widget.session.getHole(_currentHole);
@@ -393,6 +442,11 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.document_scanner_outlined, size: 28, color: AppColors.cyanLight),
+            tooltip: 'Import Scorecard (AI)',
+            onPressed: _openScorecardImport,
+          ),
           IconButton(
             icon: const Icon(Icons.leaderboard, size: 28, color: AppColors.lakeCyan),
             tooltip: 'Live Leaderboard',
@@ -813,6 +867,38 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                   ),
                 );
               },
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            decoration: const BoxDecoration(
+              color: AppColors.surfaceDark,
+              border: Border(
+                top: BorderSide(color: AppColors.cardBorder, width: 1.2),
+              ),
+            ),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.lakeCyan, width: 1.5),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: _openScorecardImport,
+                icon: const Icon(Icons.document_scanner_outlined, color: AppColors.lakeCyan, size: 22),
+                label: const Text(
+                  'SCAN SCORECARD PHOTO (AI ENTRY)',
+                  style: TextStyle(
+                    color: AppColors.lakeCyan,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.1,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
             ),
           ),
         ],

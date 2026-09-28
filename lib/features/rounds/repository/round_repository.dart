@@ -7,8 +7,9 @@ import '../models/active_round_session.dart';
 class RoundRepository {
   final AppDatabase _db;
   final Uuid _uuid = const Uuid();
+  void Function()? onDataChanged;
 
-  RoundRepository(this._db);
+  RoundRepository(this._db, {this.onDataChanged});
 
   Stream<List<SavedRound>> watchSavedRounds({String? tournamentId}) {
     final query = _db.select(_db.savedRounds);
@@ -76,12 +77,14 @@ class RoundRepository {
 
     // Clear active draft
     await clearActiveDraft();
+    onDataChanged?.call();
 
     return roundId;
   }
 
-  Future<void> deleteSavedRound(String id) {
-    return (_db.delete(_db.savedRounds)..where((t) => t.id.equals(id))).go();
+  Future<void> deleteSavedRound(String id) async {
+    await (_db.delete(_db.savedRounds)..where((t) => t.id.equals(id))).go();
+    onDataChanged?.call();
   }
 
   Stream<ActiveRoundSession?> watchActiveDraft() {
@@ -122,6 +125,7 @@ class RoundRepository {
             updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
           ),
         );
+    onDataChanged?.call();
   }
 
   Future<void> clearActiveDraft() async {

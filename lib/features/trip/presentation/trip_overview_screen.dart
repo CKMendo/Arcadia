@@ -8,6 +8,7 @@ import '../../../database/app_database.dart';
 import '../../../shared/theme/app_colors.dart';
 import '../../courses/repository/course_repository.dart';
 import '../../players/repository/player_repository.dart';
+import '../../publish/services/website_publish_service.dart';
 import '../../rounds/models/active_round_session.dart';
 import '../../rounds/models/birdie_pot_models.dart';
 import '../../rounds/presentation/active_scoring_screen.dart';
@@ -39,6 +40,49 @@ class TripOverviewScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Arcadia Trip'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.cloud_upload_outlined, color: AppColors.lakeCyan, size: 28),
+            tooltip: 'Push Standings to Website',
+            onPressed: () async {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Row(
+                    children: [
+                      SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.lakeCyan),
+                      ),
+                      SizedBox(width: 14),
+                      Text('Pushing updated standings to live website...'),
+                    ],
+                  ),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+              final result = await WebsitePublishService.publishTournament(
+                tournamentRepo: tournamentRepository,
+                courseRepo: courseRepository,
+                playerRepo: playerRepository,
+                roundRepo: roundRepository,
+              );
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      result.success
+                          ? '✅ Standings pushed to website successfully (${DateFormat('h:mm a').format(DateTime.now())})'
+                          : '⚠️ ${result.message}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    backgroundColor: result.success ? const Color(0xFF0F382A) : const Color(0xFF381515),
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              }
+            },
+          ),
           StreamBuilder<Tournament?>(
             stream: tournamentRepository.watchActiveTournament(),
             builder: (context, snap) {

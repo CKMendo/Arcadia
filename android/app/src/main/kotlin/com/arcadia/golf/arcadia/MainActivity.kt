@@ -19,6 +19,7 @@ class MainActivity : FlutterActivity() {
         ).setMethodCallHandler { call, result ->
             when (call.method) {
                 "sendSms" -> sendSms(call, result)
+                "openAiAssistant" -> openAiAssistant(call, result)
                 else -> result.notImplemented()
             }
         }
@@ -57,6 +58,33 @@ class MainActivity : FlutterActivity() {
                     null,
                 )
             }
+        }
+    }
+
+    private fun openAiAssistant(call: MethodCall, result: MethodChannel.Result) {
+        val packageName = call.argument<String>("packageName").orEmpty()
+        val fallbackUrl = call.argument<String>("fallbackUrl").orEmpty()
+        if (packageName.isBlank() || fallbackUrl.isBlank()) {
+            result.error("missing_ai_destination", "The AI destination is incomplete.", null)
+            return
+        }
+
+        val appIntent = packageManager.getLaunchIntentForPackage(packageName)
+        try {
+            if (appIntent != null) {
+                appIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(appIntent)
+                result.success(true)
+                return
+            }
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(fallbackUrl)))
+            result.success(false)
+        } catch (_: ActivityNotFoundException) {
+            result.error(
+                "ai_app_unavailable",
+                "The AI app or website could not be opened.",
+                null,
+            )
         }
     }
 }

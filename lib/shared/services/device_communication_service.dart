@@ -53,4 +53,27 @@ class DeviceCommunicationService {
       }
     }
   }
+
+  Future<bool> openAiAssistant({
+    required String packageName,
+    required String fallbackUrl,
+  }) async {
+    try {
+      if (Platform.isAndroid) {
+        final result = await _channel.invokeMethod<bool>('openAiAssistant', {
+          'packageName': packageName,
+          'fallbackUrl': fallbackUrl,
+        });
+        if (result != null) return result;
+      }
+    } catch (_) {}
+
+    // Fallback using url_launcher
+    final uri = Uri.parse(fallbackUrl);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      return false;
+    }
+    return false;
+  }
 }
