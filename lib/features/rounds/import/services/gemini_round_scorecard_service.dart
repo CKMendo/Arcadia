@@ -11,6 +11,16 @@ class GeminiRoundScorecardService {
 
   static const String defaultModel = 'gemini-3.8-flash';
 
+  /// Prioritized candidate models in the Gemini 3 family.
+  /// If 3.8 encounters Google server 503 high-demand spikes, the service
+  /// automatically retries and seamlessly fails over to sibling models in the fleet.
+  static const List<String> candidateModels = [
+    'gemini-3.8-flash',
+    'gemini-3.6-flash',
+    'gemini-3.7-flash',
+    'gemini-3.5-flash',
+  ];
+
   Future<RoundScoreImportDraft> analyze(
     String imagePath, {
     required int holeCount,
@@ -43,10 +53,6 @@ class GeminiRoundScorecardService {
           'to "$targetPlayerName" on this completed golf scorecard. Return exactly that one player row with '
           '$holeCount gross scores in hole order. Return ONLY valid JSON: {"rows": [{"playerName": "...", "scores": [...]}]}';
 
-    final url = Uri.parse(
-      'https://generativelanguage.googleapis.com/v1beta/models/$defaultModel:generateContent?key=$key',
-    );
-
     final payload = {
       'contents': [
         {
@@ -67,34 +73,103 @@ class GeminiRoundScorecardService {
       }
     };
 
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(payload),
-    ).timeout(const Duration(seconds: 45));
+    String? lastErrorDetail;
+    int lastStatusCode = 0;
 
-    if (response.statusCode != 200) {
+    for (final model in candidateModels) {
+      // Allow up to 2 attempts per model for transient errors
+      for (var attempt = 1; attempt <= 2; attempt++) {
+        final url = Uri.parse(
+          'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$key',
+        );
+
+        try {
+          final response = await http
+              .post(
+                url,
+                headers: {'Content-Type': 'application/json'},
+                body: jsonEncode(payload),
+              )
+              .timeout(const Duration(seconds: 40));
+
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body) as Map<String, dynamic>;
+            final candidates = data['candidates'] as List?;
+            if (candidates == null || candidates.isEmpty) {
+              throw const FormatException('Gemini did not return any candidates.');
+            }
+
+            final firstCandidate = candidates.first as Map<String, dynamic>;
+            final content = firstCandidate['content'] as Map<String, dynamic>?;
+            final parts = content?['parts'] as List?;
+            final text = parts?.first?['text'] as String?;
+
+            if (text == null || text.trim().isEmpty) {
+              throw const FormatException('Gemini returned empty text.');
+            }
+
+            final draft = parseResponse(text, holeCount: holeCount);
+            if (model != defaultModel) {
+              draft.warnings.insert(
+                0,
+                'Gemini 3.8 Flash had high demand on Google servers; automatically read using $model.',
+              );
+            }
+            return draft;
+          }
+
+          lastStatusCode = response.statusCode;
+          final errorBody = response.body;
+          String extractedMsg = errorBody;
+          try {
+            final parsed = jsonDecode(errorBody);
+            if (parsed is Map && parsed['error'] is Map) {
+              extractedMsg = parsed['error']['message'] ?? errorBody;
+            }
+          } catch (_) {}
+          lastErrorDetail = extractedMsg;
+
+          // If unauthorized or bad key, fail immediately without looping
+          if (response.statusCode == 400 || response.statusCode == 403) {
+            throw FormatException('Gemini API authentication failed (${response.statusCode}): $extractedMsg');
+          }
+
+          // If 503 (high demand) or 429 (rate limit), wait briefly if retrying same model
+          if ((response.statusCode == 503 || response.statusCode == 429) && attempt < 2) {
+            await Future.delayed(const Duration(milliseconds: 1200));
+            continue;
+          } else {
+            // Move to next candidate model in the fallback chain
+            break;
+          }
+        } catch (e) {
+          if (e is FormatException && (lastStatusCode == 400 || lastStatusCode == 403)) {
+            rethrow;
+          }
+          lastErrorDetail = e.toString();
+          if (attempt < 2) {
+            await Future.delayed(const Duration(milliseconds: 1000));
+          }
+        }
+      }
+    }
+
+    if (lastStatusCode == 503) {
+      throw const FormatException(
+        'Google Gemini is currently experiencing temporary high demand (503 UNAVAILABLE) on Google servers. '
+        'The app automatically attempted retries and model failover. '
+        'Please wait a moment and tap RE-READ WITH GEMINI, or switch to FREE ON-DEVICE OCR.',
+      );
+    } else if (lastStatusCode == 429) {
+      throw const FormatException(
+        'Gemini API request limit reached (429 RESOURCE_EXHAUSTED). '
+        'Please wait a few moments and tap RE-READ WITH GEMINI, or switch to FREE ON-DEVICE OCR.',
+      );
+    } else {
       throw FormatException(
-        'Gemini API error (${response.statusCode}): ${response.body}',
+        'Gemini API error ($lastStatusCode): ${lastErrorDetail ?? 'Service temporarily unavailable.'}',
       );
     }
-
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final candidates = data['candidates'] as List?;
-    if (candidates == null || candidates.isEmpty) {
-      throw const FormatException('Gemini did not return any candidates.');
-    }
-
-    final firstCandidate = candidates.first as Map<String, dynamic>;
-    final content = firstCandidate['content'] as Map<String, dynamic>?;
-    final parts = content?['parts'] as List?;
-    final text = parts?.first?['text'] as String?;
-
-    if (text == null || text.trim().isEmpty) {
-      throw const FormatException('Gemini returned empty text.');
-    }
-
-    return parseResponse(text, holeCount: holeCount);
   }
 
   RoundScoreImportDraft parseResponse(

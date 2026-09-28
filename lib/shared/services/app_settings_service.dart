@@ -111,32 +111,47 @@ class AppSettingsService {
     return defaultTinyUrl;
   }
 
-  /// Tests a Gemini API key by making a lightweight ping to gemini-3.8-flash.
+  /// Tests a Gemini API key by making a lightweight ping to Gemini 3.8 Flash,
+  /// falling back to Gemini 3.6 Flash if Google servers report high demand (503).
   static Future<bool> validateGeminiApiKey(String apiKey) async {
-    try {
-      final url = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey.trim()}',
-      );
-      final payload = {
-        'contents': [
-          {
-            'parts': [
-              {'text': 'Ping'}
-            ]
-          }
-        ]
-      };
-      final response = await http
-          .post(
-            url,
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(payload),
-          )
-          .timeout(const Duration(seconds: 10));
-      return response.statusCode == 200;
-    } catch (e) {
-      debugPrint('Gemini key validation failed: $e');
-      return false;
+    final trimmedKey = apiKey.trim();
+    if (trimmedKey.isEmpty) return false;
+
+    final models = ['gemini-3.8-flash', 'gemini-3.6-flash'];
+    for (final model in models) {
+      try {
+        final url = Uri.parse(
+          'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$trimmedKey',
+        );
+        final payload = {
+          'contents': [
+            {
+              'parts': [
+                {'text': 'Ping'}
+              ]
+            }
+          ]
+        };
+        final response = await http
+            .post(
+              url,
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode(payload),
+            )
+            .timeout(const Duration(seconds: 10));
+
+        if (response.statusCode == 200) {
+          return true;
+        }
+        // A 503 or 429 indicates Google Cloud authenticated the API key and project,
+        // but the specific model cluster is momentarily saturated.
+        if (response.statusCode == 503 || response.statusCode == 429) {
+          return true;
+        }
+      } catch (e) {
+        debugPrint('Gemini key validation attempt on $model failed: $e');
+      }
     }
+    return false;
   }
 }
