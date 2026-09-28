@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../database/app_database.dart';
 import '../../../shared/theme/app_colors.dart';
 import '../../courses/repository/course_repository.dart';
@@ -375,6 +378,229 @@ class TripOverviewScreen extends StatelessWidget {
                     ),
                   );
                 },
+              ),
+              const SizedBox(height: 14),
+
+              // Public Website Summary & Live Standings Card
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0A2218), Color(0xFF04110A)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.lakeCyan.withValues(alpha: 0.7), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.lakeCyan.withValues(alpha: 0.15),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.lakeCyan.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.public, color: AppColors.lakeCyan, size: 22),
+                            ),
+                            const SizedBox(width: 10),
+                            const Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'WEBSITE SUMMARY',
+                                  style: TextStyle(
+                                    color: AppColors.cyanLight,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 14,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                                Text(
+                                  'Live Web Leaderboard & Pairings',
+                                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.greenAccent),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.fiber_manual_record, color: Colors.greenAccent, size: 10),
+                              SizedBox(width: 4),
+                              Text(
+                                'ONLINE',
+                                style: TextStyle(
+                                  color: Colors.greenAccent,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'All 8 players can open this website on any phone or browser to see real-time cumulative standings, preliminary pairings, birdie pots, and detailed scorecards.',
+                      style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.lakeCyan.withValues(alpha: 0.3)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.link, size: 16, color: AppColors.lakeCyan),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'https://staying-commercial-steven-ins.trycloudflare.com',
+                              style: TextStyle(
+                                color: AppColors.cyanLight,
+                                fontFamily: 'monospace',
+                                fontSize: 11.5,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.open_in_browser, size: 20, color: Color(0xFF04110A)),
+                        label: const Text(
+                          'OPEN SITE',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF04110A),
+                            fontSize: 14,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.cyanLight,
+                          elevation: 3,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: () async {
+                          const siteUrl = 'https://staying-commercial-steven-ins.trycloudflare.com';
+                          final uri = Uri.parse(siteUrl);
+                          try {
+                            final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+                            if (!launched && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Could not open browser for URL.'),
+                                  backgroundColor: Colors.redAccent,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error launching browser: $e'),
+                                  backgroundColor: Colors.redAccent,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.copy_rounded, size: 18, color: AppColors.cyanLight),
+                            label: const Text(
+                              'COPY URL',
+                              style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.cyanLight, fontSize: 13),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: AppColors.lakeCyan, width: 1.2),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(vertical: 11),
+                            ),
+                            onPressed: () async {
+                              const siteUrl = 'https://staying-commercial-steven-ins.trycloudflare.com';
+                              await Clipboard.setData(const ClipboardData(text: siteUrl));
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Row(
+                                      children: [
+                                        Icon(Icons.check_circle_outline, color: Colors.greenAccent, size: 20),
+                                        SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text('Website URL copied to clipboard!'),
+                                        ),
+                                      ],
+                                    ),
+                                    backgroundColor: Color(0xFF0F3224),
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.share, size: 18, color: AppColors.cyanLight),
+                            label: const Text(
+                              'Share Link',
+                              style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.cyanLight, fontSize: 13),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: AppColors.lakeCyan, width: 1.2),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(vertical: 11),
+                            ),
+                            onPressed: () {
+                              Share.share(
+                                '🏌️ Arcadia Cup 2026 Live Standings & Tournament Summary:\nhttps://staying-commercial-steven-ins.trycloudflare.com',
+                                subject: 'Arcadia Cup 2026 Live Tournament Summary',
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 18),
 
