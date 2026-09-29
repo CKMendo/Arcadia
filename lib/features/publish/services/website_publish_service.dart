@@ -65,19 +65,22 @@ class WebsitePublishService {
       final encoded = jsonEncode(payload);
 
       // 1. Direct local file update if accessible (e.g. running on desktop or test)
+      // Safety: Never overwrite existing populated tournament_data.json with an empty roster from tests
       bool localUpdated = false;
-      try {
-        final localFile = File('public_site/tournament_data.json');
-        if (await localFile.exists()) {
-          await localFile.writeAsString(encoded, flush: true);
-          localUpdated = true;
-        }
-        final docsFile = File('docs/tournament_data.json');
-        if (await docsFile.exists()) {
-          await docsFile.writeAsString(encoded, flush: true);
-          localUpdated = true;
-        }
-      } catch (_) {}
+      if (players.isNotEmpty) {
+        try {
+          final localFile = File('public_site/tournament_data.json');
+          if (await localFile.exists()) {
+            await localFile.writeAsString(encoded, flush: true);
+            localUpdated = true;
+          }
+          final docsFile = File('docs/tournament_data.json');
+          if (await docsFile.exists()) {
+            await docsFile.writeAsString(encoded, flush: true);
+            localUpdated = true;
+          }
+        } catch (_) {}
+      }
 
       // 2. Direct GitHub API update (used on mobile / Android to commit to repo)
       final githubToken = await AppSettingsService.getGitHubToken();
