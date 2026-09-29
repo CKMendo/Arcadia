@@ -230,6 +230,44 @@ class WebsitePublishService {
           ).timeout(const Duration(seconds: 10));
         } catch (_) {}
 
+        // Also update tournament_data.json directly on gh-pages branch (live GitHub Pages source)
+        try {
+          final ghPagesGetUri = Uri.parse('https://api.github.com/repos/$repo/contents/tournament_data.json?ref=gh-pages');
+          final ghPagesGetRes = await http.get(
+            ghPagesGetUri,
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Accept': 'application/vnd.github+json',
+              'User-Agent': 'ArcadiaApp',
+            },
+          ).timeout(const Duration(seconds: 8));
+
+          String? ghPagesSha;
+          if (ghPagesGetRes.statusCode == 200) {
+            final ghPagesMap = jsonDecode(ghPagesGetRes.body) as Map<String, dynamic>;
+            ghPagesSha = ghPagesMap['sha'] as String?;
+          }
+
+          final ghPagesPutUri = Uri.parse('https://api.github.com/repos/$repo/contents/tournament_data.json');
+          final ghPagesBody = <String, dynamic>{
+            'message': 'Sync gh-pages tournament data [skip ci]',
+            'content': contentBase64,
+            'branch': 'gh-pages',
+          };
+          if (ghPagesSha != null) ghPagesBody['sha'] = ghPagesSha;
+
+          await http.put(
+            ghPagesPutUri,
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Accept': 'application/vnd.github+json',
+              'Content-Type': 'application/json',
+              'User-Agent': 'ArcadiaApp',
+            },
+            body: jsonEncode(ghPagesBody),
+          ).timeout(const Duration(seconds: 10));
+        } catch (_) {}
+
         return (success: true, message: 'Published successfully!');
       } else {
         String errDetail = 'HTTP ${putRes.statusCode}';
