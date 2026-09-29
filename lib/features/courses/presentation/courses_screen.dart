@@ -70,7 +70,16 @@ class CoursesScreen extends StatelessWidget {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Loaded Arcadia Bluffs (The Bluffs & The South)', style: TextStyle(fontSize: 17)),
+                        content: Text('Loaded Arcadia Bluffs (The Bluffs, The South & The Dozen)', style: TextStyle(fontSize: 17)),
+                      ),
+                    );
+                  }
+                } else if (val == 'forest_dunes_templates') {
+                  await courseRepository.seedForestDunesTemplates();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Loaded Forest Dunes (Original, The Loop Black, The Loop Red & Bootlegger)', style: TextStyle(fontSize: 17)),
                       ),
                     );
                   }
@@ -103,7 +112,17 @@ class CoursesScreen extends StatelessWidget {
                     children: [
                       Icon(Icons.golf_course, color: AppColors.lakeCyan, size: 22),
                       SizedBox(width: 10),
-                      Text('Load Arcadia Bluffs Templates', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      Text('Load Arcadia Bluffs (3 Courses)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'forest_dunes_templates',
+                  child: Row(
+                    children: [
+                      Icon(Icons.forest, color: Color(0xFF34D399), size: 22),
+                      SizedBox(width: 10),
+                      Text('Load Forest Dunes (4 Courses)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
@@ -207,13 +226,31 @@ class CoursesScreen extends StatelessWidget {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Arcadia Bluffs courses loaded!', style: TextStyle(fontSize: 17)),
+                            content: Text('Loaded Arcadia Bluffs 3 courses (The Bluffs, The South & The Dozen)!', style: TextStyle(fontSize: 17)),
                           ),
                         );
                       }
                     },
                     icon: const Icon(Icons.auto_awesome, color: AppColors.lakeCyan, size: 26),
-                    label: const Text('Load Arcadia Bluffs Templates', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    label: const Text('Load Arcadia Bluffs (3 Courses)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      await courseRepository.seedForestDunesTemplates();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Loaded Forest Dunes 4 courses (Original, Loop Black, Loop Red & Bootlegger)!', style: TextStyle(fontSize: 17)),
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.forest, color: Color(0xFF34D399), size: 26),
+                    label: const Text('Load Forest Dunes (4 Courses)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF34D399))),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF34D399)),
+                    ),
                   ),
                 ],
               ),

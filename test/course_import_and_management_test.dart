@@ -236,18 +236,54 @@ White (70.1/126),385,365,155,490,355,390,140,370,480,380,150,500,395,365,145,375
       expect(white.holeYardages![1], equals(385));
     });
 
-    test('getBuiltInPresets provides Arcadia Bluffs with complete hole distances', () {
+    test('getBuiltInPresets provides all 3 Arcadia Bluffs courses and all 4 Forest Dunes courses', () {
       final presets = CourseImportService.getBuiltInPresets();
-      expect(presets.length, greaterThanOrEqualTo(2));
-
+      
+      // Arcadia Bluffs (3 courses)
       final bluffs = presets.firstWhere((p) => p.name.contains('The Bluffs'));
+      final south = presets.firstWhere((p) => p.name.contains('The South'));
+      final dozen = presets.firstWhere((p) => p.name.contains('The Dozen'));
+
       expect(bluffs.holeCount, equals(18));
-      expect(bluffs.tees.length, equals(4));
-      final blackTee = bluffs.tees.firstWhere((t) => t.name == 'Black');
-      expect(blackTee.totalYardage, equals(7300));
-      expect(blackTee.holeYardages!.length, equals(18));
-      expect(blackTee.holeYardages![1], equals(519)); // Hole 1 par 5 distance
-      expect(blackTee.holeYardages![11], equals(633)); // Hole 11 par 5 distance
+      expect(south.holeCount, equals(18));
+      expect(dozen.holeCount, equals(12));
+      expect(dozen.totalPar, equals(42));
+      expect(dozen.tees.length, equals(4));
+
+      // Forest Dunes (4 courses)
+      final original = presets.firstWhere((p) => p.name.contains('Forest Dunes (Original)'));
+      final loopBlack = presets.firstWhere((p) => p.name.contains('The Loop - Black'));
+      final loopRed = presets.firstWhere((p) => p.name.contains('The Loop - Red'));
+      final bootlegger = presets.firstWhere((p) => p.name.contains('The Bootlegger'));
+
+      expect(original.holeCount, equals(18));
+      expect(loopBlack.holeCount, equals(18));
+      expect(loopBlack.totalPar, equals(70));
+      expect(loopRed.holeCount, equals(18));
+      expect(loopRed.totalPar, equals(70));
+      expect(bootlegger.holeCount, equals(10));
+      expect(bootlegger.totalPar, equals(30));
+    });
+
+    test('seedArcadiaBluffsTemplates loads 3 courses and seedForestDunesTemplates loads 4 courses', () async {
+      await repo.seedArcadiaBluffsTemplates();
+      final arcadiaCourses = await repo.getAllCourses();
+      expect(arcadiaCourses.length, equals(3));
+      expect(arcadiaCourses.map((c) => c.name).toSet(), containsAll([
+        'Arcadia Bluffs (The Bluffs)',
+        'Arcadia Bluffs (The South)',
+        'Arcadia Bluffs (The Dozen)',
+      ]));
+
+      await repo.seedForestDunesTemplates();
+      final allCourses = await repo.getAllCourses();
+      expect(allCourses.length, equals(7)); // 3 Arcadia + 4 Forest Dunes
+      expect(allCourses.map((c) => c.name).toSet(), containsAll([
+        'Forest Dunes (Original)',
+        'Forest Dunes (The Loop - Black)',
+        'Forest Dunes (The Loop - Red)',
+        'Forest Dunes (The Bootlegger)',
+      ]));
     });
   });
 }

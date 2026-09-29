@@ -545,9 +545,65 @@ Gold (67.9/122),420,135,435,335,485,140,375,350,145,385,535,335,130,270,420,390,
         ],
       ),
 
-      // 3. Forest Dunes Golf Club
+      // 3. Arcadia Bluffs (The Dozen) - 12 Holes (Opened 2025)
       const CourseImportData(
-        name: 'Forest Dunes Golf Club',
+        name: 'Arcadia Bluffs (The Dozen)',
+        city: 'Arcadia',
+        state: 'MI',
+        holeCount: 12,
+        pars: [4, 3, 4, 3, 4, 3, 3, 4, 3, 4, 3, 4],
+        strokeIndexes: [1, 7, 3, 9, 5, 11, 8, 2, 10, 4, 12, 6],
+        tees: [
+          TeeBoxInput(
+            name: 'Black',
+            colorHex: '#1A1A1A',
+            courseRating: 62.0,
+            slopeRating: 110,
+            totalYardage: 3063,
+            holeYardages: {
+              1: 290, 2: 175, 3: 310, 4: 165, 5: 335, 6: 180,
+              7: 168, 8: 345, 9: 155, 10: 360, 11: 170, 12: 410,
+            },
+          ),
+          TeeBoxInput(
+            name: 'White',
+            colorHex: '#E2E8F0',
+            courseRating: 59.5,
+            slopeRating: 104,
+            totalYardage: 2810,
+            holeYardages: {
+              1: 270, 2: 160, 3: 285, 4: 150, 5: 305, 6: 165,
+              7: 163, 8: 315, 9: 140, 10: 330, 11: 155, 12: 372,
+            },
+          ),
+          TeeBoxInput(
+            name: 'Gold',
+            colorHex: '#EAB308',
+            courseRating: 57.0,
+            slopeRating: 98,
+            totalYardage: 2540,
+            holeYardages: {
+              1: 250, 2: 145, 3: 260, 4: 135, 5: 275, 6: 150,
+              7: 137, 8: 285, 9: 125, 10: 300, 11: 140, 12: 338,
+            },
+          ),
+          TeeBoxInput(
+            name: 'Red',
+            colorHex: '#EF4444',
+            courseRating: 55.0,
+            slopeRating: 92,
+            totalYardage: 2180,
+            holeYardages: {
+              1: 230, 2: 125, 3: 220, 4: 115, 5: 235, 6: 130,
+              7: 85, 8: 245, 9: 105, 10: 260, 11: 120, 12: 310,
+            },
+          ),
+        ],
+      ),
+
+      // 4. Forest Dunes (Original Course) - 18 Holes
+      const CourseImportData(
+        name: 'Forest Dunes (Original)',
         city: 'Roscommon',
         state: 'MI',
         holeCount: 18,
@@ -590,7 +646,98 @@ Gold (67.9/122),420,135,435,335,485,140,375,350,145,385,535,335,130,270,420,390,
         ],
       ),
 
-      // 4. Pebble Beach Golf Links
+      // 5. Forest Dunes (The Loop - Black Course) - 18 Holes
+      const CourseImportData(
+        name: 'Forest Dunes (The Loop - Black)',
+        city: 'Roscommon',
+        state: 'MI',
+        holeCount: 18,
+        pars: [4, 4, 3, 4, 5, 4, 3, 4, 4, 4, 3, 5, 4, 3, 4, 5, 3, 4],
+        strokeIndexes: [5, 11, 17, 3, 1, 9, 15, 7, 13, 6, 18, 2, 8, 16, 10, 4, 14, 12],
+        tees: [
+          TeeBoxInput(
+            name: 'Back',
+            colorHex: '#1A1A1A',
+            courseRating: 73.1,
+            slopeRating: 134,
+            totalYardage: 6704,
+            holeYardages: {
+              1: 410, 2: 442, 3: 165, 4: 425, 5: 535, 6: 395, 7: 178, 8: 430, 9: 412,
+              10: 388, 11: 215, 12: 554, 13: 422, 14: 180, 15: 420, 16: 575, 17: 190, 18: 464,
+            },
+          ),
+          TeeBoxInput(
+            name: 'Middle',
+            colorHex: '#2563EB',
+            courseRating: 70.3,
+            slopeRating: 128,
+            totalYardage: 6078,
+            holeYardages: {
+              1: 375, 2: 405, 3: 145, 4: 385, 5: 490, 6: 360, 7: 155, 8: 395, 9: 370,
+              10: 350, 11: 190, 12: 505, 13: 385, 14: 160, 15: 380, 16: 525, 17: 165, 18: 428,
+            },
+          ),
+        ],
+      ),
+
+      // 6. Forest Dunes (The Loop - Red Course) - 18 Holes
+      const CourseImportData(
+        name: 'Forest Dunes (The Loop - Red)',
+        city: 'Roscommon',
+        state: 'MI',
+        holeCount: 18,
+        pars: [4, 3, 4, 5, 4, 3, 4, 4, 4, 4, 3, 4, 5, 4, 3, 5, 3, 4],
+        strokeIndexes: [6, 16, 8, 2, 10, 18, 4, 14, 12, 7, 15, 9, 3, 11, 17, 1, 13, 5],
+        tees: [
+          TeeBoxInput(
+            name: 'Back',
+            colorHex: '#1A1A1A',
+            courseRating: 73.5,
+            slopeRating: 135,
+            totalYardage: 6805,
+            holeYardages: {
+              1: 420, 2: 175, 3: 435, 4: 550, 5: 400, 6: 185, 7: 425, 8: 415, 9: 390,
+              10: 430, 11: 170, 12: 410, 13: 560, 14: 395, 15: 180, 16: 580, 17: 195, 18: 470,
+            },
+          ),
+          TeeBoxInput(
+            name: 'Middle',
+            colorHex: '#2563EB',
+            courseRating: 70.6,
+            slopeRating: 129,
+            totalYardage: 6064,
+            holeYardages: {
+              1: 380, 2: 155, 3: 390, 4: 495, 5: 360, 6: 160, 7: 385, 8: 375, 9: 350,
+              10: 390, 11: 145, 12: 370, 13: 505, 14: 355, 15: 160, 16: 530, 17: 170, 18: 430,
+            },
+          ),
+        ],
+      ),
+
+      // 7. Forest Dunes (The Bootlegger) - 10 Holes Par 30
+      const CourseImportData(
+        name: 'Forest Dunes (The Bootlegger)',
+        city: 'Roscommon',
+        state: 'MI',
+        holeCount: 10,
+        pars: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+        strokeIndexes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        tees: [
+          TeeBoxInput(
+            name: 'Standard',
+            colorHex: '#10B981',
+            courseRating: 27.0,
+            slopeRating: 90,
+            totalYardage: 1065,
+            holeYardages: {
+              1: 110, 2: 85, 3: 135, 4: 70, 5: 120,
+              6: 95, 7: 145, 8: 65, 9: 115, 10: 125,
+            },
+          ),
+        ],
+      ),
+
+      // 8. Pebble Beach Golf Links - 18 Holes
       const CourseImportData(
         name: 'Pebble Beach Golf Links',
         city: 'Pebble Beach',
