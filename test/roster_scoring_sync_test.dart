@@ -4,7 +4,6 @@ import 'package:arcadia/database/app_database.dart';
 import 'package:arcadia/features/players/repository/player_repository.dart';
 import 'package:arcadia/features/rounds/models/active_round_session.dart';
 import 'package:arcadia/features/rounds/repository/round_repository.dart';
-import 'package:arcadia/features/courses/repository/trip_schedule_repository.dart';
 import 'package:arcadia/features/tournaments/services/tournament_pairings_engine.dart';
 
 void main() {

@@ -352,12 +352,15 @@ class WebsitePublishService {
       }
     }
 
-    // Sort standings by points descending
+    final isRound1Finished = sessions.any((s) => s.roundNumber >= 1 && s.players.any((p) => s.totalGross(p.playerId) > 0));
+
+    // Sort standings by points descending (or by handicap if pre-round)
     final sortedPlayers = List<Player>.from(players)
       ..sort((a, b) {
         final ptsA = playerPoints[a.id] ?? 0;
         final ptsB = playerPoints[b.id] ?? 0;
-        return ptsB.compareTo(ptsA);
+        if (ptsB != ptsA) return ptsB.compareTo(ptsA);
+        return a.fullName.compareTo(b.fullName);
       });
 
     final standings = <Map<String, dynamic>>[];
@@ -369,7 +372,9 @@ class WebsitePublishService {
       final netAvg = rCount > 0 ? ((playerNetTotal[p.id] ?? 0) / rCount) : 0.0;
 
       String seedLabel;
-      if (i < 4) {
+      if (!isRound1Finished) {
+        seedLabel = 'TBD';
+      } else if (i < 4) {
         seedLabel = 'Seed #${i + 1} Captain';
       } else {
         seedLabel = 'Draft Pool #${i + 1}';
@@ -502,7 +507,10 @@ class WebsitePublishService {
       final p = sortedPlayers[i];
       final bluffsHcp = (p.handicapIndex * (137.0 / 113.0) + (73.5 - 72.0)).round();
       final southHcp = (p.handicapIndex * (134.0 / 113.0) + (72.8 - 72.0)).round();
-      final seed = i < 4 ? 'Seed #${i + 1} Captain' : 'Draft Pool #${i + 1}';
+      final seed = !isRound1Finished
+          ? 'TBD'
+          : (i < 4 ? 'Seed #${i + 1} Captain' : 'Draft Pool #${i + 1}');
+      final isCaptain = isRound1Finished && (i < 4);
 
       rosterList.add({
         'id': p.id,
@@ -517,6 +525,7 @@ class WebsitePublishService {
         'ghin': p.ghinNumber ?? '',
         'tee': p.preferredTee ?? 'Blue',
         'seed': seed,
+        'isCaptain': isCaptain,
         'rank': i + 1,
         'photo': p.photoPath ?? 'assets/images/user_logo.jpg',
       });
@@ -526,11 +535,17 @@ class WebsitePublishService {
       'leagueName': 'Arcadia Cup 2027',
       'publishedAt': now.toIso8601String(),
       'isLive': sessions.isNotEmpty,
+      'isRound1Finished': isRound1Finished,
+      'captainSeedsStatus': isRound1Finished ? 'Finalized' : 'TBD',
+      'draftPoolStatus': isRound1Finished ? 'Finalized' : 'TBD',
       'tournament': {
         'id': tournament?.id ?? 'arcadia_2027',
         'name': tournament?.name ?? 'Arcadia Cup 2027',
         'dates': 'June 7 - June 12, 2027',
         'venue': 'Arcadia Bluffs Golf Club',
+        'isRound1Finished': isRound1Finished,
+        'captainSeedsStatus': isRound1Finished ? 'Finalized' : 'TBD',
+        'draftPoolStatus': isRound1Finished ? 'Finalized' : 'TBD',
         'courses': courseList,
         'roster': rosterList,
       },
