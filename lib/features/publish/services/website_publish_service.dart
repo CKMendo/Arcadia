@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../../../database/app_database.dart';
+import '../../courses/models/scheduled_round.dart';
 import '../../courses/repository/course_repository.dart';
+import '../../courses/repository/trip_schedule_repository.dart';
 import '../../players/repository/player_repository.dart';
 import '../../rounds/models/active_round_session.dart';
 import '../../rounds/repository/round_repository.dart';
@@ -48,11 +50,15 @@ class WebsitePublishService {
         } catch (_) {}
       }
 
+      final scheduleRepo = TripScheduleRepository();
+      final schedule = await scheduleRepo.getSchedule();
+
       final payload = _buildTournamentPayload(
         tournament: tournament,
         courses: courses,
         players: players,
         sessions: sessions,
+        schedule: schedule,
         now: now,
       );
 
@@ -245,6 +251,7 @@ class WebsitePublishService {
     required List<Course> courses,
     required List<Player> players,
     required List<ActiveRoundSession> sessions,
+    required List<ScheduledRound> schedule,
     required DateTime now,
   }) {
     // Calculate player stats
@@ -452,6 +459,7 @@ class WebsitePublishService {
       },
       'standings': standings,
       'pairings': pairings,
+      'schedule': schedule.map((r) => r.toJson()).toList(),
     };
   }
 }

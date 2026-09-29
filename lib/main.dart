@@ -24,6 +24,7 @@ void main() async {
 
   final database = AppDatabase();
   final playerRepository = PlayerRepository(database);
+  await playerRepository.ensureRosterPreserved();
   final courseRepository = CourseRepository(database);
   final tournamentRepository = TournamentRepository(database);
   final roundRepository = RoundRepository(database);

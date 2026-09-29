@@ -4,7 +4,9 @@ import '../../../database/app_database.dart';
 import '../../../shared/theme/app_colors.dart';
 import '../../../shared/widgets/player_avatar.dart';
 import '../../courses/models/course_models.dart';
+import '../../courses/models/scheduled_round.dart';
 import '../../courses/repository/course_repository.dart';
+import '../../courses/repository/trip_schedule_repository.dart';
 import '../../players/repository/player_repository.dart';
 import '../../tournaments/presentation/final_round_draft_screen.dart';
 import '../../tournaments/repository/tournament_repository.dart';
@@ -36,6 +38,7 @@ class NewRoundSetupScreen extends StatefulWidget {
 
 class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
   final TournamentPairingsEngine _pairingsEngine = TournamentPairingsEngine();
+  final TripScheduleRepository _scheduleRepo = TripScheduleRepository();
 
   List<Course> _courses = [];
   CourseDetails? _selectedCourseDetails;
@@ -52,6 +55,8 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
   final Map<String, String> _twoManTeamNames = {}; // 'T1' -> 'Bob & Dave'
   RoundPairingPlan? _currentPairingPlan;
   List<ActiveRoundSession> _pastSavedRounds = [];
+  List<ScheduledRound> _tripSchedule = [];
+  bool _isScheduleFinalized = false;
 
   int _roundNumber = 1;
   bool _isFinalRound = false;
@@ -69,6 +74,11 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
     final courses = await widget.courseRepository.getAllCourses();
     final players = await widget.playerRepository.getAllPlayers();
     final savedRounds = await widget.roundRepository.getAllSavedRounds();
+    final schedule = await _scheduleRepo.getSchedule();
+    final finalized = await _scheduleRepo.isScheduleFinalized();
+    _tripSchedule = schedule;
+    _isScheduleFinalized = finalized;
+
     _roundNumber = savedRounds.length + 1;
 
     // Parse past rounds
@@ -89,7 +99,21 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
       }
     }
 
-    if (courses.isNotEmpty) {
+    // Check if scheduled round exists for this roundNumber
+    final matchingScheduled = schedule.where((r) => r.roundNumber == _roundNumber).firstOrNull;
+    if (matchingScheduled != null) {
+      final matchingCourse = courses.where((c) => c.id == matchingScheduled.courseId).firstOrNull;
+      if (matchingCourse != null) {
+        _selectedCourseId = matchingCourse.id;
+        _selectedCourseDetails =
+            await widget.courseRepository.getCourseDetails(matchingCourse.id);
+      } else if (courses.isNotEmpty) {
+        _selectedCourseId = courses.first.id;
+        _selectedCourseDetails =
+            await widget.courseRepository.getCourseDetails(courses.first.id);
+      }
+      _isFinalRound = matchingScheduled.isFinalRound;
+    } else if (courses.isNotEmpty) {
       _selectedCourseId = courses.first.id;
       _selectedCourseDetails =
           await widget.courseRepository.getCourseDetails(courses.first.id);
@@ -98,9 +122,11 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
     _selectedPlayerIds.addAll(players.map((p) => p.id));
     _assignDefaultTees(players, _selectedCourseDetails);
 
-    // If 8 players present, auto-generate initial balanced pairings
-    if (players.length >= 8) {
-      _generateAIPairingsInternal(players, sessions, _roundNumber);
+    // Apply scheduled pairing plan if available, or generate one
+    if (matchingScheduled != null && matchingScheduled.pairingPlan != null) {
+      _applyPairingPlan(matchingScheduled.pairingPlan!);
+    } else if (players.length >= 8) {
+      await _generateAIPairingsInternal(players, sessions, _roundNumber);
     }
 
     setState(() {
@@ -110,15 +136,31 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
     });
   }
 
-  void _generateAIPairingsInternal(
+  Future<void> _generateAIPairingsInternal(
     List<Player> players,
     List<ActiveRoundSession> pastRounds,
     int rNum,
-  ) {
-    final plan = _pairingsEngine.generatePreliminaryPairings(
+  ) async {
+    final matchingScheduled = _tripSchedule.where((r) => r.roundNumber == rNum).firstOrNull;
+    final roundDate = matchingScheduled?.date ?? DateTime.now();
+
+    final priorScheduledInfos = _tripSchedule
+        .where((r) =>
+            r.date.isBefore(roundDate) ||
+            (TournamentPairingsEngine.isSameDay(r.date, roundDate) && r.roundNumber < rNum))
+        .map((r) => ScheduledRoundInfo(
+              roundNumber: r.roundNumber,
+              date: r.date,
+              pairingPlan: r.pairingPlan,
+            ))
+        .toList();
+
+    final plan = _pairingsEngine.generateSchedulePairingsForDate(
       players: players,
-      pastRounds: pastRounds,
+      roundDate: roundDate,
       roundNumber: rNum,
+      pastCompletedRounds: pastRounds,
+      priorScheduledRounds: priorScheduledInfos,
     );
     _applyPairingPlan(plan);
   }
@@ -374,14 +416,15 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
                                     child: Text('Round $r', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                                   ))
                               .toList(),
-                          onChanged: (v) {
+                          onChanged: (v) async {
                             if (v != null) {
                               setState(() {
                                 _roundNumber = v;
-                                if (_allPlayers.length >= 8 && !_isFinalRound) {
-                                  _generateAIPairingsInternal(_allPlayers, _pastSavedRounds, v);
-                                }
                               });
+                              if (_allPlayers.length >= 8 && !_isFinalRound) {
+                                await _generateAIPairingsInternal(_allPlayers, _pastSavedRounds, v);
+                                if (mounted) setState(() {});
+                              }
                             }
                           },
                         ),
@@ -501,13 +544,19 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () {
+                          onPressed: () async {
+                            final messenger = ScaffoldMessenger.of(context);
                             final selected = _allPlayers.where((p) => _selectedPlayerIds.contains(p.id)).toList();
-                            setState(() {
-                              _generateAIPairingsInternal(selected, _pastSavedRounds, _roundNumber);
-                            });
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('AI generated balanced 4-somes & 2-man teams!')),
+                            await _generateAIPairingsInternal(selected, _pastSavedRounds, _roundNumber);
+                            if (!mounted) return;
+                            setState(() {});
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'AI examined prior pairings & generated non-repeating 2-man teams!',
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                              ),
                             );
                           },
                           icon: const Icon(Icons.shuffle, size: 20, color: AppColors.lakeCyan),
@@ -534,6 +583,29 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
+
+                  if (_isScheduleFinalized)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0C241B),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF34D399)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.lock, size: 16, color: Color(0xFF34D399)),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Loaded locked-in teams & pairings from finalized Trip Schedule.',
+                              style: TextStyle(fontSize: 13, color: Color(0xFF6EE7B7), fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
                   if (_currentPairingPlan != null) ...[
                     // Foursome 1

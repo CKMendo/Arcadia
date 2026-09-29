@@ -5,9 +5,12 @@ import '../../../shared/services/app_settings_service.dart';
 import '../../../shared/theme/app_colors.dart';
 import '../../../shared/utils/course_handicap_calculator.dart';
 import '../../../shared/widgets/player_avatar.dart';
+import '../../courses/models/scheduled_round.dart';
+import '../../courses/repository/trip_schedule_repository.dart';
 import '../../players/repository/player_repository.dart';
 import '../../rounds/import/presentation/gemini_key_config_dialog.dart';
 import '../repository/tournament_repository.dart';
+import '../services/tournament_pairings_engine.dart';
 
 class TournamentSetupScreen extends StatefulWidget {
   final TournamentRepository tournamentRepository;
@@ -27,6 +30,7 @@ class TournamentSetupScreen extends StatefulWidget {
 
 class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
   final _formKey = GlobalKey<FormState>();
+  final TripScheduleRepository _scheduleRepo = TripScheduleRepository();
 
   late TextEditingController _nameController;
   late TextEditingController _teamAController;
@@ -38,6 +42,8 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
 
   List<Player> _allPlayers = [];
   final Map<String, String> _playerTeams = {}; // playerId -> 'a', 'b', 'none'
+  List<ScheduledRound> _scheduledRounds = [];
+  bool _isScheduleFinalized = false;
   bool _isLoading = true;
   bool _isSaving = false;
 
@@ -63,6 +69,9 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
 
   Future<void> _loadData() async {
     final players = await widget.playerRepository.getAllPlayers();
+    final scheduledRounds = await _scheduleRepo.getSchedule();
+    final isFinalized = await _scheduleRepo.isScheduleFinalized();
+
     if (widget.tournament != null) {
       final tPlayers = await widget.tournamentRepository
           .getTournamentPlayers(widget.tournament!.id);
@@ -79,6 +88,8 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
 
     setState(() {
       _allPlayers = players;
+      _scheduledRounds = scheduledRounds;
+      _isScheduleFinalized = isFinalized;
       _isLoading = false;
     });
   }
@@ -631,10 +642,10 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.golf_course, color: AppColors.cyanLight, size: 22),
+                    Icon(Icons.diversity_3, color: AppColors.cyanLight, size: 22),
                     SizedBox(width: 8),
                     Text(
-                      'ESTABLISHED TEAMS PER COURSE',
+                      'TEAMS & PAIRINGS BY SCHEDULE',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
@@ -647,40 +658,139 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceElevated,
+                    color: _isScheduleFinalized ? const Color(0xFF0F382A) : const Color(0xFF261D05),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.cardBorder),
+                    border: Border.all(
+                      color: _isScheduleFinalized ? const Color(0xFF34D399) : const Color(0xFFE5C07B),
+                    ),
                   ),
-                  child: const Text(
-                    '2 Courses',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.duneSand),
+                  child: Text(
+                    _isScheduleFinalized
+                        ? 'Finalized (${_scheduledRounds.length} Rounds)'
+                        : 'Schedule Incomplete',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: _isScheduleFinalized ? const Color(0xFF34D399) : const Color(0xFFE5C07B),
+                    ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 14),
-            if (_allPlayers.length < 4)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  'Add at least 4 golfers to generate course pairings and 2-man teams.',
-                  style: TextStyle(color: Colors.white60, fontSize: 15),
+            if (!_isScheduleFinalized || _scheduledRounds.isEmpty) ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E1705),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFF59E0B), width: 1.5),
                 ),
-              )
-            else ...[
-              _buildCoursePairingsBlock(
-                courseName: 'Arcadia Bluffs (The Bluffs)',
-                subtitle: 'Par 72 • Championship Links',
-                isSouth: false,
-                players: _allPlayers,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.lock_clock, color: Color(0xFFFBBF24), size: 26),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'PAIRINGS PENDING SCHEDULE FINALIZATION',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.1,
+                              color: Color(0xFFFDE68A),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Pairings and two-man teams cannot be finalized until all rounds have been entered on the schedule. Enter course play, dates, and tee times for the entire trip on the Courses screen before finalizing.',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    ElevatedButton.icon(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.calendar_month, size: 20),
+                      label: const Text(
+                        'Go to Courses & Schedule Tab',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.lakeCyan,
+                        foregroundColor: const Color(0xFF07121E),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 14),
-              _buildCoursePairingsBlock(
-                courseName: 'Arcadia Bluffs (The South)',
-                subtitle: 'Par 72 • C.B. Macdonald Geometric Classic',
-                isSouth: true,
-                players: _allPlayers,
-              ),
+            ] else ...[
+              ..._scheduledRounds.map((round) {
+                final isSouth = round.courseName.toLowerCase().contains('south');
+                final plan = round.pairingPlan;
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceElevated,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.cardBorder),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Round ${round.roundNumber}: ${round.courseName}',
+                              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Colors.white),
+                            ),
+                          ),
+                          Text(
+                            round.shortDate,
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.duneSand),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Tee Times: ${round.teeTimeGroup1} & ${round.teeTimeGroup2}',
+                        style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 10),
+                      if (plan != null) ...[
+                        _buildPairingGroupDisplay(
+                          groupNum: 1,
+                          foursome: plan.foursome1,
+                          isSouth: isSouth,
+                        ),
+                        const SizedBox(height: 8),
+                        _buildPairingGroupDisplay(
+                          groupNum: 2,
+                          foursome: plan.foursome2,
+                          isSouth: isSouth,
+                        ),
+                      ] else
+                        const Text(
+                          'No pairings generated for this round yet.',
+                          style: TextStyle(fontSize: 14, color: Colors.white54),
+                        ),
+                    ],
+                  ),
+                );
+              }),
             ],
           ],
         ),
@@ -688,105 +798,29 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
     );
   }
 
-  Widget _buildCoursePairingsBlock({
-    required String courseName,
-    required String subtitle,
-    required bool isSouth,
-    required List<Player> players,
-  }) {
-    // Generate pairings for this course
-    final pList = List<Player>.from(players);
-    // On South, rearrange partner pairings so players play with different partners
-    final ordered = isSouth && pList.length >= 8
-        ? [pList[0], pList[2], pList[1], pList[3], pList[4], pList[6], pList[5], pList[7]]
-        : pList;
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isSouth ? const Color(0xFF26190C) : const Color(0xFF0F2B3E),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.sports_golf,
-                  color: isSouth ? AppColors.duneSand : AppColors.lakeCyan,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      courseName,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Group 1
-          _buildPairingGroup(
-            groupNum: 1,
-            p1: ordered[0],
-            p2: ordered[1],
-            p3: ordered.length > 2 ? ordered[2] : null,
-            p4: ordered.length > 3 ? ordered[3] : null,
-            isSouth: isSouth,
-          ),
-          if (ordered.length >= 8) ...[
-            const SizedBox(height: 10),
-            _buildPairingGroup(
-              groupNum: 2,
-              p1: ordered[4],
-              p2: ordered[5],
-              p3: ordered[6],
-              p4: ordered[7],
-              isSouth: isSouth,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPairingGroup({
+  Widget _buildPairingGroupDisplay({
     required int groupNum,
-    required Player p1,
-    required Player p2,
-    Player? p3,
-    Player? p4,
+    required FoursomePlan foursome,
     required bool isSouth,
   }) {
+    final t1P1 = foursome.teamA.player1;
+    final t1P2 = foursome.teamA.player2;
+    final t2P1 = foursome.teamB.player1;
+    final t2P2 = foursome.teamB.player2;
+
     final t1Ch1 = isSouth
-        ? CourseHandicapCalculator.forSouth(p1.handicapIndex, p1.preferredTee ?? 'White')
-        : CourseHandicapCalculator.forBluffs(p1.handicapIndex, p1.preferredTee ?? 'White');
+        ? CourseHandicapCalculator.forSouth(t1P1.handicapIndex, t1P1.preferredTee ?? 'White')
+        : CourseHandicapCalculator.forBluffs(t1P1.handicapIndex, t1P1.preferredTee ?? 'White');
     final t1Ch2 = isSouth
-        ? CourseHandicapCalculator.forSouth(p2.handicapIndex, p2.preferredTee ?? 'White')
-        : CourseHandicapCalculator.forBluffs(p2.handicapIndex, p2.preferredTee ?? 'White');
+        ? CourseHandicapCalculator.forSouth(t1P2.handicapIndex, t1P2.preferredTee ?? 'White')
+        : CourseHandicapCalculator.forBluffs(t1P2.handicapIndex, t1P2.preferredTee ?? 'White');
+
+    final t2Ch1 = isSouth
+        ? CourseHandicapCalculator.forSouth(t2P1.handicapIndex, t2P1.preferredTee ?? 'White')
+        : CourseHandicapCalculator.forBluffs(t2P1.handicapIndex, t2P1.preferredTee ?? 'White');
+    final t2Ch2 = isSouth
+        ? CourseHandicapCalculator.forSouth(t2P2.handicapIndex, t2P2.preferredTee ?? 'White')
+        : CourseHandicapCalculator.forBluffs(t2P2.handicapIndex, t2P2.preferredTee ?? 'White');
 
     return Container(
       padding: const EdgeInsets.all(10),
@@ -818,45 +852,43 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                     children: [
                       const Text('Team 1', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.teamA)),
                       const SizedBox(height: 2),
-                      Text('${p1.nickname} (HCP $t1Ch1)', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-                      Text('${p2.nickname} (HCP $t1Ch2)', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                      Text('${t1P1.nickname.isNotEmpty ? t1P1.nickname : t1P1.fullName} (H$t1Ch1)',
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                          overflow: TextOverflow.ellipsis),
+                      Text('${t1P2.nickname.isNotEmpty ? t1P2.nickname : t1P2.fullName} (H$t1Ch2)',
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                          overflow: TextOverflow.ellipsis),
                     ],
                   ),
                 ),
               ),
-              if (p3 != null && p4 != null) ...[
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Text('VS', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: AppColors.duneSand)),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8.0),
+                child: Text('VS', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: AppColors.duneSand)),
+              ),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.teamB.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.teamB.withValues(alpha: 0.5)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Team 2', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.teamB)),
+                      const SizedBox(height: 2),
+                      Text('${t2P1.nickname.isNotEmpty ? t2P1.nickname : t2P1.fullName} (H$t2Ch1)',
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                          overflow: TextOverflow.ellipsis),
+                      Text('${t2P2.nickname.isNotEmpty ? t2P2.nickname : t2P2.fullName} (H$t2Ch2)',
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                          overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
                 ),
-                Expanded(
-                  child: Builder(builder: (context) {
-                    final t2Ch1 = isSouth
-                        ? CourseHandicapCalculator.forSouth(p3.handicapIndex, p3.preferredTee ?? 'White')
-                        : CourseHandicapCalculator.forBluffs(p3.handicapIndex, p3.preferredTee ?? 'White');
-                    final t2Ch2 = isSouth
-                        ? CourseHandicapCalculator.forSouth(p4.handicapIndex, p4.preferredTee ?? 'White')
-                        : CourseHandicapCalculator.forBluffs(p4.handicapIndex, p4.preferredTee ?? 'White');
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.teamB.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.teamB.withValues(alpha: 0.5)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Team 2', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.teamB)),
-                          const SizedBox(height: 2),
-                          Text('${p3.nickname} (HCP $t2Ch1)', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-                          Text('${p4.nickname} (HCP $t2Ch2)', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-                        ],
-                      ),
-                    );
-                  }),
-                ),
-              ],
+              ),
             ],
           ),
         ],

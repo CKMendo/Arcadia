@@ -4,6 +4,7 @@ import '../features/courses/repository/course_repository.dart';
 import '../features/players/presentation/players_screen.dart';
 import '../features/players/repository/player_repository.dart';
 import '../features/courses/presentation/courses_screen.dart';
+import '../features/courses/repository/trip_schedule_repository.dart';
 import '../features/rounds/presentation/active_scoring_screen.dart';
 import '../features/rounds/presentation/new_round_setup_screen.dart';
 import '../features/rounds/repository/round_repository.dart';
@@ -34,6 +35,7 @@ class ArcadiaShell extends StatefulWidget {
 
 class _ArcadiaShellState extends State<ArcadiaShell> {
   int _currentIndex = 0;
+  final TripScheduleRepository _tripScheduleRepository = TripScheduleRepository();
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +57,12 @@ class _ArcadiaShellState extends State<ArcadiaShell> {
         playerRepository: widget.playerRepository,
         tournamentRepository: widget.tournamentRepository,
       ),
-      CoursesScreen(courseRepository: widget.courseRepository),
+      CoursesScreen(
+        courseRepository: widget.courseRepository,
+        playerRepository: widget.playerRepository,
+        roundRepository: widget.roundRepository,
+        tripScheduleRepository: _tripScheduleRepository,
+      ),
       PlayersScreen(playerRepository: widget.playerRepository),
       RulesScreen(playerRepository: widget.playerRepository),
     ];
