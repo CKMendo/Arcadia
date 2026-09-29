@@ -334,13 +334,21 @@ class WebsitePublishService {
         seedLabel = 'Draft Pool #${i + 1}';
       }
 
+      final bluffsHcp = (p.handicapIndex * (137.0 / 113.0) + (73.5 - 72.0)).round();
+      final southHcp = (p.handicapIndex * (134.0 / 113.0) + (72.8 - 72.0)).round();
+
       standings.add({
         'rank': i + 1,
         'seed': seedLabel,
         'playerId': p.id,
         'name': p.fullName,
         'nickname': p.nickname,
+        'initials': p.initials,
         'handicapIndex': p.handicapIndex,
+        'courseHcpBluffs': bluffsHcp,
+        'courseHcpSouth': southHcp,
+        'phone': p.phoneNumber ?? '',
+        'tee': p.preferredTee ?? 'Blue',
         'roundsPlayed': rCount,
         'totalPoints': pts,
         'birdies': playerBirdies[p.id] ?? 0,
@@ -420,6 +428,59 @@ class WebsitePublishService {
       });
     }
 
+    final courseList = courses.isNotEmpty
+        ? courses.map((c) => {
+            'id': c.id,
+            'name': c.name,
+            'par': 72,
+            'rating': 73.5,
+            'slope': 137,
+            'yardage': 6800,
+          }).toList()
+        : [
+            {
+              'id': 'arcadia_bluffs',
+              'name': 'Arcadia Bluffs (The Bluffs)',
+              'par': 72,
+              'rating': 73.5,
+              'slope': 137,
+              'yardage': 6800,
+            },
+            {
+              'id': 'the_south_course',
+              'name': 'The South Course',
+              'par': 72,
+              'rating': 72.8,
+              'slope': 134,
+              'yardage': 6750,
+            },
+          ];
+
+    final rosterList = <Map<String, dynamic>>[];
+    for (var i = 0; i < sortedPlayers.length; i++) {
+      final p = sortedPlayers[i];
+      final bluffsHcp = (p.handicapIndex * (137.0 / 113.0) + (73.5 - 72.0)).round();
+      final southHcp = (p.handicapIndex * (134.0 / 113.0) + (72.8 - 72.0)).round();
+      final seed = i < 4 ? 'Seed #${i + 1} Captain' : 'Draft Pool #${i + 1}';
+
+      rosterList.add({
+        'id': p.id,
+        'name': p.fullName,
+        'nickname': p.nickname,
+        'initials': p.initials,
+        'handicapIndex': p.handicapIndex,
+        'courseHcpBluffs': bluffsHcp,
+        'courseHcpSouth': southHcp,
+        'phone': p.phoneNumber ?? '',
+        'email': p.email ?? '',
+        'ghin': p.ghinNumber ?? '',
+        'tee': p.preferredTee ?? 'Blue',
+        'seed': seed,
+        'rank': i + 1,
+        'photo': p.photoPath ?? 'assets/images/user_logo.jpg',
+      });
+    }
+
     return {
       'leagueName': 'Arcadia Cup 2027',
       'publishedAt': now.toIso8601String(),
@@ -429,23 +490,8 @@ class WebsitePublishService {
         'name': tournament?.name ?? 'Arcadia Cup 2027',
         'dates': 'June 7 - June 12, 2027',
         'venue': 'Arcadia Bluffs Golf Club',
-        'courses': courses.map((c) => {
-          'id': c.id,
-          'name': c.name,
-          'par': 72,
-          'rating': 73.5,
-          'slope': 137,
-          'yardage': 6800,
-        }).toList(),
-        'roster': players.map((p) => {
-          'id': p.id,
-          'name': p.fullName,
-          'nickname': p.nickname,
-          'handicapIndex': p.handicapIndex,
-          'phone': p.phoneNumber ?? '',
-          'tee': p.preferredTee ?? 'Blue',
-          'photo': p.photoPath ?? 'assets/images/user_logo.jpg',
-        }).toList(),
+        'courses': courseList,
+        'roster': rosterList,
       },
       'birdiePots': {
         'totalBirdies': totalBirdieCount,

@@ -723,10 +723,638 @@ body {
   font-weight: 800;
 }
 
-/* RESPONSIVE */
-@media (max-width: 680px) {
-  .hero-title { font-size: 1.8rem; }
-  .pot-amount { font-size: 1.8rem; }
-  .tab-btn { min-width: 110px; font-size: 0.8rem; padding: 10px; }
-  .tbd-main-banner { font-size: 1.1rem; }
+.stroke-highlight {
+  background: rgba(247, 217, 140, 0.25);
+  color: var(--gold-light);
+  font-weight: 900;
 }
+
+.counted-badge {
+  background: #2e7d32;
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+/* -------------------------------------------------------------
+   ROSTER & PLAYER CARDS SECTION
+   ------------------------------------------------------------- */
+.roster-header-section {
+  margin-bottom: 24px;
+}
+
+.roster-stats-strip {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.stat-pill {
+  flex: 1;
+  min-width: 140px;
+  background: var(--bg-surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.stat-pill-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.stat-pill-val {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: var(--gold-light);
+}
+
+.roster-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.filter-chip {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  color: var(--text-muted);
+  padding: 8px 18px;
+  border-radius: var(--radius-full);
+  font-size: 0.86rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.filter-chip:hover {
+  color: #fff;
+  border-color: var(--line-gold);
+}
+
+.filter-chip.active {
+  background: var(--gold);
+  color: #06110a;
+  border-color: var(--gold);
+  box-shadow: 0 4px 12px var(--gold-glow);
+}
+
+.roster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
+}
+
+.player-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.player-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--gold);
+  box-shadow: 0 12px 30px var(--gold-glow);
+}
+
+.player-card.captain-card {
+  background: linear-gradient(145deg, #102b1f 0%, #091c14 100%);
+  border-color: rgba(213, 174, 91, 0.45);
+}
+
+.player-card-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.player-avatar-wrap {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  flex-shrink: 0;
+}
+
+.player-avatar-initials {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #193a2d 0%, #0d241b 100%);
+  border: 2.5px solid var(--gold);
+  display: grid;
+  place-items: center;
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: var(--gold-light);
+  box-shadow: 0 0 14px var(--gold-glow);
+}
+
+.captain-crown {
+  position: absolute;
+  top: -8px;
+  right: -6px;
+  font-size: 1.1rem;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
+}
+
+.player-header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.player-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.player-full-name {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.nickname-badge {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--gold-light);
+  font-style: italic;
+}
+
+.seed-badge {
+  display: inline-block;
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+.captain-badge {
+  background: rgba(213, 174, 91, 0.2);
+  color: var(--gold-light);
+  border: 1px solid var(--gold);
+}
+
+.pool-badge {
+  background: rgba(77, 208, 225, 0.15);
+  color: var(--cyan);
+  border: 1px solid var(--cyan);
+}
+
+.player-specs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.spec-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.spec-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.spec-val {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #fff;
+}
+
+.hcp-val {
+  color: var(--gold-light);
+}
+
+.spec-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.tee-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tee-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.player-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.player-contact-actions {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+}
+
+.contact-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.84rem;
+  font-weight: 800;
+  text-decoration: none;
+  min-height: 40px;
+  transition: all 0.15s ease;
+  touch-action: manipulation;
+}
+
+.call-btn {
+  background: rgba(82, 227, 150, 0.15);
+  color: #52e396;
+  border: 1px solid #52e396;
+}
+
+.call-btn:hover {
+  background: #52e396;
+  color: #041209;
+}
+
+.text-btn {
+  background: rgba(77, 208, 225, 0.15);
+  color: var(--cyan);
+  border: 1px solid var(--cyan);
+}
+
+.text-btn:hover {
+  background: var(--cyan);
+  color: #041209;
+}
+
+.view-profile-btn {
+  background: transparent;
+  border: none;
+  color: var(--gold-light);
+  font-size: 0.85rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 0;
+  touch-action: manipulation;
+}
+
+.view-profile-btn:hover {
+  color: #fff;
+}
+
+/* -------------------------------------------------------------
+   RESPONSIVE DESIGN: GALAXY FOLD 8 & IPHONE OPTIMIZATION
+   ------------------------------------------------------------- */
+
+/* TABLE STICKY COLUMN FOR MOBILE HORIZONTAL SCROLL */
+@media (max-width: 768px) {
+  .standings-table th:first-child,
+  .standings-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: #0d231a;
+    box-shadow: 3px 0 8px rgba(0,0,0,0.4);
+  }
+  .standings-table th:first-child {
+    background: #091d14;
+  }
+}
+
+/* GALAXY Z FOLD 8 (FOLDED COVER SCREEN) & COMPACT MOBILES (<= 400px) */
+@media (max-width: 400px) {
+  body {
+    padding-bottom: max(60px, env(safe-area-inset-bottom));
+  }
+
+  .live-bar {
+    padding: 8px 12px;
+    font-size: 0.75rem;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .refresh-btn {
+    padding: 6px 10px;
+    font-size: 0.72rem;
+  }
+
+  .hero {
+    padding: 24px 12px 18px;
+  }
+
+  .hero-logo-wrap {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 12px;
+  }
+
+  .hero-title {
+    font-size: 1.55rem;
+    letter-spacing: 0.02em;
+  }
+
+  .hero-subtitle {
+    font-size: 0.88rem;
+  }
+
+  .hero-meta {
+    font-size: 0.78rem;
+    gap: 8px;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .birdie-banner {
+    margin: -12px auto 20px;
+    padding: 0 12px;
+  }
+
+  .birdie-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .pot-card {
+    padding: 14px;
+  }
+
+  .pot-amount {
+    font-size: 1.75rem;
+  }
+
+  .pot-name {
+    font-size: 0.95rem;
+  }
+
+  .pot-sub {
+    font-size: 0.76rem;
+  }
+
+  .nav-container {
+    padding: 0 12px;
+    margin-bottom: 16px;
+  }
+
+  .nav-tabs {
+    padding: 4px;
+    gap: 4px;
+    scrollbar-width: none;
+  }
+
+  .nav-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab-btn {
+    min-width: 95px;
+    padding: 8px 10px;
+    font-size: 0.78rem;
+  }
+
+  .main-wrapper {
+    padding: 0 12px;
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+  }
+
+  .section-sub {
+    font-size: 0.78rem;
+  }
+
+  .stat-pill {
+    min-width: 45%;
+    padding: 8px 10px;
+  }
+
+  .stat-pill-val {
+    font-size: 1.05rem;
+  }
+
+  .roster-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .player-card {
+    padding: 14px;
+  }
+
+  .player-card-header {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .player-avatar-wrap {
+    width: 48px;
+    height: 48px;
+  }
+
+  .player-avatar-initials {
+    font-size: 1.1rem;
+  }
+
+  .player-full-name {
+    font-size: 1.1rem;
+  }
+
+  .nickname-badge {
+    font-size: 0.8rem;
+  }
+
+  .player-specs-grid {
+    padding: 10px;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .spec-label {
+    font-size: 0.64rem;
+  }
+
+  .spec-val {
+    font-size: 1.05rem;
+  }
+
+  .player-card-footer {
+    padding-top: 10px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .player-contact-actions {
+    width: 100%;
+  }
+
+  .contact-btn {
+    flex: 1;
+    min-height: 42px;
+    font-size: 0.8rem;
+  }
+
+  .view-profile-btn {
+    justify-content: center;
+    padding: 8px;
+  }
+
+  .modal-overlay {
+    padding: 10px;
+  }
+
+  .modal-content {
+    padding: 18px 14px;
+    border-radius: var(--radius-md);
+  }
+
+  .tbd-main-banner {
+    font-size: 1rem;
+    padding: 8px 14px;
+  }
+
+  .groups-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* IPHONE STANDARD SIZES (390px to 430px) */
+@media (min-width: 401px) and (max-width: 600px) {
+  body {
+    padding-bottom: max(60px, env(safe-area-inset-bottom));
+  }
+
+  .hero {
+    padding: 30px 16px 22px;
+  }
+
+  .hero-logo-wrap {
+    width: 95px;
+    height: 95px;
+  }
+
+  .hero-title {
+    font-size: 1.85rem;
+  }
+
+  .birdie-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .nav-tabs {
+    scrollbar-width: none;
+  }
+
+  .nav-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab-btn {
+    min-width: 110px;
+    font-size: 0.82rem;
+    padding: 10px 12px;
+  }
+
+  .roster-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .contact-btn {
+    min-height: 44px;
+  }
+}
+
+/* GALAXY Z FOLD 8 (UNFOLDED SQUARE / TABLET VIEW: 601px to 920px) */
+@media (min-width: 601px) and (max-width: 920px) {
+  .hero-content {
+    flex-direction: row;
+    justify-content: center;
+    gap: 24px;
+    text-align: left;
+  }
+
+  .hero-logo-wrap {
+    width: 105px;
+    height: 105px;
+    margin-bottom: 0;
+  }
+
+  .hero-meta {
+    justify-content: flex-start;
+  }
+
+  .birdie-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .roster-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .groups-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .draft-diagram-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+

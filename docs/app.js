@@ -148,6 +148,8 @@ function renderTabContent() {
 
   if (currentTab === 'standings') {
     renderStandingsTab(container);
+  } else if (currentTab === 'roster') {
+    renderRosterTab(container);
   } else if (currentTab === 'pairings') {
     renderPairingsTab(container);
   } else if (currentTab === 'ledger') {
@@ -155,6 +157,191 @@ function renderTabContent() {
   } else if (currentTab === 'rules') {
     renderRulesTab(container);
   }
+}
+
+// -------------------------------------------------------------
+// PLAYERS & ROSTER TAB
+// -------------------------------------------------------------
+let rosterFilter = 'all';
+
+function setRosterFilter(filter) {
+  rosterFilter = filter;
+  const container = document.getElementById('tabContent');
+  if (container && currentTab === 'roster') {
+    renderRosterTab(container);
+  }
+}
+
+function renderRosterTab(container) {
+  if (!tournamentData) return;
+  const roster = (tournamentData.tournament && tournamentData.tournament.roster) || [];
+  const standings = tournamentData.standings || [];
+
+  const players = roster.map((p, idx) => {
+    const stand = standings.find(s => s.playerId === p.id) || {};
+    const hcp = typeof p.handicapIndex === 'number' ? p.handicapIndex : (stand.handicapIndex ?? 10.0);
+    const bluffsHcp = p.courseHcpBluffs ?? Math.round(hcp * (137 / 113) + (73.5 - 72.0));
+    const southHcp = p.courseHcpSouth ?? Math.round(hcp * (134 / 113) + (72.8 - 72.0));
+    const rank = p.rank ?? stand.rank ?? (idx + 1);
+    const isCaptain = rank <= 4;
+    const seed = p.seed ?? stand.seed ?? (isCaptain ? `Seed #${rank} Captain` : `Draft Pool #${rank}`);
+    const nameParts = p.name ? p.name.split(' ') : ['Golfer'];
+    const initials = p.initials || nameParts.map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+    return {
+      ...p,
+      ...stand,
+      id: p.id,
+      name: p.name,
+      nickname: p.nickname || nameParts[0],
+      initials,
+      handicapIndex: hcp,
+      courseHcpBluffs: bluffsHcp,
+      courseHcpSouth: southHcp,
+      rank,
+      isCaptain,
+      seed,
+      phone: p.phone || stand.phone || '',
+      tee: p.tee || stand.tee || 'Blue',
+    };
+  });
+
+  const filteredPlayers = players.filter(p => {
+    if (rosterFilter === 'captains') return p.isCaptain;
+    if (rosterFilter === 'pool') return !p.isCaptain;
+    return true;
+  });
+
+  const avgHcp = players.length > 0
+    ? (players.reduce((sum, p) => sum + p.handicapIndex, 0) / players.length).toFixed(1)
+    : '0.0';
+
+  let html = `
+    <div class="roster-header-section">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Official Tournament Roster &amp; Profiles</h2>
+          <p class="section-sub">8-Player Field • USGA Handicap Indexes • Course Handicaps &amp; Contact Directory</p>
+        </div>
+      </div>
+
+      <!-- QUICK FIELD STATS STRIP -->
+      <div class="roster-stats-strip">
+        <div class="stat-pill">
+          <span class="stat-pill-label">COMPETING FIELD</span>
+          <span class="stat-pill-val">8 Golfers</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-pill-label">CAPTAIN SEEDS</span>
+          <span class="stat-pill-val">Top 4 (#1–#4)</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-pill-label">DRAFT POOL</span>
+          <span class="stat-pill-val">Seeds #5–#8</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-pill-label">FIELD AVG HCP</span>
+          <span class="stat-pill-val">${avgHcp}</span>
+        </div>
+      </div>
+
+      <!-- FILTER TABS (All / Captains / Draft Pool) -->
+      <div class="roster-filters" role="group" aria-label="Roster Filters">
+        <button class="filter-chip ${rosterFilter === 'all' ? 'active' : ''}" onclick="setRosterFilter('all')" type="button">
+          All Players (8)
+        </button>
+        <button class="filter-chip ${rosterFilter === 'captains' ? 'active' : ''}" onclick="setRosterFilter('captains')" type="button">
+          👑 Captain Seeds (4)
+        </button>
+        <button class="filter-chip ${rosterFilter === 'pool' ? 'active' : ''}" onclick="setRosterFilter('pool')" type="button">
+          🎯 Draft Pool (4)
+        </button>
+      </div>
+    </div>
+
+    <!-- PLAYERS GRID -->
+    <div class="roster-grid">
+  `;
+
+  filteredPlayers.forEach(p => {
+    const isCaptain = p.isCaptain;
+    const badgeClass = isCaptain ? 'captain-badge' : 'pool-badge';
+    const teeColor = (p.tee || 'Blue').toLowerCase().includes('blue') ? '#1e88e5' : '#e0e0e0';
+    const cleanPhone = (p.phone || '').replace(/[^0-9]/g, '');
+
+    html += `
+      <article class="player-card ${isCaptain ? 'captain-card' : ''}" onclick="openPlayerModal('${p.id}')" tabindex="0" role="button" aria-label="View profile for ${p.name}">
+        <div class="player-card-header">
+          <div class="player-avatar-wrap">
+            <div class="player-avatar-initials">${p.initials}</div>
+            ${isCaptain ? '<span class="captain-crown" title="Seed Captain">👑</span>' : ''}
+          </div>
+
+          <div class="player-header-info">
+            <div class="player-title-row">
+              <h3 class="player-full-name">${p.name}</h3>
+              <span class="nickname-badge">"${p.nickname}"</span>
+            </div>
+            <div class="seed-badge ${badgeClass}">${p.seed}</div>
+          </div>
+        </div>
+
+        <div class="player-specs-grid">
+          <div class="spec-cell">
+            <span class="spec-label">USGA HCP INDEX</span>
+            <span class="spec-val hcp-val">${p.handicapIndex.toFixed(1)}</span>
+          </div>
+
+          <div class="spec-cell">
+            <span class="spec-label">PLAYING TEE</span>
+            <div class="tee-display">
+              <span class="tee-dot" style="background-color: ${teeColor};"></span>
+              <span class="spec-val" style="font-size: 1.05rem;">${p.tee} Tees</span>
+            </div>
+          </div>
+
+          <div class="spec-cell">
+            <span class="spec-label">THE BLUFFS HCP</span>
+            <span class="spec-val">${p.courseHcpBluffs}</span>
+            <span class="spec-sub">Rating 73.5 • Slope 137</span>
+          </div>
+
+          <div class="spec-cell">
+            <span class="spec-label">SOUTH COURSE HCP</span>
+            <span class="spec-val">${p.courseHcpSouth}</span>
+            <span class="spec-sub">Rating 72.8 • Slope 134</span>
+          </div>
+        </div>
+
+        <div class="player-card-footer" onclick="event.stopPropagation()">
+          ${p.phone ? `
+            <div class="player-contact-actions">
+              <a href="tel:${cleanPhone}" class="contact-btn call-btn" title="Call ${p.nickname}">
+                <span>📞</span>
+                <span>Call</span>
+              </a>
+              <a href="sms:${cleanPhone}" class="contact-btn text-btn" title="Text ${p.nickname}">
+                <span>💬</span>
+                <span>Text</span>
+              </a>
+            </div>
+          ` : `
+            <div style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">Contact on file</div>
+          `}
+          <button type="button" class="view-profile-btn" onclick="openPlayerModal('${p.id}')">
+            <span>Scorecard &amp; Stats</span>
+            <span>&rarr;</span>
+          </button>
+        </div>
+      </article>
+    `;
+  });
+
+  html += `
+    </div>
+  `;
+
+  container.innerHTML = html;
 }
 
 // -------------------------------------------------------------
@@ -522,59 +709,127 @@ function renderRulesTab(container) {
 }
 
 // -------------------------------------------------------------
+// -------------------------------------------------------------
 // MODALS
 // -------------------------------------------------------------
 function openPlayerModal(playerId) {
+  if (!tournamentData) return;
   const standings = tournamentData.standings || [];
-  const player = standings.find(p => p.playerId === playerId);
-  if (!player) return;
+  const roster = (tournamentData.tournament && tournamentData.tournament.roster) || [];
+
+  const sPlayer = standings.find(p => p.playerId === playerId || p.id === playerId) || {};
+  const rPlayer = roster.find(p => p.id === playerId || p.playerId === playerId) || {};
+
+  if (!sPlayer.playerId && !rPlayer.id) return;
+
+  const name = rPlayer.name || sPlayer.name || 'Golfer';
+  const nameParts = name.split(' ');
+  const nickname = rPlayer.nickname || sPlayer.nickname || nameParts[0];
+  const hcp = typeof rPlayer.handicapIndex === 'number' ? rPlayer.handicapIndex : (sPlayer.handicapIndex ?? 10.0);
+  const bluffsHcp = rPlayer.courseHcpBluffs ?? Math.round(hcp * (137 / 113) + (73.5 - 72.0));
+  const southHcp = rPlayer.courseHcpSouth ?? Math.round(hcp * (134 / 113) + (72.8 - 72.0));
+  const rank = sPlayer.rank ?? rPlayer.rank ?? 1;
+  const isCaptain = rank <= 4;
+  const seed = sPlayer.seed ?? rPlayer.seed ?? (isCaptain ? `Seed #${rank} Captain` : `Draft Pool #${rank}`);
+  const tee = rPlayer.tee || sPlayer.tee || 'Blue';
+  const phone = rPlayer.phone || sPlayer.phone || '';
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  const initials = rPlayer.initials || sPlayer.initials || nameParts.map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+  const totalPoints = sPlayer.totalPoints ?? 0;
+  const birdies = sPlayer.birdies ?? 0;
+  const grossAvg = sPlayer.grossAvg ?? 0.0;
+  const netAvg = sPlayer.netAvg ?? 0.0;
+  const contributionPct = sPlayer.contributionPct ?? 50;
+  const partnerHistory = sPlayer.partnerHistory || [];
+  const roundsPlayed = sPlayer.roundsPlayed ?? 0;
 
   const modalContainer = document.getElementById('modalContainer');
-  const sampleCard = tournamentData.sampleScorecards && tournamentData.sampleScorecards[playerId];
+  const sampleCard = tournamentData.sampleScorecards && (tournamentData.sampleScorecards[playerId] || tournamentData.sampleScorecards[sPlayer.playerId]);
 
   let modalHtml = `
     <div class="modal-overlay" onclick="closeModal(event)">
       <div class="modal-content" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="closeModal()">&times;</button>
 
-        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px;">
-          <img src="assets/arcadia_cup_crest.jpg" style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--gold); object-fit: cover;">
+        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;">
+          <div class="player-avatar-wrap" style="width: 64px; height: 64px;">
+            <div class="player-avatar-initials" style="font-size: 1.4rem;">${initials}</div>
+            ${isCaptain ? '<span class="captain-crown" style="font-size: 1.2rem;">👑</span>' : ''}
+          </div>
           <div>
-            <h2 style="font-size: 1.6rem; color: #fff;">${player.name}</h2>
-            <div style="color: var(--cyan); font-weight: 800; font-size: 0.88rem;">
-              Rank #${player.rank} &bull; ${player.seed} &bull; HCP Index: ${player.handicapIndex.toFixed(1)}
+            <div style="display: flex; align-items: baseline; gap: 8px;">
+              <h2 style="font-size: 1.6rem; color: #fff; line-height: 1.2;">${name}</h2>
+              <span class="nickname-badge" style="font-size: 1rem;">"${nickname}"</span>
+            </div>
+            <div style="color: var(--cyan); font-weight: 800; font-size: 0.9rem; margin-top: 2px;">
+              ${seed} &bull; ${tee} Tees
             </div>
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 22px;">
-          <div style="background: var(--bg-card); padding: 12px; border-radius: 10px; text-align: center; border: 1px solid var(--line);">
-            <div style="font-size: 0.72rem; color: var(--text-muted);">TOTAL POINTS</div>
-            <div style="font-size: 1.3rem; font-weight: 900; color: var(--gold-light);">${player.totalPoints} pts</div>
+        <!-- COURSE HANDICAPS STRIP -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 20px;">
+          <div style="background: var(--bg-card); padding: 12px; border-radius: 10px; border: 1px solid var(--line); text-align: center;">
+            <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800;">USGA HCP INDEX</div>
+            <div style="font-size: 1.4rem; font-weight: 900; color: var(--gold-light);">${hcp.toFixed(1)}</div>
           </div>
-          <div style="background: var(--bg-card); padding: 12px; border-radius: 10px; text-align: center; border: 1px solid var(--line);">
-            <div style="font-size: 0.72rem; color: var(--text-muted);">BIRDIES</div>
-            <div style="font-size: 1.3rem; font-weight: 900; color: var(--cyan);">${player.birdies}</div>
+          <div style="background: var(--bg-card); padding: 12px; border-radius: 10px; border: 1px solid var(--line); text-align: center;">
+            <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800;">THE BLUFFS HCP</div>
+            <div style="font-size: 1.4rem; font-weight: 900; color: #fff;">${bluffsHcp}</div>
+            <div style="font-size: 0.68rem; color: var(--text-muted);">Slope 137</div>
           </div>
-          <div style="background: var(--bg-card); padding: 12px; border-radius: 10px; text-align: center; border: 1px solid var(--line);">
-            <div style="font-size: 0.72rem; color: var(--text-muted);">GROSS AVG</div>
-            <div style="font-size: 1.3rem; font-weight: 900; color: #fff;">${player.grossAvg.toFixed(1)}</div>
-          </div>
-          <div style="background: var(--bg-card); padding: 12px; border-radius: 10px; text-align: center; border: 1px solid var(--line);">
-            <div style="font-size: 0.72rem; color: var(--text-muted);">TEAM CONTRIB</div>
-            <div style="font-size: 1.3rem; font-weight: 900; color: #81c784;">${player.contributionPct}%</div>
+          <div style="background: var(--bg-card); padding: 12px; border-radius: 10px; border: 1px solid var(--line); text-align: center;">
+            <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800;">SOUTH COURSE HCP</div>
+            <div style="font-size: 1.4rem; font-weight: 900; color: #fff;">${southHcp}</div>
+            <div style="font-size: 0.68rem; color: var(--text-muted);">Slope 134</div>
           </div>
         </div>
 
-        <h3 style="font-size: 1.15rem; color: #fff; margin-bottom: 8px;">2-Man Team Partner History & Contribution</h3>
-        <div style="background: var(--bg-card); padding: 14px; border-radius: 10px; border: 1px solid var(--line); margin-bottom: 20px;">
-          <ul style="color: var(--text-main); font-size: 0.9rem; padding-left: 18px; line-height: 1.6;">
-            ${player.partnerHistory.map(h => `<li>${h}</li>`).join('')}
-          </ul>
-          <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 10px;">
-            Contributed the counting Best Ball score on <strong>${player.contributionPct}%</strong> of holes played with their partner.
-          </p>
+        ${phone ? `
+          <div style="background: rgba(82, 227, 150, 0.08); border: 1px solid rgba(82, 227, 150, 0.3); border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <div style="font-size: 0.72rem; color: #52e396; font-weight: 800; text-transform: uppercase;">PLAYER CONTACT DIRECTORY</div>
+              <div style="font-size: 1rem; font-weight: 800; color: #fff;">${phone}</div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <a href="tel:${cleanPhone}" class="contact-btn call-btn">📞 Call</a>
+              <a href="sms:${cleanPhone}" class="contact-btn text-btn">💬 SMS</a>
+            </div>
+          </div>
+        ` : ''}
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 22px;">
+          <div style="background: var(--bg-card); padding: 12px; border-radius: 10px; text-align: center; border: 1px solid var(--line);">
+            <div style="font-size: 0.72rem; color: var(--text-muted);">TOTAL POINTS</div>
+            <div style="font-size: 1.3rem; font-weight: 900; color: var(--gold-light);">${totalPoints} pts</div>
+          </div>
+          <div style="background: var(--bg-card); padding: 12px; border-radius: 10px; text-align: center; border: 1px solid var(--line);">
+            <div style="font-size: 0.72rem; color: var(--text-muted);">BIRDIES</div>
+            <div style="font-size: 1.3rem; font-weight: 900; color: var(--cyan);">${birdies}</div>
+          </div>
+          <div style="background: var(--bg-card); padding: 12px; border-radius: 10px; text-align: center; border: 1px solid var(--line);">
+            <div style="font-size: 0.72rem; color: var(--text-muted);">GROSS AVG</div>
+            <div style="font-size: 1.3rem; font-weight: 900; color: #fff;">${roundsPlayed > 0 ? grossAvg.toFixed(1) : '-'}</div>
+          </div>
+          <div style="background: var(--bg-card); padding: 12px; border-radius: 10px; text-align: center; border: 1px solid var(--line);">
+            <div style="font-size: 0.72rem; color: var(--text-muted);">TEAM CONTRIB</div>
+            <div style="font-size: 1.3rem; font-weight: 900; color: #81c784;">${roundsPlayed > 0 ? contributionPct + '%' : '-'}</div>
+          </div>
         </div>
+
+        ${partnerHistory.length > 0 ? `
+          <h3 style="font-size: 1.15rem; color: #fff; margin-bottom: 8px;">2-Man Team Partner History & Contribution</h3>
+          <div style="background: var(--bg-card); padding: 14px; border-radius: 10px; border: 1px solid var(--line); margin-bottom: 20px;">
+            <ul style="color: var(--text-main); font-size: 0.9rem; padding-left: 18px; line-height: 1.6;">
+              ${partnerHistory.map(h => `<li>${h}</li>`).join('')}
+            </ul>
+          </div>
+        ` : `
+          <div style="background: var(--bg-card); padding: 14px; border-radius: 10px; border: 1px solid var(--line); margin-bottom: 20px; font-size: 0.88rem; color: var(--text-muted);">
+            ⛳ <strong>Tournament Preview:</strong> 2-Man partner pairings and hole-by-hole Stableford scoring will update live once Round 1 begins at Arcadia Bluffs!
+          </div>
+        `}
   `;
 
   if (sampleCard) {
