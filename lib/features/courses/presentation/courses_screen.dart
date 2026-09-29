@@ -7,6 +7,7 @@ import '../models/course_models.dart';
 import '../repository/course_repository.dart';
 import '../repository/trip_schedule_repository.dart';
 import 'course_edit_screen.dart';
+import 'course_import_dialog.dart';
 import 'trip_schedule_tab.dart';
 
 class CoursesScreen extends StatelessWidget {
@@ -52,10 +53,19 @@ class CoursesScreen extends StatelessWidget {
             ],
           ),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.cloud_download, color: AppColors.cyanLight, size: 26),
+              tooltip: 'Import Course',
+              onPressed: () => _openCourseImportDialog(context),
+            ),
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert, color: AppColors.cyanLight, size: 28),
               onSelected: (val) async {
-                if (val == 'arcadia_templates') {
+                if (val == 'import_course') {
+                  _openCourseImportDialog(context);
+                } else if (val == 'add_course') {
+                  _openCourseEditor(context);
+                } else if (val == 'arcadia_templates') {
                   await courseRepository.seedArcadiaBluffsTemplates();
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -68,12 +78,32 @@ class CoursesScreen extends StatelessWidget {
               },
               itemBuilder: (ctx) => [
                 const PopupMenuItem(
+                  value: 'import_course',
+                  child: Row(
+                    children: [
+                      Icon(Icons.cloud_download, color: AppColors.lakeCyan, size: 22),
+                      SizedBox(width: 10),
+                      Text('Import Course (JSON/CSV)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'add_course',
+                  child: Row(
+                    children: [
+                      Icon(Icons.add_location_alt_outlined, color: AppColors.lakeCyan, size: 22),
+                      SizedBox(width: 10),
+                      Text('Add New Course', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
                   value: 'arcadia_templates',
                   child: Row(
                     children: [
-                      Icon(Icons.golf_course, color: AppColors.lakeCyan, size: 24),
+                      Icon(Icons.golf_course, color: AppColors.lakeCyan, size: 22),
                       SizedBox(width: 10),
-                      Text('Load Arcadia Bluffs Templates', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                      Text('Load Arcadia Bluffs Templates', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
@@ -140,16 +170,35 @@ class CoursesScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   const Text(
-                    'Add the courses you will be playing on your trip, including tees, par, and hole handicap ratings.',
+                    'Add or import the courses you will be playing on your trip, including tees, pars, and hole yardage info.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white70, fontSize: 18, height: 1.4),
                   ),
                   const SizedBox(height: 26),
-                  ElevatedButton.icon(
-                    onPressed: () => _openCourseEditor(context),
-                    icon: const Icon(Icons.add_location_alt_outlined, size: 26),
-                    label: const Text('Add New Course', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-                    style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16)),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () => _openCourseImportDialog(context),
+                        icon: const Icon(Icons.cloud_download, size: 24),
+                        label: const Text('Import Course', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.lakeCyan,
+                          foregroundColor: const Color(0xFF04111D),
+                          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () => _openCourseEditor(context),
+                        icon: const Icon(Icons.add_location_alt_outlined, size: 24),
+                        label: const Text('Add New Course', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 14),
                   OutlinedButton.icon(
@@ -242,7 +291,7 @@ class CoursesScreen extends StatelessWidget {
                                           ),
                                         ),
                                         Text(
-                                          '${course.city}, ${course.state} • ${course.holeCount} Holes',
+                                          '${course.city}, ${course.state} • ${course.holeCount} Holes${details != null ? ' • Par ${details.totalPar}' : ''}',
                                           style: const TextStyle(
                                             color: AppColors.duneLight,
                                             fontSize: 15,
@@ -252,12 +301,27 @@ class CoursesScreen extends StatelessWidget {
                                       ],
                                     ),
                                   ),
-                                  IconButton(
-                                    icon: const Icon(Icons.edit, color: Colors.white, size: 26),
-                                    style: IconButton.styleFrom(
-                                      backgroundColor: Colors.black45,
-                                    ),
-                                    onPressed: () => _openCourseEditor(context, course: course),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.edit, color: Colors.white, size: 24),
+                                        style: IconButton.styleFrom(
+                                          backgroundColor: Colors.black54,
+                                        ),
+                                        tooltip: 'Edit Course',
+                                        onPressed: () => _openCourseEditor(context, course: course),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 24),
+                                        style: IconButton.styleFrom(
+                                          backgroundColor: Colors.black54,
+                                        ),
+                                        tooltip: 'Delete Course',
+                                        onPressed: () => _confirmDeleteCourse(context, course),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -301,6 +365,9 @@ class CoursesScreen extends StatelessWidget {
                             else
                               ...details.teeBoxes.map((teeWithYardages) {
                                 final tee = teeWithYardages.teeBox;
+                                final yds = teeWithYardages.totalYardage;
+                                final holeDistancesCount = teeWithYardages.holeYardages.values.where((y) => y > 0).length;
+
                                 return Padding(
                                   padding: const EdgeInsets.symmetric(vertical: 6.0),
                                   child: Row(
@@ -321,7 +388,7 @@ class CoursesScreen extends StatelessWidget {
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
-                                        '(${tee.totalYardage > 0 ? '${tee.totalYardage} yds' : '18 holes'})',
+                                        '(${yds > 0 ? '$yds yds' : '18 holes'}${holeDistancesCount > 0 ? ' • $holeDistancesCount holes mapped' : ''})',
                                         style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
                                       ),
                                       const Spacer(),
@@ -345,16 +412,34 @@ class CoursesScreen extends StatelessWidget {
                                   ),
                                 );
                               }),
-                            const SizedBox(height: 12),
-                            OutlinedButton.icon(
-                              onPressed: () => _openCourseEditor(context, course: course),
-                              icon: const Icon(Icons.settings_outlined, size: 20),
-                              label: const Text('Manage Tees, Pars & Handicap Indexes', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.lakeCyan,
-                                side: const BorderSide(color: AppColors.lakeCyan),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                              ),
+                            const SizedBox(height: 14),
+
+                            // Actions row
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () => _openCourseEditor(context, course: course),
+                                    icon: const Icon(Icons.settings_outlined, size: 20),
+                                    label: const Text('Edit Course & Tees', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.lakeCyan,
+                                      side: const BorderSide(color: AppColors.lakeCyan),
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                IconButton.outlined(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                  tooltip: 'Delete Course',
+                                  style: IconButton.styleFrom(
+                                    side: const BorderSide(color: Colors.redAccent),
+                                    padding: const EdgeInsets.all(12),
+                                  ),
+                                  onPressed: () => _confirmDeleteCourse(context, course),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -370,13 +455,73 @@ class CoursesScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _confirmDeleteCourse(BuildContext context, Course course) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF132235),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 28),
+            SizedBox(width: 10),
+            Text('Delete Course?', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 20)),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to permanently delete "${course.name}"? This will also remove all its tee boxes, hole pars, and distances.',
+          style: const TextStyle(fontSize: 16, color: Colors.white70, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white70, fontSize: 16)),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(ctx, true),
+            icon: const Icon(Icons.delete_forever, size: 20),
+            label: const Text('Delete Permanently', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && context.mounted) {
+      try {
+        await courseRepository.deleteCourse(course.id);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFF1E293B),
+              content: Text(
+                'Course "${course.name}" deleted successfully.',
+                style: const TextStyle(fontSize: 16, color: Colors.white),
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error deleting course: $e')),
+          );
+        }
+      }
+    }
+  }
+
   Color _getTeeColor(String name) {
     final lower = name.toLowerCase();
-    if (lower.contains('black')) return Colors.black;
+    if (lower.contains('black') || lower.contains('champ')) return Colors.black;
     if (lower.contains('blue')) return const Color(0xFF1E88E5);
     if (lower.contains('white')) return Colors.white;
     if (lower.contains('gold') || lower.contains('yellow')) return const Color(0xFFFFD54F);
-    if (lower.contains('red')) return const Color(0xFFE53935);
+    if (lower.contains('red') || lower.contains('forward')) return const Color(0xFFE53935);
     return Colors.teal;
   }
 
@@ -389,5 +534,9 @@ class CoursesScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _openCourseImportDialog(BuildContext context) {
+    CourseImportDialog.show(context, courseRepository);
   }
 }

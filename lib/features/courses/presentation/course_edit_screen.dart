@@ -28,13 +28,14 @@ class _CourseEditScreenState extends State<CourseEditScreen> {
   late List<int> _pars;
   late List<int> _strokeIndexes;
 
-  // Tees
+  // Tees with hole-by-hole yardages
   final List<_TeeItem> _tees = [
     _TeeItem(name: 'Blue', rating: 73.0, slope: 135, yardage: 6800),
     _TeeItem(name: 'White', rating: 71.0, slope: 128, yardage: 6300),
   ];
 
   bool _isSaving = false;
+  bool _isDeleting = false;
 
   @override
   void initState() {
@@ -64,7 +65,8 @@ class _CourseEditScreenState extends State<CourseEditScreen> {
               name: t.teeBox.name,
               rating: t.teeBox.courseRating,
               slope: t.teeBox.slopeRating,
-              yardage: t.teeBox.totalYardage,
+              yardage: t.totalYardage,
+              holeYardages: Map<int, int>.from(t.holeYardages),
             ));
           }
         }
@@ -111,6 +113,70 @@ class _CourseEditScreenState extends State<CourseEditScreen> {
     });
   }
 
+  Future<void> _confirmDeleteCourse() async {
+    if (widget.course == null) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF132235),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 28),
+            SizedBox(width: 10),
+            Text('Delete Course?', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 20)),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to permanently delete "${widget.course!.name}"? All associated hole pars, handicap ratings, and tee yardages will be removed.',
+          style: const TextStyle(fontSize: 16, color: Colors.white70, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white70, fontSize: 16)),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(ctx, true),
+            icon: const Icon(Icons.delete_forever, size: 20),
+            label: const Text('Delete Permanently', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      setState(() => _isDeleting = true);
+      try {
+        await widget.courseRepository.deleteCourse(widget.course!.id);
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFF1E293B),
+              content: Text(
+                'Course "${widget.course!.name}" has been deleted.',
+                style: const TextStyle(fontSize: 16, color: Colors.white),
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isDeleting = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error deleting course: $e')),
+          );
+        }
+      }
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_tees.isEmpty) {
@@ -125,23 +191,45 @@ class _CourseEditScreenState extends State<CourseEditScreen> {
     setState(() => _isSaving = true);
     try {
       final teeInputs = _tees.map((t) {
+        // If hole yardages exist and total yardage is 0, auto-sum
+        int totalYardage = t.yardage;
+        if (totalYardage == 0 && t.holeYardages.isNotEmpty) {
+          totalYardage = t.holeYardages.values.fold(0, (sum, y) => sum + y);
+        }
+
         return TeeBoxInput(
-          name: t.name,
+          name: t.name.trim(),
           courseRating: t.rating,
           slopeRating: t.slope,
-          totalYardage: t.yardage,
+          totalYardage: totalYardage,
+          holeYardages: t.holeYardages.isNotEmpty ? t.holeYardages : null,
         );
       }).toList();
 
-      await widget.courseRepository.createCourse(
-        name: _nameController.text.trim(),
-        city: _cityController.text.trim(),
-        state: _stateController.text.trim(),
-        holeCount: _holeCount,
-        pars: _pars,
-        strokeIndexes: _strokeIndexes,
-        tees: teeInputs,
-      );
+      if (widget.course != null) {
+        // UPDATE EXISTING COURSE
+        await widget.courseRepository.updateCourse(
+          courseId: widget.course!.id,
+          name: _nameController.text.trim(),
+          city: _cityController.text.trim(),
+          state: _stateController.text.trim(),
+          holeCount: _holeCount,
+          pars: _pars,
+          strokeIndexes: _strokeIndexes,
+          tees: teeInputs,
+        );
+      } else {
+        // CREATE NEW COURSE
+        await widget.courseRepository.createCourse(
+          name: _nameController.text.trim(),
+          city: _cityController.text.trim(),
+          state: _stateController.text.trim(),
+          holeCount: _holeCount,
+          pars: _pars,
+          strokeIndexes: _strokeIndexes,
+          tees: teeInputs,
+        );
+      }
 
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -159,12 +247,20 @@ class _CourseEditScreenState extends State<CourseEditScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.course != null;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('New Course'),
+        title: Text(isEditing ? 'Edit Course' : 'New Course'),
         actions: [
+          if (isEditing)
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 26),
+              tooltip: 'Delete Course',
+              onPressed: (_isSaving || _isDeleting) ? null : _confirmDeleteCourse,
+            ),
           TextButton(
-            onPressed: _isSaving ? null : _save,
+            onPressed: (_isSaving || _isDeleting) ? null : _save,
             child: _isSaving
                 ? const SizedBox(
                     width: 22,
@@ -281,7 +377,7 @@ class _CourseEditScreenState extends State<CourseEditScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Tees Card
+            // Tees Card with hole yardages
             Card(
               margin: EdgeInsets.zero,
               child: Padding(
@@ -293,7 +389,7 @@ class _CourseEditScreenState extends State<CourseEditScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          'TEE BOXES',
+                          'TEE BOXES & DISTANCES',
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w900,
@@ -316,68 +412,178 @@ class _CourseEditScreenState extends State<CourseEditScreen> {
                     ...List.generate(_tees.length, (idx) {
                       final tee = _tees[idx];
                       return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
+                        margin: const EdgeInsets.only(bottom: 14),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceElevated,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: AppColors.cardBorder),
                         ),
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              flex: 3,
-                              child: TextFormField(
-                                initialValue: tee.name,
-                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                                decoration: const InputDecoration(
-                                  labelText: 'Tee',
-                                  labelStyle: TextStyle(fontSize: 15),
-                                  isDense: true,
+                            Row(
+                              children: [
+                                Expanded(
+                                  flex: 3,
+                                  child: TextFormField(
+                                    initialValue: tee.name,
+                                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                                    decoration: const InputDecoration(
+                                      labelText: 'Tee Name',
+                                      labelStyle: TextStyle(fontSize: 15),
+                                      isDense: true,
+                                    ),
+                                    onChanged: (val) => tee.name = val,
+                                  ),
                                 ),
-                                onChanged: (val) => tee.name = val,
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  flex: 2,
+                                  child: TextFormField(
+                                    initialValue: tee.rating.toString(),
+                                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                                    decoration: const InputDecoration(
+                                      labelText: 'Rating',
+                                      hintText: '72.4',
+                                      labelStyle: TextStyle(fontSize: 15),
+                                      isDense: true,
+                                    ),
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    onChanged: (val) => tee.rating = double.tryParse(val) ?? tee.rating,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  flex: 2,
+                                  child: TextFormField(
+                                    initialValue: tee.slope.toString(),
+                                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                                    decoration: const InputDecoration(
+                                      labelText: 'Slope',
+                                      hintText: '135',
+                                      labelStyle: TextStyle(fontSize: 15),
+                                      isDense: true,
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    onChanged: (val) => tee.slope = int.tryParse(val) ?? tee.slope,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  flex: 2,
+                                  child: TextFormField(
+                                    key: ValueKey('${tee.name}_totalYardage_${tee.yardage}'),
+                                    initialValue: tee.yardage > 0 ? tee.yardage.toString() : '',
+                                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                                    decoration: const InputDecoration(
+                                      labelText: 'Total Yds',
+                                      hintText: '6800',
+                                      labelStyle: TextStyle(fontSize: 14),
+                                      isDense: true,
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    onChanged: (val) => tee.yardage = int.tryParse(val) ?? tee.yardage,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.close, size: 22, color: Colors.white54),
+                                  onPressed: () => _removeTee(idx),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+
+                            // Expandable hole yardages trigger
+                            InkWell(
+                              onTap: () {
+                                setState(() => tee.isExpanded = !tee.isExpanded);
+                              },
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0F1B2B),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppColors.cardBorder.withValues(alpha: 0.5)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          tee.isExpanded ? Icons.expand_less : Icons.expand_more,
+                                          color: AppColors.cyanLight,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Hole Yardages for ${tee.name} (${tee.holeYardages.values.where((y) => y > 0).length}/$_holeCount set)',
+                                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white70),
+                                        ),
+                                      ],
+                                    ),
+                                    if (tee.holeYardages.isNotEmpty)
+                                      TextButton(
+                                        onPressed: () {
+                                          final sum = tee.holeYardages.values.fold(0, (s, y) => s + y);
+                                          if (sum > 0) {
+                                            setState(() => tee.yardage = sum);
+                                          }
+                                        },
+                                        style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(60, 24)),
+                                        child: const Text('Auto-Sum Total', style: TextStyle(fontSize: 12, color: AppColors.lakeCyan)),
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              flex: 2,
-                              child: TextFormField(
-                                initialValue: tee.rating.toString(),
-                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                                decoration: const InputDecoration(
-                                  labelText: 'Rating',
-                                  hintText: '72.4',
-                                  labelStyle: TextStyle(fontSize: 15),
-                                  isDense: true,
+
+                            // Expanded hole distance inputs
+                            if (tee.isExpanded) ...[
+                              const SizedBox(height: 10),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF081320),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                                keyboardType: const TextInputType.numberWithOptions(
-                                  decimal: true,
+                                child: Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: List.generate(_holeCount, (hIdx) {
+                                    final holeNum = hIdx + 1;
+                                    final currentYd = tee.holeYardages[holeNum] ?? 0;
+
+                                    return SizedBox(
+                                      width: 78,
+                                      child: TextFormField(
+                                        initialValue: currentYd > 0 ? '$currentYd' : '',
+                                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                                        decoration: InputDecoration(
+                                          labelText: '#$holeNum (${_pars[hIdx]}p)',
+                                          labelStyle: const TextStyle(fontSize: 11, color: AppColors.cyanLight),
+                                          hintText: 'yds',
+                                          isDense: true,
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                                        ),
+                                        keyboardType: TextInputType.number,
+                                        onChanged: (val) {
+                                          final parsed = int.tryParse(val);
+                                          if (parsed != null && parsed > 0) {
+                                            tee.holeYardages[holeNum] = parsed;
+                                          } else {
+                                            tee.holeYardages.remove(holeNum);
+                                          }
+                                        },
+                                      ),
+                                    );
+                                  }),
                                 ),
-                                onChanged: (val) => tee.rating =
-                                    double.tryParse(val) ?? tee.rating,
                               ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              flex: 2,
-                              child: TextFormField(
-                                initialValue: tee.slope.toString(),
-                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                                decoration: const InputDecoration(
-                                  labelText: 'Slope',
-                                  hintText: '135',
-                                  labelStyle: TextStyle(fontSize: 15),
-                                  isDense: true,
-                                ),
-                                keyboardType: TextInputType.number,
-                                onChanged: (val) =>
-                                    tee.slope = int.tryParse(val) ?? tee.slope,
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close, size: 24, color: Colors.white54),
-                              onPressed: () => _removeTee(idx),
-                            ),
+                            ],
                           ],
                         ),
                       );
@@ -388,7 +594,7 @@ class _CourseEditScreenState extends State<CourseEditScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Holes Configuration
+            // Holes Configuration (Par & HCP)
             Card(
               margin: EdgeInsets.zero,
               child: Padding(
@@ -400,7 +606,7 @@ class _CourseEditScreenState extends State<CourseEditScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          'HOLE CONFIGURATION',
+                          'HOLE CONFIGURATION (PAR & HCP)',
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w900,
@@ -526,17 +732,39 @@ class _CourseEditScreenState extends State<CourseEditScreen> {
               ),
             ),
             const SizedBox(height: 24),
+
+            // Save Button
             SizedBox(
               height: 56,
               child: ElevatedButton(
-                onPressed: _isSaving ? null : _save,
+                onPressed: (_isSaving || _isDeleting) ? null : _save,
                 style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.lakeCyan,
+                  foregroundColor: const Color(0xFF04111D),
                   textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
                 ),
-                child: const Text('Save Course'),
+                child: Text(isEditing ? 'Save Changes' : 'Create Course'),
               ),
             ),
-            const SizedBox(height: 20),
+
+            if (isEditing) ...[
+              const SizedBox(height: 14),
+              SizedBox(
+                height: 52,
+                child: OutlinedButton.icon(
+                  onPressed: (_isSaving || _isDeleting) ? null : _confirmDeleteCourse,
+                  icon: const Icon(Icons.delete_forever, color: Colors.redAccent, size: 24),
+                  label: const Text(
+                    'Delete This Course',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.redAccent),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.redAccent, width: 1.5),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 30),
           ],
         ),
       ),
@@ -549,11 +777,14 @@ class _TeeItem {
   double rating;
   int slope;
   int yardage;
+  Map<int, int> holeYardages;
+  bool isExpanded = false;
 
   _TeeItem({
     required this.name,
     required this.rating,
     required this.slope,
     required this.yardage,
-  });
+    Map<int, int>? holeYardages,
+  }) : holeYardages = holeYardages ?? {};
 }

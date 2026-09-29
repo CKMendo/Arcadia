@@ -345,34 +345,43 @@ class TripScheduleTab extends StatelessWidget {
             ),
             const SizedBox(height: 6),
 
-            // Date & Tee Times Row
-            Wrap(
-              spacing: 14,
-              runSpacing: 6,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+            // Date & Tee Times Row (Tap to edit)
+            InkWell(
+              onTap: () => _openAddEditRoundDialog(context, round: round),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Wrap(
+                  spacing: 14,
+                  runSpacing: 6,
                   children: [
-                    const Icon(Icons.calendar_today, size: 16, color: AppColors.duneSand),
-                    const SizedBox(width: 6),
-                    Text(
-                      dateFormat.format(round.date),
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.calendar_today, size: 16, color: AppColors.duneSand),
+                        const SizedBox(width: 6),
+                        Text(
+                          dateFormat.format(round.date),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.access_time, size: 16, color: AppColors.lakeCyan),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Tee Times: ${round.teeTimeGroup1} & ${round.teeTimeGroup2}',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.cyanLight),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.edit, size: 14, color: AppColors.lakeCyan),
+                      ],
                     ),
                   ],
                 ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.access_time, size: 16, color: AppColors.lakeCyan),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Tee Times: ${round.teeTimeGroup1} & ${round.teeTimeGroup2}',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.cyanLight),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
 
             if (round.notes != null && round.notes!.isNotEmpty) ...[
@@ -382,6 +391,38 @@ class TripScheduleTab extends StatelessWidget {
                 style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic, color: Colors.white70),
               ),
             ],
+            const SizedBox(height: 10),
+
+            // Prominent Round Actions Bar
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openAddEditRoundDialog(context, round: round),
+                    icon: const Icon(Icons.edit_calendar, size: 18),
+                    label: const Text(
+                      'Edit Course & Tee Times',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.lakeCyan,
+                      side: const BorderSide(color: AppColors.lakeCyan),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.outlined(
+                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                  tooltip: 'Remove Round',
+                  style: IconButton.styleFrom(
+                    side: const BorderSide(color: Colors.redAccent),
+                    padding: const EdgeInsets.all(10),
+                  ),
+                  onPressed: () => _deleteRound(context, round),
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
 
             // Pairings & 2-Man Teams Block
@@ -808,7 +849,7 @@ class TripScheduleTab extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            round != null ? 'Edit Scheduled Round' : 'Add Round to Schedule',
+                            round != null ? 'Edit Round ${round.roundNumber} & Tee Times' : 'Add Round to Schedule',
                             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white),
                           ),
                           IconButton(
