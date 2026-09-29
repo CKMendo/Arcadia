@@ -32,11 +32,13 @@ class _CourseImportDialogState extends State<CourseImportDialog> with SingleTick
   late TabController _tabController;
 
   final TextEditingController _jsonController = TextEditingController();
+  final TextEditingController _promptCourseController = TextEditingController();
   final TextEditingController _csvController = TextEditingController();
   final TextEditingController _csvCourseNameController = TextEditingController(text: 'Arcadia Bluffs (The Bluffs)');
   final TextEditingController _csvCityController = TextEditingController(text: 'Arcadia');
   final TextEditingController _csvStateController = TextEditingController(text: 'MI');
 
+  bool _isPromptExpanded = false;
   CourseImportData? _previewData;
   String? _parseError;
   bool _isImporting = false;
@@ -74,6 +76,7 @@ class _CourseImportDialogState extends State<CourseImportDialog> with SingleTick
   void dispose() {
     _tabController.dispose();
     _jsonController.dispose();
+    _promptCourseController.dispose();
     _csvController.dispose();
     _csvCourseNameController.dispose();
     _csvCityController.dispose();
@@ -381,15 +384,191 @@ class _CourseImportDialogState extends State<CourseImportDialog> with SingleTick
   }
 
   // TAB 2: JSON
+  Widget _buildAiInstructionTile() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0F263B), Color(0xFF091827)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.lakeCyan.withValues(alpha: 0.5), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.35),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.lakeCyan.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.auto_awesome, color: AppColors.cyanLight, size: 22),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'HOW TO GET COURSE JSON WITH AI',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.1,
+                        color: AppColors.cyanLight,
+                      ),
+                    ),
+                    Text(
+                      'Get 18-hole scorecards for any course in seconds',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF133628),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFF34D399).withValues(alpha: 0.6)),
+                ),
+                child: const Text(
+                  'ChatGPT • Claude • Gemini',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF6EE7B7)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            '1. Enter the course name below (optional).\n2. Tap "Copy AI Course Prompt" and paste it into ChatGPT, Claude, or Gemini.\n3. Copy the AI reply and tap "Paste from Clipboard" below.',
+            style: TextStyle(fontSize: 13, height: 1.45, color: Colors.white),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _promptCourseController,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+            decoration: InputDecoration(
+              labelText: 'Target Course Name (Optional)',
+              hintText: 'e.g. Whistling Straits, Pebble Beach, Pine Valley',
+              hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+              prefixIcon: const Icon(Icons.golf_course, color: AppColors.lakeCyan, size: 20),
+              filled: true,
+              fillColor: AppColors.surfaceElevated,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    final courseName = _promptCourseController.text.trim();
+                    final prompt = CourseImportService.getAiPromptTemplate(
+                      courseName: courseName.isNotEmpty ? courseName : null,
+                    );
+                    Clipboard.setData(ClipboardData(text: prompt));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        backgroundColor: const Color(0xFF132235),
+                        content: Row(
+                          children: [
+                            const Icon(Icons.check_circle, color: Color(0xFF34D399), size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                courseName.isNotEmpty
+                                    ? 'AI Prompt for "$courseName" copied! Paste into ChatGPT, Claude, or Gemini.'
+                                    : 'AI Course Prompt copied! Paste into ChatGPT, Claude, or Gemini.',
+                                style: const TextStyle(fontSize: 14, color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        ),
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.copy, size: 18),
+                  label: const Text('Copy AI Course Prompt', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.lakeCyan,
+                    foregroundColor: const Color(0xFF04111D),
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              OutlinedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _isPromptExpanded = !_isPromptExpanded;
+                  });
+                },
+                icon: Icon(_isPromptExpanded ? Icons.expand_less : Icons.visibility_outlined, size: 18),
+                label: Text(_isPromptExpanded ? 'Hide' : 'Preview Prompt'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white70,
+                  side: const BorderSide(color: Colors.white24),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          ),
+          if (_isPromptExpanded) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF06111D),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: SelectableText(
+                CourseImportService.getAiPromptTemplate(
+                  courseName: _promptCourseController.text.trim().isNotEmpty
+                      ? _promptCourseController.text.trim()
+                      : null,
+                ),
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 11.5, color: Colors.white70, height: 1.35),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildJsonTab() {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        _buildAiInstructionTile(),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              'PASTE COURSE JSON:',
+              'PASTE & IMPORT JSON:',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w900,
@@ -412,11 +591,11 @@ class _CourseImportDialogState extends State<CourseImportDialog> with SingleTick
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: CourseImportService.getSampleJsonTemplate()));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Sample JSON copied to clipboard!')),
+                      const SnackBar(content: Text('Raw JSON schema copied to clipboard!')),
                     );
                   },
                   icon: const Icon(Icons.copy, size: 18),
-                  label: const Text('Copy Template', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  label: const Text('Copy Schema', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -425,10 +604,10 @@ class _CourseImportDialogState extends State<CourseImportDialog> with SingleTick
         const SizedBox(height: 8),
         TextField(
           controller: _jsonController,
-          maxLines: 8,
+          maxLines: 7,
           style: const TextStyle(fontFamily: 'monospace', fontSize: 13, color: Colors.white),
           decoration: InputDecoration(
-            hintText: 'Paste complete course JSON here with holes, pars, and tee yardages...',
+            hintText: 'Paste complete course JSON here (markdown code blocks and raw JSON are automatically parsed)...',
             hintStyle: const TextStyle(color: Colors.white38),
             filled: true,
             fillColor: AppColors.surfaceElevated,
@@ -454,7 +633,18 @@ class _CourseImportDialogState extends State<CourseImportDialog> with SingleTick
                 foregroundColor: AppColors.cyanLight,
               ),
             ),
-            const SizedBox(width: 12),
+            if (_jsonController.text.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: () {
+                  _jsonController.clear();
+                  _updateJsonPreview();
+                },
+                icon: const Icon(Icons.clear, color: Colors.white60, size: 20),
+                tooltip: 'Clear',
+              ),
+            ],
+            const Spacer(),
             if (_previewData != null)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

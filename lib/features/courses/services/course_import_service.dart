@@ -50,9 +50,97 @@ class CourseImportData {
 }
 
 class CourseImportService {
+  /// Cleans raw text containing JSON, removing markdown code fences or conversational text.
+  static String extractCleanJson(String raw) {
+    var s = raw.trim();
+    if (s.startsWith('```')) {
+      final firstNewline = s.indexOf('\n');
+      if (firstNewline != -1) {
+        s = s.substring(firstNewline + 1);
+      }
+      if (s.endsWith('```')) {
+        s = s.substring(0, s.length - 3);
+      }
+      s = s.trim();
+    }
+    final firstBrace = s.indexOf('{');
+    final lastBrace = s.lastIndexOf('}');
+    if (firstBrace != -1 && lastBrace != -1 && lastBrace > firstBrace) {
+      s = s.substring(firstBrace, lastBrace + 1);
+    }
+    return s.trim();
+  }
+
+  /// Generates the structured prompt that can be pasted into ChatGPT, Claude, or Gemini
+  /// to receive the exact JSON format required by Arcadia.
+  static String getAiPromptTemplate({String? courseName, String? city, String? state}) {
+    final targetCourse = (courseName != null && courseName.trim().isNotEmpty)
+        ? courseName.trim()
+        : '[COURSE NAME]';
+    final targetLoc = (city != null && city.trim().isNotEmpty)
+        ? '$city${state != null && state.trim().isNotEmpty ? ', $state' : ''}'
+        : (state != null && state.trim().isNotEmpty ? state.trim() : '[CITY, STATE]');
+
+    return '''Please provide the official golf scorecard information for $targetCourse ($targetLoc).
+
+Output ONLY valid, raw JSON (no conversational text, no markdown backticks, no code fences) adhering strictly to this JSON format for the Arcadia Golf Trip app:
+
+{
+  "name": "$targetCourse",
+  "city": "${city != null && city.trim().isNotEmpty ? city.trim() : 'City'}",
+  "state": "${state != null && state.trim().isNotEmpty ? state.trim() : 'MI'}",
+  "holeCount": 18,
+  "holes": [
+    {"holeNumber": 1, "par": 4, "strokeIndex": 7},
+    {"holeNumber": 2, "par": 3, "strokeIndex": 15},
+    {"holeNumber": 3, "par": 5, "strokeIndex": 3},
+    {"holeNumber": 4, "par": 4, "strokeIndex": 11},
+    {"holeNumber": 5, "par": 4, "strokeIndex": 1},
+    {"holeNumber": 6, "par": 3, "strokeIndex": 17},
+    {"holeNumber": 7, "par": 4, "strokeIndex": 5},
+    {"holeNumber": 8, "par": 5, "strokeIndex": 9},
+    {"holeNumber": 9, "par": 4, "strokeIndex": 13},
+    {"holeNumber": 10, "par": 4, "strokeIndex": 8},
+    {"holeNumber": 11, "par": 4, "strokeIndex": 12},
+    {"holeNumber": 12, "par": 3, "strokeIndex": 16},
+    {"holeNumber": 13, "par": 5, "strokeIndex": 2},
+    {"holeNumber": 14, "par": 4, "strokeIndex": 10},
+    {"holeNumber": 15, "par": 4, "strokeIndex": 6},
+    {"holeNumber": 16, "par": 3, "strokeIndex": 18},
+    {"holeNumber": 17, "par": 5, "strokeIndex": 4},
+    {"holeNumber": 18, "par": 4, "strokeIndex": 14}
+  ],
+  "tees": [
+    {
+      "name": "Championship",
+      "courseRating": 74.2,
+      "slopeRating": 140,
+      "totalYardage": 7050,
+      "yardages": {
+        "1": 420, "2": 190, "3": 545, "4": 410, "5": 435, "6": 175, "7": 415, "8": 530, "9": 405,
+        "10": 425, "11": 395, "12": 180, "13": 555, "14": 410, "15": 440, "16": 165, "17": 540, "18": 415
+      }
+    },
+    {
+      "name": "Member",
+      "courseRating": 71.5,
+      "slopeRating": 132,
+      "totalYardage": 6450,
+      "yardages": {
+        "1": 390, "2": 165, "3": 510, "4": 380, "5": 405, "6": 155, "7": 385, "8": 495, "9": 375,
+        "10": 395, "11": 365, "12": 155, "13": 520, "14": 380, "15": 410, "16": 145, "17": 505, "18": 385
+      }
+    }
+  ]
+}
+
+Ensure all 18 holes have their official men's par (3, 4, or 5) and stroke index (handicap ranking 1 to 18). Include each available tee box with its USGA course rating, slope rating, and hole-by-hole yardages.''';
+  }
+
   /// Parses JSON string with complete course, holes, and tee distances.
   static CourseImportData parseJson(String jsonStr) {
-    final Map<String, dynamic> data = jsonDecode(jsonStr.trim()) as Map<String, dynamic>;
+    final cleaned = extractCleanJson(jsonStr);
+    final Map<String, dynamic> data = jsonDecode(cleaned) as Map<String, dynamic>;
 
     final String name = (data['name'] ?? data['courseName'] ?? 'Imported Course').toString().trim();
     final String city = (data['city'] ?? 'Arcadia').toString().trim();

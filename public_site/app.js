@@ -5,10 +5,32 @@ let refreshTimer = null;
 let countdownSecs = 15;
 
 document.addEventListener('DOMContentLoaded', () => {
+  initSplashScreen();
   initApp();
   setupTabs();
   setupRefresh();
 });
+
+function initSplashScreen() {
+  const overlay = document.getElementById('splashOverlay');
+  if (!overlay) return;
+
+  let dismissed = false;
+  const dismiss = () => {
+    if (dismissed) return;
+    dismissed = true;
+    overlay.classList.add('hidden');
+    setTimeout(() => {
+      if (overlay.parentNode) {
+        overlay.parentNode.removeChild(overlay);
+      }
+    }, 900);
+  };
+
+  overlay.addEventListener('click', dismiss);
+  overlay.addEventListener('touchstart', dismiss, { passive: true });
+  setTimeout(dismiss, 1900);
+}
 
 async function initApp() {
   await fetchTournamentData();

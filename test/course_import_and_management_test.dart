@@ -339,5 +339,79 @@ White (70.1/126),385,365,155,490,355,390,140,370,480,380,150,500,395,365,145,375
       expect(crystalDetails.teeBoxes.first.holeYardages[1], equals(460));
       expect(crystalDetails.teeBoxes.first.holeYardages[8], equals(550));
     });
+
+    test('getAiPromptTemplate formats structured prompt with course name', () {
+      final prompt = CourseImportService.getAiPromptTemplate(
+        courseName: 'Whistling Straits (Straits)',
+        city: 'Sheboygan',
+        state: 'WI',
+      );
+      expect(prompt, contains('Whistling Straits (Straits)'));
+      expect(prompt, contains('Sheboygan, WI'));
+      expect(prompt, contains('"holeCount": 18'));
+      expect(prompt, contains('strokeIndex'));
+      expect(prompt, contains('courseRating'));
+      expect(prompt, contains('slopeRating'));
+    });
+
+    test('parseJson automatically strips markdown code fences and conversational wrapper text', () {
+      const rawResponse = '''
+Here is the official scorecard JSON for your golf app:
+```json
+{
+  "name": "Whistling Straits",
+  "city": "Sheboygan",
+  "state": "WI",
+  "holeCount": 18,
+  "holes": [
+    {"holeNumber": 1, "par": 4, "strokeIndex": 11},
+    {"holeNumber": 2, "par": 5, "strokeIndex": 1},
+    {"holeNumber": 3, "par": 3, "strokeIndex": 17},
+    {"holeNumber": 4, "par": 4, "strokeIndex": 5},
+    {"holeNumber": 5, "par": 5, "strokeIndex": 3},
+    {"holeNumber": 6, "par": 4, "strokeIndex": 13},
+    {"holeNumber": 7, "par": 3, "strokeIndex": 15},
+    {"holeNumber": 8, "par": 4, "strokeIndex": 7},
+    {"holeNumber": 9, "par": 4, "strokeIndex": 9},
+    {"holeNumber": 10, "par": 4, "strokeIndex": 8},
+    {"holeNumber": 11, "par": 5, "strokeIndex": 2},
+    {"holeNumber": 12, "par": 3, "strokeIndex": 18},
+    {"holeNumber": 13, "par": 4, "strokeIndex": 6},
+    {"holeNumber": 14, "par": 4, "strokeIndex": 12},
+    {"holeNumber": 15, "par": 4, "strokeIndex": 10},
+    {"holeNumber": 16, "par": 5, "strokeIndex": 4},
+    {"holeNumber": 17, "par": 3, "strokeIndex": 16},
+    {"holeNumber": 18, "par": 4, "strokeIndex": 14}
+  ],
+  "tees": [
+    {
+      "name": "Championship",
+      "courseRating": 77.2,
+      "slopeRating": 152,
+      "totalYardage": 7790,
+      "yardages": {
+        "1": 408, "2": 593, "3": 181, "4": 493, "5": 603, "6": 355, "7": 221, "8": 507, "9": 446,
+        "10": 391, "11": 645, "12": 163, "13": 403, "14": 397, "15": 518, "16": 569, "17": 249, "18": 520
+      }
+    }
+  ]
+}
+```
+Let me know if you need anything else!
+''';
+
+      final course = CourseImportService.parseJson(rawResponse);
+      expect(course.name, equals('Whistling Straits'));
+      expect(course.city, equals('Sheboygan'));
+      expect(course.state, equals('WI'));
+      expect(course.holeCount, equals(18));
+      expect(course.pars.length, equals(18));
+      expect(course.strokeIndexes.length, equals(18));
+      expect(course.tees.length, equals(1));
+      expect(course.tees.first.name, equals('Championship'));
+      expect(course.tees.first.courseRating, equals(77.2));
+      expect(course.tees.first.slopeRating, equals(152));
+      expect(course.tees.first.holeYardages![1], equals(408));
+    });
   });
 }

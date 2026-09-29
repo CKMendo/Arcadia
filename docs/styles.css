@@ -1454,3 +1454,136 @@ body {
   }
 }
 
+/* ==========================================================================
+   SPLASH SCREEN OVERLAY (MATCHES FLUTTER APP STARTUP TRANSITION)
+   ========================================================================== */
+.splash-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(circle at 50% 40%, #0F2B20 0%, #0A1C2E 55%, #040A12 100%);
+  cursor: pointer;
+  user-select: none;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.85s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.85s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0.85s ease;
+}
+
+.splash-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(1.06);
+  pointer-events: none;
+}
+
+.splash-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px;
+}
+
+.splash-emblem-wrap {
+  width: min(84vw, 360px);
+  height: min(84vw, 360px);
+  border-radius: 50%;
+  border: 4.5px solid #d5ae5b;
+  box-shadow: 
+    0 0 40px 8px rgba(213, 174, 91, 0.55),
+    0 0 54px 4px rgba(77, 208, 225, 0.32),
+    0 14px 32px rgba(0, 0, 0, 0.85);
+  overflow: hidden;
+  animation: splashScaleIn 1.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards,
+             splashGlowPulse 2.8s ease-in-out infinite alternate;
+}
+
+.splash-emblem {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.splash-titles {
+  margin-top: 36px;
+  animation: splashFadeInUp 1.1s ease-out 0.25s forwards;
+  opacity: 0;
+}
+
+.splash-title {
+  color: #f7d98c;
+  font-size: clamp(1.8rem, 6vw, 2.4rem);
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.95);
+  margin-bottom: 10px;
+}
+
+.splash-subtitle-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.splash-line {
+  display: inline-block;
+  width: 32px;
+  height: 1.5px;
+  background-color: rgba(77, 208, 225, 0.75);
+}
+
+.splash-subtitle {
+  color: #4dd0e1;
+  font-size: clamp(0.72rem, 2.8vw, 0.86rem);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+@keyframes splashScaleIn {
+  0% {
+    transform: scale(0.65);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes splashFadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes splashGlowPulse {
+  0% {
+    box-shadow: 
+      0 0 32px 6px rgba(213, 174, 91, 0.45),
+      0 0 44px 2px rgba(77, 208, 225, 0.25),
+      0 12px 28px rgba(0, 0, 0, 0.85);
+  }
+  100% {
+    box-shadow: 
+      0 0 46px 12px rgba(213, 174, 91, 0.7),
+      0 0 62px 6px rgba(77, 208, 225, 0.42),
+      0 16px 36px rgba(0, 0, 0, 0.9);
+  }
+}
+
