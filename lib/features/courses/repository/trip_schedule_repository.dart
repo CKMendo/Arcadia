@@ -365,4 +365,29 @@ class TripScheduleRepository {
     await saveSchedule(updatedSchedule);
     await setScheduleFinalized(true);
   }
+
+  /// Synchronizes scheduled round pairing plans with updated player names, nicknames, and handicaps.
+  Future<void> syncPlayerProfiles(List<Player> latestPlayers) async {
+    if (latestPlayers.isEmpty) return;
+
+    final schedule = await getSchedule();
+    if (schedule.isEmpty) return;
+
+    bool anyChanged = false;
+    final updatedSchedule = <ScheduledRound>[];
+
+    for (final round in schedule) {
+      if (round.pairingPlan != null) {
+        final updatedPlan = round.pairingPlan!.withLatestPlayers(latestPlayers);
+        updatedSchedule.add(round.copyWith(pairingPlan: updatedPlan));
+        anyChanged = true;
+      } else {
+        updatedSchedule.add(round);
+      }
+    }
+
+    if (anyChanged) {
+      await saveSchedule(updatedSchedule);
+    }
+  }
 }

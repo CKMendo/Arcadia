@@ -1,3 +1,5 @@
+import '../../../database/app_database.dart';
+import '../../../shared/utils/course_handicap_calculator.dart';
 import 'birdie_pot_models.dart';
 import 'scoring_calculator.dart';
 
@@ -181,6 +183,126 @@ class ActiveRoundSession {
         courseHandicap: newCourseHandicap,
       );
     }
+  }
+
+  /// Automatically synchronizes all player session profiles with the latest roster data from the database.
+  /// Refreshes names, nicknames, initials, handicap indexes, course handicaps, and 2-man team labels.
+  bool syncWithRoster(List<Player> latestPlayers) {
+    if (latestPlayers.isEmpty) return false;
+    bool changed = false;
+    final updatedPlayers = <PlayerSessionInfo>[];
+
+    for (final psi in players) {
+      final match = latestPlayers.where((p) => p.id == psi.playerId).firstOrNull;
+      if (match != null) {
+        final newNickname = match.nickname.isNotEmpty ? match.nickname : match.fullName.split(' ').first;
+        final newInitials = match.initials;
+
+        // Recalculate course handicap if index changed
+        int newCourseHcp = psi.courseHandicap;
+        if (match.handicapIndex != psi.handicapIndex) {
+          newCourseHcp = CourseHandicapCalculator.forCourse(
+            courseName: courseName,
+            handicapIndex: match.handicapIndex,
+            tee: psi.teeName,
+          );
+        }
+
+        if (psi.name != match.fullName ||
+            psi.nickname != newNickname ||
+            psi.initials != newInitials ||
+            psi.handicapIndex != match.handicapIndex ||
+            psi.courseHandicap != newCourseHcp) {
+          changed = true;
+          updatedPlayers.add(psi.copyWith(
+            name: match.fullName,
+            nickname: newNickname,
+            initials: newInitials,
+            handicapIndex: match.handicapIndex,
+            courseHandicap: newCourseHcp,
+          ));
+        } else {
+          updatedPlayers.add(psi);
+        }
+      } else {
+        updatedPlayers.add(psi);
+      }
+    }
+
+    if (changed) {
+      players.clear();
+      players.addAll(updatedPlayers);
+      _refreshTwoManTeamNames();
+    }
+    return changed;
+  }
+
+  void _refreshTwoManTeamNames() {
+    final byTeam = <String, List<PlayerSessionInfo>>{};
+    for (final p in players) {
+      if (p.twoManTeamId != 'none' && p.twoManTeamId.isNotEmpty) {
+        byTeam.putIfAbsent(p.twoManTeamId, () => []).add(p);
+      }
+    }
+
+    for (final entry in byTeam.entries) {
+      if (entry.value.length >= 2) {
+        final teamName = '${entry.value[0].nickname} & ${entry.value[1].nickname}';
+        for (var i = 0; i < players.length; i++) {
+          if (players[i].twoManTeamId == entry.key) {
+            players[i] = players[i].copyWith(twoManTeamName: teamName);
+          }
+        }
+      }
+    }
+  }
+
+  /// Adds a golfer from the current roster to this active round session if not already participating.
+  bool addPlayerFromRoster(
+    Player player, {
+    required String teeName,
+    required String teeBoxId,
+    int? courseHandicap,
+    String teamId = 'none',
+    int foursomeGroup = 1,
+    String twoManTeamId = 'none',
+    String? twoManTeamName,
+  }) {
+    if (players.any((p) => p.playerId == player.id)) return false;
+
+    final ch = courseHandicap ??
+        CourseHandicapCalculator.forCourse(
+          courseName: courseName,
+          handicapIndex: player.handicapIndex,
+          tee: teeName,
+        );
+
+    final nickname = player.nickname.isNotEmpty ? player.nickname : player.fullName.split(' ').first;
+
+    players.add(
+      PlayerSessionInfo(
+        playerId: player.id,
+        name: player.fullName,
+        nickname: nickname,
+        initials: player.initials,
+        handicapIndex: player.handicapIndex,
+        teeBoxId: teeBoxId,
+        teeName: teeName,
+        courseHandicap: ch,
+        teamId: teamId,
+        foursomeGroup: foursomeGroup,
+        twoManTeamId: twoManTeamId,
+        twoManTeamName: twoManTeamName,
+      ),
+    );
+
+    // Initialize score containers
+    grossScores.putIfAbsent(player.id, () => {});
+    putts.putIfAbsent(player.id, () => {});
+    greenies.putIfAbsent(player.id, () => {});
+    sandies.putIfAbsent(player.id, () => {});
+
+    return true;
   }
 
   int get holeCount => holes.length;

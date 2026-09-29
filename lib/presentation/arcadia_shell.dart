@@ -141,6 +141,7 @@ class _ScoringTab extends StatelessWidget {
           return ActiveScoringScreen(
             roundRepository: roundRepository,
             session: draft,
+            playerRepository: playerRepository,
           );
         }
 

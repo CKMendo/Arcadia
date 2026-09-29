@@ -10,8 +10,9 @@ class PlayerRepository {
   final AppDatabase _db;
   final Uuid _uuid = const Uuid();
   final PlayerBackupService _backupService = PlayerBackupService();
+  void Function()? onRosterChanged;
 
-  PlayerRepository(this._db);
+  PlayerRepository(this._db, {this.onRosterChanged});
 
   Stream<List<Player>> watchAllPlayers() {
     return (_db.select(_db.players)
@@ -123,6 +124,7 @@ class PlayerRepository {
       final all = await (_db.select(_db.players)).get();
       await _backupService.saveBackup(all);
     }
+    onRosterChanged?.call();
   }
 
   Future<void> updatePlayer(Player player) async {
@@ -133,6 +135,7 @@ class PlayerRepository {
     // Auto-backup whenever a player is edited
     final all = await (_db.select(_db.players)).get();
     await _backupService.saveBackup(all);
+    onRosterChanged?.call();
   }
 
   Future<void> deletePlayer(String id) async {
@@ -143,6 +146,7 @@ class PlayerRepository {
     if (all.isNotEmpty) {
       await _backupService.saveBackup(all);
     }
+    onRosterChanged?.call();
   }
 
   Future<void> updatePlayerPhoto(String id, String? photoPath) async {
@@ -169,6 +173,7 @@ class PlayerRepository {
 
     final all = await (_db.select(_db.players)).get();
     await _backupService.saveBackup(all);
+    onRosterChanged?.call();
   }
 
   /// Manually force a fresh backup of the current roster
@@ -200,6 +205,7 @@ class PlayerRepository {
             ),
           );
     }
+    onRosterChanged?.call();
     return backup.length;
   }
 
@@ -257,6 +263,7 @@ class PlayerRepository {
 
       final all = await (_db.select(_db.players)).get();
       await _backupService.saveBackup(all);
+      onRosterChanged?.call();
       return count;
     } catch (e) {
       debugPrint('[PlayerRepository] importRosterFromJson error: $e');
@@ -266,5 +273,6 @@ class PlayerRepository {
 
   Future<void> clearAllPlayers() async {
     await _db.delete(_db.players).go();
+    onRosterChanged?.call();
   }
 }

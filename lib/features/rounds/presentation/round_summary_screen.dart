@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../database/app_database.dart';
 import '../../../shared/theme/app_colors.dart';
 import '../../../shared/widgets/player_avatar.dart';
+import '../../players/repository/player_repository.dart';
 import '../models/active_round_session.dart';
 import '../repository/round_repository.dart';
 import 'active_scoring_screen.dart';
@@ -11,11 +12,13 @@ import 'active_scoring_screen.dart';
 class RoundSummaryScreen extends StatelessWidget {
   final RoundRepository roundRepository;
   final String roundId;
+  final PlayerRepository? playerRepository;
 
   const RoundSummaryScreen({
     super.key,
     required this.roundRepository,
     required this.roundId,
+    this.playerRepository,
   });
 
   @override
@@ -492,6 +495,7 @@ class RoundSummaryScreen extends StatelessWidget {
           builder: (_) => ActiveScoringScreen(
             roundRepository: roundRepository,
             session: unlocked,
+            playerRepository: playerRepository,
           ),
         ),
       );

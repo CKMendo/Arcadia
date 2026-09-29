@@ -37,9 +37,15 @@ class TwoManTeamPlan {
         ? (allPlayers.where((p) => p.id == p2Id).firstOrNull ?? _playerFromMap(p2Map))
         : _playerFromMap(p2Map);
 
+    final n1 = player1.nickname.isNotEmpty ? player1.nickname : player1.fullName.split(' ').first;
+    final n2 = player2.nickname.isNotEmpty ? player2.nickname : player2.fullName.split(' ').first;
+    final dynamicTeamName = (allPlayers != null && allPlayers.isNotEmpty)
+        ? '$n1 & $n2'
+        : (json['teamName'] as String? ?? '$n1 & $n2');
+
     return TwoManTeamPlan(
       teamId: json['teamId'] as String? ?? 'T1',
-      teamName: json['teamName'] as String? ?? '',
+      teamName: dynamicTeamName,
       player1: player1,
       player2: player2,
     );
@@ -109,6 +115,10 @@ class RoundPairingPlan {
       foursome1: FoursomePlan.fromJson(json['foursome1'] as Map<String, dynamic>? ?? {}, allPlayers),
       foursome2: FoursomePlan.fromJson(json['foursome2'] as Map<String, dynamic>? ?? {}, allPlayers),
     );
+  }
+
+  RoundPairingPlan withLatestPlayers(List<Player> latestPlayers) {
+    return RoundPairingPlan.fromJson(toJson(), latestPlayers);
   }
 }
 

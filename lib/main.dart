@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'database/app_database.dart';
 import 'features/courses/repository/course_repository.dart';
+import 'features/courses/repository/trip_schedule_repository.dart';
 import 'features/players/repository/player_repository.dart';
 import 'features/publish/services/website_publish_service.dart';
 import 'features/rounds/repository/round_repository.dart';
@@ -30,6 +31,18 @@ void main() async {
   final courseRepository = CourseRepository(database);
   final tournamentRepository = TournamentRepository(database);
   final roundRepository = RoundRepository(database);
+
+  playerRepository.onRosterChanged = () async {
+    final freshPlayers = await playerRepository.getAllPlayers();
+    await roundRepository.syncPlayerProfiles(freshPlayers);
+    await TripScheduleRepository().syncPlayerProfiles(freshPlayers);
+    WebsitePublishService.publishTournament(
+      tournamentRepo: tournamentRepository,
+      courseRepo: courseRepository,
+      playerRepo: playerRepository,
+      roundRepo: roundRepository,
+    );
+  };
 
   roundRepository.onDataChanged = () {
     WebsitePublishService.publishTournament(

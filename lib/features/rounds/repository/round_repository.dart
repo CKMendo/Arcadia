@@ -185,4 +185,57 @@ class RoundRepository {
   Future<void> clearActiveDraft() async {
     await (_db.delete(_db.activeRoundDraft)..where((t) => t.id.equals(1))).go();
   }
+
+  /// Propagates player profile updates (names, nicknames, initials, handicaps)
+  /// through all active drafts and past saved rounds so all screens stay in sync.
+  Future<void> syncPlayerProfiles(List<Player> latestPlayers) async {
+    if (latestPlayers.isEmpty) return;
+
+    bool anyChanged = false;
+
+    // 1. Sync Active Draft
+    final draft = await getActiveDraft();
+    if (draft != null) {
+      final changed = draft.syncWithRoster(latestPlayers);
+      if (changed) {
+        await saveActiveDraft(draft);
+        anyChanged = true;
+      }
+    }
+
+    // 2. Sync Saved Rounds
+    final savedRounds = await (_db.select(_db.savedRounds)).get();
+    for (final r in savedRounds) {
+      try {
+        final map = jsonDecode(r.roundPayloadJson) as Map<String, dynamic>;
+        final session = ActiveRoundSession.fromJson(map);
+        final changed = session.syncWithRoster(latestPlayers);
+        if (changed) {
+          final jsonString = jsonEncode(session.toJson());
+          String? winnerName = r.winnerName;
+          if (session.players.isNotEmpty) {
+            var minNet = 999;
+            for (final p in session.players) {
+              final net = session.totalNet(p.playerId);
+              if (net > 0 && net < minNet) {
+                minNet = net;
+                winnerName = p.name;
+              }
+            }
+          }
+          await (_db.update(_db.savedRounds)..where((t) => t.id.equals(r.id))).write(
+            SavedRoundsCompanion(
+              winnerName: Value(winnerName),
+              roundPayloadJson: Value(jsonString),
+            ),
+          );
+          anyChanged = true;
+        }
+      } catch (_) {}
+    }
+
+    if (anyChanged) {
+      onDataChanged?.call();
+    }
+  }
 }

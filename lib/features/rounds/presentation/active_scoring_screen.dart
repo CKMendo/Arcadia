@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../database/app_database.dart';
 import '../../../shared/theme/app_colors.dart';
 import '../../../shared/utils/course_handicap_calculator.dart';
 import '../../../shared/widgets/player_avatar.dart';
 import '../../../shared/widgets/stat_badge.dart';
+import '../../players/repository/player_repository.dart';
 import '../import/presentation/round_scorecard_import_screen.dart';
 import '../import/services/player_score_row_matcher.dart';
 import '../models/active_round_session.dart';
@@ -12,12 +15,14 @@ import 'round_summary_screen.dart';
 class ActiveScoringScreen extends StatefulWidget {
   final RoundRepository roundRepository;
   final ActiveRoundSession session;
+  final PlayerRepository? playerRepository;
   final bool initialGridView;
 
   const ActiveScoringScreen({
     super.key,
     required this.roundRepository,
     required this.session,
+    this.playerRepository,
     this.initialGridView = true,
   });
 
@@ -28,12 +33,31 @@ class ActiveScoringScreen extends StatefulWidget {
 class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
   late int _currentHole;
   late bool _isGridView;
+  StreamSubscription<List<Player>>? _playersSub;
 
   @override
   void initState() {
     super.initState();
     _currentHole = widget.session.currentHoleNumber;
     _isGridView = widget.initialGridView;
+
+    if (widget.playerRepository != null) {
+      _playersSub = widget.playerRepository!.watchAllPlayers().listen((players) {
+        if (mounted && players.isNotEmpty) {
+          final changed = widget.session.syncWithRoster(players);
+          if (changed) {
+            _saveDraft();
+            setState(() {});
+          }
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _playersSub?.cancel();
+    super.dispose();
   }
 
   void _saveDraft() {
@@ -157,6 +181,7 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
             builder: (_) => RoundSummaryScreen(
               roundRepository: widget.roundRepository,
               roundId: roundId,
+              playerRepository: widget.playerRepository,
             ),
           ),
         );
@@ -629,6 +654,102 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
     }
   }
 
+  Future<void> _manualSyncRoster() async {
+    if (widget.playerRepository == null) return;
+    final players = await widget.playerRepository!.getAllPlayers();
+    final changed = widget.session.syncWithRoster(players);
+    if (changed) {
+      _saveDraft();
+      setState(() {});
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Round player names & handicaps synchronized with Roster!'),
+          backgroundColor: Color(0xFF0F3224),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<void> _showAddPlayerFromRosterDialog() async {
+    if (widget.playerRepository == null) return;
+    final allPlayers = await widget.playerRepository!.getAllPlayers();
+    final participatingIds = widget.session.players.map((p) => p.playerId).toSet();
+    final available = allPlayers.where((p) => !participatingIds.contains(p.id)).toList();
+
+    if (!mounted) return;
+
+    if (available.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('All players in the roster are already in this round!'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surfaceDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'ADD GOLFER FROM ROSTER',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.1,
+                  color: AppColors.cyanLight,
+                ),
+              ),
+              const SizedBox(height: 14),
+              ...available.map((p) {
+                return ListTile(
+                  leading: PlayerAvatar(name: p.fullName, initials: p.initials, radius: 20),
+                  title: Text(p.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
+                  subtitle: Text('Index: ${p.handicapIndex.toStringAsFixed(1)} • Preferred Tee: ${p.preferredTee ?? "White"}', style: const TextStyle(color: AppColors.duneSand)),
+                  trailing: ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.lakeCyan, foregroundColor: const Color(0xFF04111D)),
+                    onPressed: () {
+                      final tee = p.preferredTee ?? 'White';
+                      setState(() {
+                        widget.session.addPlayerFromRoster(
+                          p,
+                          teeName: tee,
+                          teeBoxId: tee.toLowerCase(),
+                        );
+                      });
+                      _saveDraft();
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('✅ Added "${p.fullName}" to this round!'),
+                          backgroundColor: const Color(0xFF0F3224),
+                        ),
+                      );
+                    },
+                    child: const Text('Add', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isEditingLocked = widget.session.savedRoundId != null;
@@ -671,6 +792,10 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
             onSelected: (val) {
               if (val == 'exit') {
                 _exitRound();
+              } else if (val == 'sync') {
+                _manualSyncRoster();
+              } else if (val == 'add_player') {
+                _showAddPlayerFromRosterDialog();
               } else if (val == 'delete') {
                 _deleteRound();
               } else if (val == 'finalize') {
@@ -678,6 +803,28 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
               }
             },
             itemBuilder: (ctx) => [
+              const PopupMenuItem(
+                value: 'sync',
+                child: Row(
+                  children: [
+                    Icon(Icons.sync, color: AppColors.lakeCyan, size: 22),
+                    SizedBox(width: 10),
+                    Text('Sync with Trip Roster', style: TextStyle(fontSize: 16)),
+                  ],
+                ),
+              ),
+              if (widget.playerRepository != null)
+                const PopupMenuItem(
+                  value: 'add_player',
+                  child: Row(
+                    children: [
+                      Icon(Icons.person_add_alt_1, color: AppColors.cyanLight, size: 22),
+                      SizedBox(width: 10),
+                      Text('Add Golfer from Roster', style: TextStyle(fontSize: 16)),
+                    ],
+                  ),
+                ),
+              const PopupMenuDivider(),
               const PopupMenuItem(
                 value: 'exit',
                 child: Row(

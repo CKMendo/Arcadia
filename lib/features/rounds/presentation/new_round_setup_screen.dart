@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../database/app_database.dart';
@@ -63,11 +64,68 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
   final String _format = 'stableford';
   final int _pointsPerSkin = 2;
   bool _isLoading = true;
+  StreamSubscription<List<Player>>? _playersSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadInitialData();
+    _playersSubscription = widget.playerRepository.watchAllPlayers().listen((players) {
+      if (mounted) {
+        _onRosterPlayersUpdated(players);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _playersSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _onRosterPlayersUpdated(List<Player> freshPlayers) {
+    if (_isLoading) return;
+
+    final existingIds = _allPlayers.map((p) => p.id).toSet();
+    final freshIds = freshPlayers.map((p) => p.id).toSet();
+
+    // Reconcile selected players:
+    // Remove any player IDs that no longer exist
+    _selectedPlayerIds.removeWhere((id) => !freshIds.contains(id));
+    // For newly added players (weren't in previous roster), add them to selection
+    for (final p in freshPlayers) {
+      if (!existingIds.contains(p.id)) {
+        _selectedPlayerIds.add(p.id);
+      }
+    }
+
+    // Reconcile default tees
+    _assignDefaultTees(freshPlayers, _selectedCourseDetails);
+
+    // Reconcile pairing plan
+    if (_currentPairingPlan != null) {
+      final planPlayerIds = _currentPairingPlan!.allTeams
+          .expand((t) => t.players.map((p) => p.id))
+          .toSet();
+
+      // Check if all players in the existing plan still exist in the fresh roster
+      final allPlanPlayersStillExist = planPlayerIds.every((id) => freshIds.contains(id));
+
+      if (allPlanPlayersStillExist && planPlayerIds.length == freshPlayers.length) {
+        // Refresh player details (names, nicknames, handicaps) and dynamic team names
+        final refreshedPlan = _currentPairingPlan!.withLatestPlayers(freshPlayers);
+        _applyPairingPlan(refreshedPlan);
+      } else if (freshPlayers.length >= 8) {
+        // Player set changed (added/removed) - re-generate balanced AI pairings
+        _generateAIPairingsInternal(freshPlayers, _pastSavedRounds, _roundNumber);
+      }
+    } else if (freshPlayers.length >= 8) {
+      _generateAIPairingsInternal(freshPlayers, _pastSavedRounds, _roundNumber);
+    }
+
+    setState(() {
+      _allPlayers = freshPlayers;
+    });
   }
 
   Future<void> _loadInitialData() async {
@@ -338,6 +396,7 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
           builder: (_) => ActiveScoringScreen(
             roundRepository: widget.roundRepository,
             session: session,
+            playerRepository: widget.playerRepository,
           ),
         ),
       );

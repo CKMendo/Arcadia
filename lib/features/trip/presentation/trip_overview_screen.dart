@@ -988,6 +988,7 @@ class TripOverviewScreen extends StatelessWidget {
                         builder: (_) => ActiveScoringScreen(
                           roundRepository: roundRepository,
                           session: draft,
+                          playerRepository: playerRepository,
                         ),
                       ),
                     );
@@ -1019,6 +1020,7 @@ class TripOverviewScreen extends StatelessWidget {
                         builder: (_) => ActiveScoringScreen(
                           roundRepository: roundRepository,
                           session: draft,
+                          playerRepository: playerRepository,
                         ),
                       ),
                     );
@@ -1251,6 +1253,7 @@ class TripOverviewScreen extends StatelessWidget {
           builder: (_) => ActiveScoringScreen(
             roundRepository: roundRepository,
             session: session,
+            playerRepository: playerRepository,
           ),
         ),
       );
