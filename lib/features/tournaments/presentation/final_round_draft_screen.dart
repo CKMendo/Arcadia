@@ -287,29 +287,34 @@ class _FinalRoundDraftScreenState extends State<FinalRoundDraftScreen> {
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(color: AppColors.lakeCyan.withValues(alpha: 0.7)),
                           ),
-                          child: DropdownButton<String>(
-                            value: selectedPartnerId,
-                            isExpanded: true,
-                            dropdownColor: AppColors.cardDark,
-                            underline: const SizedBox.shrink(),
-                            hint: const Text('Select Partner', style: TextStyle(color: Colors.white60, fontSize: 14)),
-                            items: _pool.map((pSeed) {
-                              final p = pSeed.player;
-                              return DropdownMenuItem<String>(
-                                value: p.id,
-                                child: Text(
-                                  '#${pSeed.rank} ${p.nickname.isNotEmpty ? p.nickname : p.fullName.split(' ').first} (${pSeed.totalStablefordPoints}p)',
-                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (newId) {
-                              if (newId != null) {
-                                _onSelectPartner(captain.id, newId);
-                              }
-                            },
-                          ),
+                          child: Builder(builder: (ctx) {
+                            final isPartnerInPool = _pool.any((p) => p.player.id == selectedPartnerId);
+                            final safePartnerId = isPartnerInPool ? selectedPartnerId : null;
+                            return DropdownButton<String>(
+                              key: ValueKey('captain_${captain.id}_partner_$safePartnerId'),
+                              value: safePartnerId,
+                              isExpanded: true,
+                              dropdownColor: AppColors.cardDark,
+                              underline: const SizedBox.shrink(),
+                              hint: const Text('Select Partner', style: TextStyle(color: Colors.white60, fontSize: 14)),
+                              items: _pool.map((pSeed) {
+                                final p = pSeed.player;
+                                return DropdownMenuItem<String>(
+                                  value: p.id,
+                                  child: Text(
+                                    '#${pSeed.rank} ${p.nickname.isNotEmpty ? p.nickname : p.fullName.split(' ').first} (${pSeed.totalStablefordPoints}p)',
+                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (newId) {
+                                if (newId != null) {
+                                  _onSelectPartner(captain.id, newId);
+                                }
+                              },
+                            );
+                          }),
                         ),
                       ),
                     ],

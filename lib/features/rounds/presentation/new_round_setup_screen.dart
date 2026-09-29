@@ -65,6 +65,7 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
   final int _pointsPerSkin = 2;
   bool _isLoading = true;
   StreamSubscription<List<Player>>? _playersSubscription;
+  StreamSubscription<List<Course>>? _coursesSubscription;
 
   @override
   void initState() {
@@ -75,11 +76,17 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
         _onRosterPlayersUpdated(players);
       }
     });
+    _coursesSubscription = widget.courseRepository.watchAllCourses().listen((courses) {
+      if (mounted) {
+        _onCoursesUpdated(courses);
+      }
+    });
   }
 
   @override
   void dispose() {
     _playersSubscription?.cancel();
+    _coursesSubscription?.cancel();
     super.dispose();
   }
 
@@ -125,6 +132,40 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
 
     setState(() {
       _allPlayers = freshPlayers;
+    });
+  }
+
+  Future<void> _onCoursesUpdated(List<Course> freshCourses) async {
+    if (_isLoading) return;
+
+    final currentCourseStillExists =
+        _selectedCourseId != null && freshCourses.any((c) => c.id == _selectedCourseId);
+
+    String? newSelectedCourseId;
+    CourseDetails? newCourseDetails;
+
+    if (currentCourseStillExists) {
+      newSelectedCourseId = _selectedCourseId;
+      newCourseDetails = await widget.courseRepository.getCourseDetails(newSelectedCourseId!);
+    } else if (freshCourses.isNotEmpty) {
+      newSelectedCourseId = freshCourses.first.id;
+      newCourseDetails = await widget.courseRepository.getCourseDetails(newSelectedCourseId);
+    } else {
+      newSelectedCourseId = null;
+      newCourseDetails = null;
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _courses = freshCourses;
+      _selectedCourseId = newSelectedCourseId;
+      _selectedCourseDetails = newCourseDetails;
+      if (newCourseDetails != null) {
+        _assignDefaultTees(_allPlayers, newCourseDetails);
+      } else {
+        _playerTeeIds.clear();
+      }
     });
   }
 
@@ -442,51 +483,61 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
                       style: TextStyle(color: Colors.redAccent, fontSize: 17),
                     )
                   else
-                    DropdownButtonFormField<String>(
-                      initialValue: _selectedCourseId,
-                      style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
-                      decoration: const InputDecoration(
-                        labelText: 'Select Course',
-                        labelStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        prefixIcon: Icon(Icons.golf_course, color: AppColors.lakeCyan, size: 28),
-                      ),
-                      items: _courses.map((c) {
-                        return DropdownMenuItem(
-                          value: c.id,
-                          child: Text('${c.name} (${c.holeCount}h)', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                        );
-                      }).toList(),
-                      onChanged: _onCourseChanged,
-                    ),
+                    Builder(builder: (ctx) {
+                      final validCourseId = _courses.any((c) => c.id == _selectedCourseId)
+                          ? _selectedCourseId
+                          : _courses.first.id;
+                      return DropdownButtonFormField<String>(
+                        key: ValueKey('round_setup_course_${validCourseId}_${_courses.length}'),
+                        initialValue: validCourseId,
+                        style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
+                        decoration: const InputDecoration(
+                          labelText: 'Select Course',
+                          labelStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          prefixIcon: Icon(Icons.golf_course, color: AppColors.lakeCyan, size: 28),
+                        ),
+                        items: _courses.map((c) {
+                          return DropdownMenuItem(
+                            value: c.id,
+                            child: Text('${c.name} (${c.holeCount}h)', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          );
+                        }).toList(),
+                        onChanged: _onCourseChanged,
+                      );
+                    }),
                   const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
-                        child: DropdownButtonFormField<int>(
-                          initialValue: _roundNumber,
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                          decoration: const InputDecoration(
-                            labelText: 'Round #',
-                            labelStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          items: [1, 2, 3, 4, 5]
-                              .map((r) => DropdownMenuItem(
-                                    value: r,
-                                    child: Text('Round $r', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                  ))
-                              .toList(),
-                          onChanged: (v) async {
-                            if (v != null) {
-                              setState(() {
-                                _roundNumber = v;
-                              });
-                              if (_allPlayers.length >= 8 && !_isFinalRound) {
-                                await _generateAIPairingsInternal(_allPlayers, _pastSavedRounds, v);
-                                if (mounted) setState(() {});
+                        child: Builder(builder: (ctx) {
+                          final roundOptions = [1, 2, 3, 4, 5, if (_roundNumber > 5) _roundNumber];
+                          return DropdownButtonFormField<int>(
+                            key: ValueKey('round_num_$_roundNumber'),
+                            initialValue: _roundNumber,
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                            decoration: const InputDecoration(
+                              labelText: 'Round #',
+                              labelStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                            items: roundOptions
+                                .map((r) => DropdownMenuItem(
+                                      value: r,
+                                      child: Text('Round $r', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                    ))
+                                .toList(),
+                            onChanged: (v) async {
+                              if (v != null) {
+                                setState(() {
+                                  _roundNumber = v;
+                                });
+                                if (_allPlayers.length >= 8 && !_isFinalRound) {
+                                  await _generateAIPairingsInternal(_allPlayers, _pastSavedRounds, v);
+                                  if (mounted) setState(() {});
+                                }
                               }
-                            }
-                          },
-                        ),
+                            },
+                          );
+                        }),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -816,36 +867,42 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
                             ),
                             if (_selectedCourseDetails != null &&
                                 _selectedCourseDetails!.teeBoxes.isNotEmpty)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppColors.surfaceDark,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: AppColors.cardBorder),
-                                ),
-                                child: DropdownButton<String>(
-                                  value: teeId,
-                                  isDense: true,
-                                  dropdownColor: AppColors.cardDark,
-                                  underline: const SizedBox.shrink(),
-                                  items: _selectedCourseDetails!.teeBoxes
-                                      .map((t) => DropdownMenuItem(
-                                            value: t.teeBox.id,
-                                            child: Text(
-                                              t.teeBox.name,
-                                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                            ),
-                                          ))
-                                      .toList(),
-                                  onChanged: (val) {
-                                    if (val != null) {
-                                      setState(() {
-                                        _playerTeeIds[player.id] = val;
-                                      });
-                                    }
-                                  },
-                                ),
-                              ),
+                              Builder(builder: (ctx) {
+                                final safeTeeId = _selectedCourseDetails!.teeBoxes.any((t) => t.teeBox.id == teeId)
+                                    ? teeId
+                                    : _selectedCourseDetails!.teeBoxes.first.teeBox.id;
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceDark,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppColors.cardBorder),
+                                  ),
+                                  child: DropdownButton<String>(
+                                    key: ValueKey('player_tee_${player.id}_$safeTeeId'),
+                                    value: safeTeeId,
+                                    isDense: true,
+                                    dropdownColor: AppColors.cardDark,
+                                    underline: const SizedBox.shrink(),
+                                    items: _selectedCourseDetails!.teeBoxes
+                                        .map((t) => DropdownMenuItem(
+                                              value: t.teeBox.id,
+                                              child: Text(
+                                                t.teeBox.name,
+                                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                              ),
+                                            ))
+                                        .toList(),
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        setState(() {
+                                          _playerTeeIds[player.id] = val;
+                                        });
+                                      }
+                                    },
+                                  ),
+                                );
+                              }),
                           ],
                         ),
                       );

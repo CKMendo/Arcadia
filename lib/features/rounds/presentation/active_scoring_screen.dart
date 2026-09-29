@@ -228,17 +228,23 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                   children: [
                     const Text('TEE BOX SELECTION', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.cyanLight)),
                     const SizedBox(height: 8),
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedTee,
-                      dropdownColor: AppColors.surfaceElevated,
-                      style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
-                      items: teeOptions.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setDialogState(() => selectedTee = val);
-                        }
-                      },
-                    ),
+                    Builder(builder: (ctx) {
+                      final effectiveTeeOptions = teeOptions.contains(selectedTee)
+                          ? teeOptions
+                          : [selectedTee, ...teeOptions];
+                      return DropdownButtonFormField<String>(
+                        key: ValueKey('scoring_tee_${player.playerId}_$selectedTee'),
+                        initialValue: selectedTee,
+                        dropdownColor: AppColors.surfaceElevated,
+                        style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
+                        items: effectiveTeeOptions.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setDialogState(() => selectedTee = val);
+                          }
+                        },
+                      );
+                    }),
                     const SizedBox(height: 18),
                     const Text('HANDICAP INDEX', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.cyanLight)),
                     const SizedBox(height: 8),

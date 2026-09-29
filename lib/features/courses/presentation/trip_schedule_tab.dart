@@ -796,7 +796,8 @@ class TripScheduleTab extends StatelessWidget {
     final schedule = await tripScheduleRepository.getSchedule();
     final defaultRoundNumber = round != null ? round.roundNumber : schedule.length + 1;
 
-    String selectedCourseId = round?.courseId ?? courses.first.id;
+    final courseExists = courses.any((c) => c.id == round?.courseId);
+    String selectedCourseId = courseExists ? round!.courseId : (courses.isNotEmpty ? courses.first.id : '');
     DateTime selectedDate = round?.date ?? DateTime.now().add(Duration(days: schedule.length));
     TimeOfDay selectedTime1 = const TimeOfDay(hour: 9, minute: 30);
     TimeOfDay selectedTime2 = const TimeOfDay(hour: 9, minute: 42);
@@ -886,25 +887,31 @@ class TripScheduleTab extends StatelessWidget {
                       // Course Dropdown
                       const Text('Course *', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white70)),
                       const SizedBox(height: 6),
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedCourseId,
-                        dropdownColor: AppColors.surfaceElevated,
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: AppColors.surfaceElevated,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        items: courses.map((c) {
-                          return DropdownMenuItem(
-                            value: c.id,
-                            child: Text(c.name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) setModalState(() => selectedCourseId = val);
-                        },
-                      ),
+                      Builder(builder: (ctx) {
+                        final validCourseId = courses.any((c) => c.id == selectedCourseId)
+                            ? selectedCourseId
+                            : (courses.isNotEmpty ? courses.first.id : null);
+                        return DropdownButtonFormField<String>(
+                          key: ValueKey('round_course_${validCourseId}_${courses.length}'),
+                          initialValue: validCourseId,
+                          dropdownColor: AppColors.surfaceElevated,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: AppColors.surfaceElevated,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          items: courses.map((c) {
+                            return DropdownMenuItem(
+                              value: c.id,
+                              child: Text(c.name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) setModalState(() => selectedCourseId = val);
+                          },
+                        );
+                      }),
                       const SizedBox(height: 14),
 
                       // Date Picker

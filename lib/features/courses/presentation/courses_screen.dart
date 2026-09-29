@@ -568,6 +568,7 @@ class CoursesScreen extends StatelessWidget {
     if (confirm == true && context.mounted) {
       try {
         await courseRepository.deleteCourse(course.id);
+        await (tripScheduleRepository ?? TripScheduleRepository()).removeCourseFromSchedule(course.id);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

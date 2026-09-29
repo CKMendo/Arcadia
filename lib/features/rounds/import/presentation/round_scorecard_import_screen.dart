@@ -762,41 +762,47 @@ class _RoundScorecardImportScreenState
               ],
             ),
             const SizedBox(height: 10),
-            DropdownButtonFormField<String?>(
-              initialValue: assignedPlayerId,
-              decoration: const InputDecoration(
-                labelText: 'Player for this row',
-                prefixIcon: Icon(Icons.person_outline, color: AppColors.lakeCyan),
-                filled: true,
-                fillColor: AppColors.surfaceElevated,
-              ),
-              items: [
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('Unassigned / Ignore Row'),
+            Builder(builder: (ctx) {
+              final isAssignedInPlayers = assignedPlayerId != null &&
+                  widget.players.any((p) => p.id == assignedPlayerId);
+              final safePlayerId = isAssignedInPlayers ? assignedPlayerId : null;
+              return DropdownButtonFormField<String?>(
+                key: ValueKey('row_${rowIndex}_player_$safePlayerId'),
+                initialValue: safePlayerId,
+                decoration: const InputDecoration(
+                  labelText: 'Player for this row',
+                  prefixIcon: Icon(Icons.person_outline, color: AppColors.lakeCyan),
+                  filled: true,
+                  fillColor: AppColors.surfaceElevated,
                 ),
-                ...widget.players.map(
-                  (player) => DropdownMenuItem<String?>(
-                    value: player.id,
-                    child: Text(player.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('Unassigned / Ignore Row'),
                   ),
-                ),
-              ],
-              onChanged: (playerId) {
-                setState(() {
-                  for (final player in widget.players) {
-                    if (_rowByPlayerId[player.id] == rowIndex) {
-                      _rowByPlayerId[player.id] = null;
-                      _matchConfidenceByPlayerId.remove(player.id);
+                  ...widget.players.map(
+                    (player) => DropdownMenuItem<String?>(
+                      value: player.id,
+                      child: Text(player.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+                onChanged: (playerId) {
+                  setState(() {
+                    for (final player in widget.players) {
+                      if (_rowByPlayerId[player.id] == rowIndex) {
+                        _rowByPlayerId[player.id] = null;
+                        _matchConfidenceByPlayerId.remove(player.id);
+                      }
                     }
-                  }
-                  if (playerId != null) {
-                    _rowByPlayerId[playerId] = rowIndex;
-                    _matchConfidenceByPlayerId.remove(playerId);
-                  }
-                });
-              },
-            ),
+                    if (playerId != null) {
+                      _rowByPlayerId[playerId] = rowIndex;
+                      _matchConfidenceByPlayerId.remove(playerId);
+                    }
+                  });
+                },
+              );
+            }),
             const SizedBox(height: 8),
             Text(
               '${_playerPreviewText(row)}'

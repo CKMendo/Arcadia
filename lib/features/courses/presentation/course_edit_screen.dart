@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../database/app_database.dart';
 import '../../../shared/theme/app_colors.dart';
 import '../repository/course_repository.dart';
+import '../repository/trip_schedule_repository.dart';
 
 class CourseEditScreen extends StatefulWidget {
   final CourseRepository courseRepository;
@@ -154,6 +155,7 @@ class _CourseEditScreenState extends State<CourseEditScreen> {
       setState(() => _isDeleting = true);
       try {
         await widget.courseRepository.deleteCourse(widget.course!.id);
+        await TripScheduleRepository().removeCourseFromSchedule(widget.course!.id);
         if (mounted) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
@@ -700,28 +702,34 @@ class _CourseEditScreenState extends State<CourseEditScreen> {
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(color: AppColors.cardBorder),
                               ),
-                              child: DropdownButton<int>(
-                                value: _strokeIndexes[i],
-                                isDense: true,
-                                dropdownColor: AppColors.surfaceElevated,
-                                underline: const SizedBox.shrink(),
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                ),
-                                items: List.generate(_holeCount, (idx) => idx + 1)
-                                    .map((si) => DropdownMenuItem(
-                                          value: si,
-                                          child: Text('$si', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                        ))
-                                    .toList(),
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    setState(() => _strokeIndexes[i] = val);
-                                  }
-                                },
-                              ),
+                              child: Builder(builder: (ctx) {
+                                final safeVal = (_strokeIndexes[i] >= 1 && _strokeIndexes[i] <= _holeCount)
+                                    ? _strokeIndexes[i]
+                                    : ((i + 1) <= _holeCount ? (i + 1) : 1);
+                                return DropdownButton<int>(
+                                  key: ValueKey('hole_${i}_si_$safeVal'),
+                                  value: safeVal,
+                                  isDense: true,
+                                  dropdownColor: AppColors.surfaceElevated,
+                                  underline: const SizedBox.shrink(),
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                  ),
+                                  items: List.generate(_holeCount, (idx) => idx + 1)
+                                      .map((si) => DropdownMenuItem(
+                                            value: si,
+                                            child: Text('$si', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                          ))
+                                      .toList(),
+                                  onChanged: (val) {
+                                    if (val != null) {
+                                      setState(() => _strokeIndexes[i] = val);
+                                    }
+                                  },
+                                );
+                              }),
                             ),
                           ],
                         ),

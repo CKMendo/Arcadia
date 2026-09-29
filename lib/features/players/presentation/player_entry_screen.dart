@@ -459,23 +459,32 @@ class _PlayerEntryScreenState extends State<PlayerEntryScreen> {
                           // Preferred Tee Box (Quick Selector)
                           Expanded(
                             flex: 4,
-                            child: DropdownButtonFormField<String>(
-                              initialValue: _preferredTee,
-                              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
-                              dropdownColor: AppColors.surfaceElevated,
-                              decoration: const InputDecoration(
-                                labelText: 'TEE',
-                                helperText: 'Default tee',
-                                helperStyle: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                              ),
-                              items: _teeOptions
-                                  .map((t) => DropdownMenuItem(
-                                        value: t,
-                                        child: Text(t, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                      ))
-                                  .toList(),
-                              onChanged: (val) => setState(() => _preferredTee = val),
-                            ),
+                            child: Builder(builder: (ctx) {
+                              final safeTee = (_preferredTee != null && _preferredTee!.isNotEmpty)
+                                  ? _preferredTee!
+                                  : 'White';
+                              final effectiveTeeOptions = _teeOptions.contains(safeTee)
+                                  ? _teeOptions
+                                  : [safeTee, ..._teeOptions];
+                              return DropdownButtonFormField<String>(
+                                key: ValueKey('player_entry_tee_$safeTee'),
+                                initialValue: safeTee,
+                                style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
+                                dropdownColor: AppColors.surfaceElevated,
+                                decoration: const InputDecoration(
+                                  labelText: 'TEE',
+                                  helperText: 'Default tee',
+                                  helperStyle: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                                ),
+                                items: effectiveTeeOptions
+                                    .map((t) => DropdownMenuItem(
+                                          value: t,
+                                          child: Text(t, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                        ))
+                                    .toList(),
+                                onChanged: (val) => setState(() => _preferredTee = val),
+                              );
+                            }),
                           ),
                         ],
                       ),

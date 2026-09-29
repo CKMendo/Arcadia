@@ -113,6 +113,20 @@ class TripScheduleRepository {
     } catch (_) {}
   }
 
+  Future<void> removeCourseFromSchedule(String courseId) async {
+    try {
+      final schedule = await getSchedule();
+      final remaining = schedule.where((r) => r.courseId != courseId).toList();
+      if (remaining.length != schedule.length) {
+        final renumbered = <ScheduledRound>[];
+        for (var i = 0; i < remaining.length; i++) {
+          renumbered.add(remaining[i].copyWith(roundNumber: i + 1));
+        }
+        await saveSchedule(renumbered);
+      }
+    } catch (_) {}
+  }
+
   Future<List<ScheduledRound>?> _loadScheduleFromFileLayers() async {
     if (_isTestEnv) return null;
 
