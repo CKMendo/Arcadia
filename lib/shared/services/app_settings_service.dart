@@ -1,18 +1,18 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'credentials_backup_service.dart';
 
 class AppSettingsService {
-  static const String _keyGeminiApiKey = 'gemini_api_key';
-  static const String _keyWebsiteUrl = 'website_url';
-  static const String _keyTinyUrl = 'tiny_url';
+  static const String _keyGeminiApiKey = CredentialsBackupService.keyGeminiApiKey;
+  static const String _keyWebsiteUrl = CredentialsBackupService.keyWebsiteUrl;
+  static const String _keyTinyUrl = CredentialsBackupService.keyTinyUrl;
 
   static const String defaultWebsiteUrl =
       'https://ckmendo.github.io/Arcadia/';
   static const String defaultTinyUrl = 'https://tinyurl.com/arcadia2027';
 
-  static const String _keyGeminiSecondaryApiKey = 'gemini_secondary_api_key';
+  static const String _keyGeminiSecondaryApiKey = CredentialsBackupService.keyGeminiSecondaryApiKey;
 
   /// Compile-time fallback key passed via --dart-define=GEMINI_API_KEY=...
   static const String _compileTimeGeminiKey = String.fromEnvironment(
@@ -25,16 +25,15 @@ class AppSettingsService {
     return getGeminiPrimaryApiKey();
   }
 
-  /// Retrieves the Primary Gemini API key.
+  /// Retrieves the Primary Gemini API key, checking SharedPreferences and persistent backup.
   static Future<String?> getGeminiPrimaryApiKey() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final saved = prefs.getString(_keyGeminiApiKey)?.trim();
+      final saved = await CredentialsBackupService.getCredential(_keyGeminiApiKey);
       if (saved != null && saved.isNotEmpty) {
         return saved;
       }
     } catch (e) {
-      debugPrint('Error reading SharedPreferences for Gemini primary key: $e');
+      debugPrint('Error reading Gemini primary key: $e');
     }
     if (_compileTimeGeminiKey.isNotEmpty) {
       return _compileTimeGeminiKey;
@@ -45,13 +44,12 @@ class AppSettingsService {
   /// Retrieves the Secondary Gemini API key (for Gemini 3.7 Flash fallback).
   static Future<String?> getGeminiSecondaryApiKey() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final saved = prefs.getString(_keyGeminiSecondaryApiKey)?.trim();
+      final saved = await CredentialsBackupService.getCredential(_keyGeminiSecondaryApiKey);
       if (saved != null && saved.isNotEmpty) {
         return saved;
       }
     } catch (e) {
-      debugPrint('Error reading SharedPreferences for Gemini secondary key: $e');
+      debugPrint('Error reading Gemini secondary key: $e');
     }
     return null;
   }
@@ -69,46 +67,27 @@ class AppSettingsService {
     return setGeminiPrimaryApiKey(key);
   }
 
-  /// Saves the Primary Gemini API key. Passing null or empty removes it.
+  /// Saves the Primary Gemini API key to persistent multi-layer storage.
   static Future<void> setGeminiPrimaryApiKey(String? key) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (key == null || key.trim().isEmpty) {
-        await prefs.remove(_keyGeminiApiKey);
-      } else {
-        await prefs.setString(_keyGeminiApiKey, key.trim());
-      }
-    } catch (e) {
-      debugPrint('Error saving Gemini primary API key to SharedPreferences: $e');
-    }
+    await CredentialsBackupService.setCredential(_keyGeminiApiKey, key);
   }
 
-  /// Saves the Secondary Gemini API key. Passing null or empty removes it.
+  /// Saves the Secondary Gemini API key to persistent multi-layer storage.
   static Future<void> setGeminiSecondaryApiKey(String? key) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (key == null || key.trim().isEmpty) {
-        await prefs.remove(_keyGeminiSecondaryApiKey);
-      } else {
-        await prefs.setString(_keyGeminiSecondaryApiKey, key.trim());
-      }
-    } catch (e) {
-      debugPrint('Error saving Gemini secondary API key to SharedPreferences: $e');
-    }
+    await CredentialsBackupService.setCredential(_keyGeminiSecondaryApiKey, key);
   }
 
   /// Retrieves the public website URL.
   static Future<String> getWebsiteUrl() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final saved = prefs.getString(_keyWebsiteUrl)?.trim();
+      final saved = await CredentialsBackupService.getCredential(_keyWebsiteUrl);
       if (saved != null && saved.isNotEmpty) {
         // Automatically migrate any legacy domains to the current GitHub Pages site
         if (saved.contains('chatgpt.site') ||
             saved.contains('trycloudflare.com') ||
             saved.contains('arcadia-golf-trip')) {
-          await prefs.setString(_keyWebsiteUrl, defaultWebsiteUrl);
-          await prefs.setString(_keyTinyUrl, defaultTinyUrl);
+          await CredentialsBackupService.setCredential(_keyWebsiteUrl, defaultWebsiteUrl);
+          await CredentialsBackupService.setCredential(_keyTinyUrl, defaultTinyUrl);
           return defaultWebsiteUrl;
         }
         return saved;
@@ -123,10 +102,8 @@ class AppSettingsService {
   static Future<String> setWebsiteUrl(String url) async {
     final cleanUrl = url.trim().isEmpty ? defaultWebsiteUrl : url.trim();
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_keyWebsiteUrl, cleanUrl);
       final tinyUrl = await shortenWithTinyUrl(cleanUrl);
-      await prefs.setString(_keyTinyUrl, tinyUrl);
+      await updateWebsiteLinks(websiteUrl: cleanUrl, tinyUrl: tinyUrl);
       return tinyUrl;
     } catch (e) {
       debugPrint('Error saving website URL: $e');
@@ -137,32 +114,26 @@ class AppSettingsService {
   /// Sets the custom TinyURL.
   static Future<void> setTinyUrl(String tinyUrl) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      if (tinyUrl.trim().isEmpty) {
-        await prefs.remove(_keyTinyUrl);
-      } else {
-        await prefs.setString(_keyTinyUrl, tinyUrl.trim());
-      }
+      await CredentialsBackupService.setCredential(_keyTinyUrl, tinyUrl);
     } catch (e) {
       debugPrint('Error saving custom TinyURL: $e');
     }
   }
 
-  /// Sets both website URL and an optional custom TinyURL.
+  /// Sets both website URL and an optional custom TinyURL to persistent multi-layer storage.
   static Future<void> updateWebsiteLinks({
     required String websiteUrl,
     String? tinyUrl,
   }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
       final cleanWeb = websiteUrl.trim().isEmpty ? defaultWebsiteUrl : websiteUrl.trim();
-      await prefs.setString(_keyWebsiteUrl, cleanWeb);
+      await CredentialsBackupService.setCredential(_keyWebsiteUrl, cleanWeb);
 
       if (tinyUrl != null && tinyUrl.trim().isNotEmpty) {
-        await prefs.setString(_keyTinyUrl, tinyUrl.trim());
+        await CredentialsBackupService.setCredential(_keyTinyUrl, tinyUrl.trim());
       } else {
         final autoTiny = await shortenWithTinyUrl(cleanWeb);
-        await prefs.setString(_keyTinyUrl, autoTiny);
+        await CredentialsBackupService.setCredential(_keyTinyUrl, autoTiny);
       }
     } catch (e) {
       debugPrint('Error updating website links: $e');
@@ -172,11 +143,10 @@ class AppSettingsService {
   /// Retrieves the shortened TinyURL.
   static Future<String> getTinyUrl() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final saved = prefs.getString(_keyTinyUrl)?.trim();
+      final saved = await CredentialsBackupService.getCredential(_keyTinyUrl);
       if (saved != null && saved.isNotEmpty) {
         if (saved.contains('2xnkqbrx') || saved.contains('arcadia2026')) {
-          await prefs.setString(_keyTinyUrl, defaultTinyUrl);
+          await CredentialsBackupService.setCredential(_keyTinyUrl, defaultTinyUrl);
           return defaultTinyUrl;
         }
         return saved;
@@ -257,37 +227,27 @@ class AppSettingsService {
     return false;
   }
 
-  static const String _keyGitHubToken = 'github_personal_access_token';
+  static const String _keyGitHubToken = CredentialsBackupService.keyGitHubToken;
   static const String defaultGitHubRepo = 'CKMendo/Arcadia';
 
-  /// Retrieves the saved GitHub Personal Access Token for live website publishing.
+  /// Retrieves the saved GitHub Personal Access Token from persistent multi-layer storage.
   static Future<String?> getGitHubToken() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final saved = prefs.getString(_keyGitHubToken)?.trim();
+      final saved = await CredentialsBackupService.getCredential(_keyGitHubToken);
       if (saved != null && saved.isNotEmpty) {
         return saved;
       }
     } catch (e) {
-      debugPrint('Error reading SharedPreferences for GitHub token: $e');
+      debugPrint('Error reading GitHub token: $e');
     }
     const compileTime = String.fromEnvironment('GITHUB_TOKEN', defaultValue: '');
     if (compileTime.isNotEmpty) return compileTime;
     return null;
   }
 
-  /// Saves or clears the GitHub Personal Access Token.
+  /// Saves or clears the GitHub Personal Access Token across persistent storage layers.
   static Future<bool> setGitHubToken(String? token) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (token == null || token.trim().isEmpty) {
-        return await prefs.remove(_keyGitHubToken);
-      }
-      return await prefs.setString(_keyGitHubToken, token.trim());
-    } catch (e) {
-      debugPrint('Error saving GitHub token: $e');
-      return false;
-    }
+    return CredentialsBackupService.setCredential(_keyGitHubToken, token);
   }
 
   /// Validates a GitHub Personal Access Token against the CKMendo/Arcadia repository.
@@ -309,5 +269,11 @@ class AppSettingsService {
       debugPrint('GitHub token validation error: $e');
       return false;
     }
+  }
+
+  /// Guarantees that any tokens/keys saved in persistent device storage are restored
+  /// to SharedPreferences upon app startup.
+  static Future<int> ensureCredentialsPreserved() async {
+    return CredentialsBackupService.ensureCredentialsPreserved();
   }
 }

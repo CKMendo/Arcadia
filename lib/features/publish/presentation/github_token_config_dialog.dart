@@ -95,7 +95,7 @@ class _GitHubTokenConfigDialogState extends State<GitHubTokenConfigDialog> {
     if (mounted) {
       setState(() {
         _isValidating = false;
-        _statusMessage = '✅ GitHub token verified & saved!';
+        _statusMessage = '✅ GitHub token verified & permanently backed up!';
         _isSuccess = true;
       });
 
@@ -151,7 +151,7 @@ class _GitHubTokenConfigDialogState extends State<GitHubTokenConfigDialog> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
+                    Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: const Color(0xFF0F2B3E),
@@ -176,6 +176,31 @@ class _GitHubTokenConfigDialogState extends State<GitHubTokenConfigDialog> {
                             fontSize: 13,
                             color: Colors.white70,
                             height: 1.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1B5E20).withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF4CAF50).withValues(alpha: 0.6)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.shield, color: Color(0xFF4CAF50), size: 18),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Permanent Protection: Tokens are auto-backed up across device storage and never lost on app updates.',
+                            style: TextStyle(
+                              color: Color(0xFF81C784),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],

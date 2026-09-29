@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../database/app_database.dart';
 import '../../rounds/models/active_round_session.dart';
@@ -9,11 +12,14 @@ import '../models/scheduled_round.dart';
 class TripScheduleRepository {
   static const String _keyScheduledRounds = 'trip_scheduled_rounds_json';
   static const String _keyScheduleFinalized = 'trip_schedule_finalized_flag';
+  static const String _backupFileName = 'arcadia_trip_schedule_backup.json';
 
   final _scheduleController = StreamController<List<ScheduledRound>>.broadcast();
   final _finalizedController = StreamController<bool>.broadcast();
 
   final TournamentPairingsEngine _pairingsEngine = TournamentPairingsEngine();
+
+  bool get _isTestEnv => Platform.environment['FLUTTER_TEST'] == 'true';
 
   TripScheduleRepository() {
     _init();
@@ -40,20 +46,37 @@ class TripScheduleRepository {
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_keyScheduledRounds);
-      if (raw == null || raw.isEmpty) return [];
-      final list = jsonDecode(raw) as List<dynamic>;
-      final rounds = list
-          .map((item) => ScheduledRound.fromJson(item as Map<String, dynamic>))
-          .toList();
-      rounds.sort((a, b) {
-        final cmpDate = a.date.compareTo(b.date);
-        if (cmpDate != 0) return cmpDate;
-        return a.roundNumber.compareTo(b.roundNumber);
-      });
-      return rounds;
+      if (raw != null && raw.isNotEmpty) {
+        final list = jsonDecode(raw) as List<dynamic>;
+        final rounds = list
+            .map((item) => ScheduledRound.fromJson(item as Map<String, dynamic>))
+            .toList();
+        _sortRounds(rounds);
+        return rounds;
+      }
+
+      if (_isTestEnv) return [];
+
+      // Self-healing from file layers if SharedPreferences was wiped
+      final backupList = await _loadScheduleFromFileLayers();
+      if (backupList != null && backupList.isNotEmpty) {
+        final encoded = jsonEncode(backupList.map((r) => r.toJson()).toList());
+        await prefs.setString(_keyScheduledRounds, encoded);
+        return backupList;
+      }
+
+      return [];
     } catch (e) {
       return [];
     }
+  }
+
+  void _sortRounds(List<ScheduledRound> rounds) {
+    rounds.sort((a, b) {
+      final cmpDate = a.date.compareTo(b.date);
+      if (cmpDate != 0) return cmpDate;
+      return a.roundNumber.compareTo(b.roundNumber);
+    });
   }
 
   Future<bool> isScheduleFinalized() async {
@@ -70,6 +93,10 @@ class TripScheduleRepository {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_keyScheduleFinalized, isFinalized);
       _finalizedController.add(isFinalized);
+
+      // Also persist finalized state alongside schedule backup
+      final schedule = await getSchedule();
+      await _writeScheduleToAllFileLayers(schedule, isFinalized);
     } catch (_) {}
   }
 
@@ -77,9 +104,122 @@ class TripScheduleRepository {
     try {
       final prefs = await SharedPreferences.getInstance();
       final list = schedule.map((r) => r.toJson()).toList();
-      await prefs.setString(_keyScheduledRounds, jsonEncode(list));
+      final jsonStr = jsonEncode(list);
+      await prefs.setString(_keyScheduledRounds, jsonStr);
       _scheduleController.add(schedule);
+
+      final isFinalized = prefs.getBool(_keyScheduleFinalized) ?? false;
+      await _writeScheduleToAllFileLayers(schedule, isFinalized);
     } catch (_) {}
+  }
+
+  Future<List<ScheduledRound>?> _loadScheduleFromFileLayers() async {
+    if (_isTestEnv) return null;
+
+    // Check Documents Directory
+    try {
+      final docsDir = await getApplicationDocumentsDirectory();
+      final docFile = File('${docsDir.path}/$_backupFileName');
+      if (await docFile.exists()) {
+        final content = await docFile.readAsString();
+        final rounds = _parseRoundsFromJson(content);
+        if (rounds != null && rounds.isNotEmpty) return rounds;
+      }
+    } catch (_) {}
+
+    // Check External App Directory
+    try {
+      final extDir = await getExternalStorageDirectory();
+      if (extDir != null) {
+        final extFile = File('${extDir.path}/$_backupFileName');
+        if (await extFile.exists()) {
+          final content = await extFile.readAsString();
+          final rounds = _parseRoundsFromJson(content);
+          if (rounds != null && rounds.isNotEmpty) return rounds;
+        }
+      }
+    } catch (_) {}
+
+    // Check Android Public Download Directory
+    if (!kIsWeb && Platform.isAndroid) {
+      try {
+        final downloadFile = File('/sdcard/Download/$_backupFileName');
+        if (await downloadFile.exists()) {
+          final content = await downloadFile.readAsString();
+          final rounds = _parseRoundsFromJson(content);
+          if (rounds != null && rounds.isNotEmpty) return rounds;
+        }
+      } catch (_) {}
+    }
+
+    return null;
+  }
+
+  List<ScheduledRound>? _parseRoundsFromJson(String content) {
+    try {
+      final decoded = jsonDecode(content);
+      List<dynamic>? list;
+      if (decoded is List) {
+        list = decoded;
+      } else if (decoded is Map<String, dynamic> && decoded['rounds'] is List) {
+        list = decoded['rounds'] as List<dynamic>;
+      }
+      if (list != null) {
+        final rounds = list
+            .map((item) => ScheduledRound.fromJson(item as Map<String, dynamic>))
+            .toList();
+        _sortRounds(rounds);
+        return rounds;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<void> _writeScheduleToAllFileLayers(List<ScheduledRound> schedule, bool isFinalized) async {
+    if (_isTestEnv || schedule.isEmpty) return;
+
+    try {
+      final payload = {
+        'version': 1,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+        'isFinalized': isFinalized,
+        'rounds': schedule.map((r) => r.toJson()).toList(),
+      };
+      final jsonStr = jsonEncode(payload);
+
+      // Documents Directory
+      try {
+        final docsDir = await getApplicationDocumentsDirectory();
+        final docFile = File('${docsDir.path}/$_backupFileName');
+        await docFile.writeAsString(jsonStr);
+      } catch (_) {}
+
+      // External App Directory
+      try {
+        final extDir = await getExternalStorageDirectory();
+        if (extDir != null) {
+          final extFile = File('${extDir.path}/$_backupFileName');
+          await extFile.writeAsString(jsonStr);
+        }
+      } catch (_) {}
+
+      // Android Download Directory (survives full uninstall)
+      if (!kIsWeb && Platform.isAndroid) {
+        try {
+          final downloadDir = Directory('/sdcard/Download');
+          if (await downloadDir.exists()) {
+            final downloadFile = File('/sdcard/Download/$_backupFileName');
+            await downloadFile.writeAsString(jsonStr);
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
+  /// Called on startup to guarantee schedule survives updates/reinstalls
+  Future<int> ensureSchedulePreserved() async {
+    final schedule = await getSchedule();
+    return schedule.length;
   }
 
   Future<void> addOrUpdateScheduledRound(ScheduledRound round) async {

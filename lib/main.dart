@@ -7,6 +7,7 @@ import 'features/publish/services/website_publish_service.dart';
 import 'features/rounds/repository/round_repository.dart';
 import 'features/tournaments/repository/tournament_repository.dart';
 import 'presentation/splash_screen.dart';
+import 'shared/services/app_settings_service.dart';
 import 'shared/theme/app_theme.dart';
 
 void main() async {
@@ -25,6 +26,7 @@ void main() async {
   final database = AppDatabase();
   final playerRepository = PlayerRepository(database);
   await playerRepository.ensureRosterPreserved();
+  await AppSettingsService.ensureCredentialsPreserved();
   final courseRepository = CourseRepository(database);
   final tournamentRepository = TournamentRepository(database);
   final roundRepository = RoundRepository(database);

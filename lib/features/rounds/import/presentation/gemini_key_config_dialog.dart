@@ -118,7 +118,7 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
     if (mounted) {
       setState(() {
         _isValidating = false;
-        _statusMessage = '✅ Gemini API keys verified and saved!';
+        _statusMessage = '✅ Gemini API keys verified & permanently backed up!';
         _isSuccess = true;
       });
       await Future.delayed(const Duration(milliseconds: 700));
@@ -163,6 +163,31 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
                       'If 3.8 is unavailable or experiencing high demand (503), '
                       'the app automatically fails over to Gemini 3.7 Flash.',
                       style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1B5E20).withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF4CAF50).withValues(alpha: 0.6)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.shield, color: Color(0xFF4CAF50), size: 18),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Permanent Protection: API keys are auto-backed up across device storage and never lost on app updates.',
+                              style: TextStyle(
+                                color: Color(0xFF81C784),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 16),
 

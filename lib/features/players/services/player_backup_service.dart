@@ -195,7 +195,7 @@ class PlayerBackupService {
         debugPrint('[PlayerBackupService] Could not write doc file: $e');
       }
 
-      // Layer 3: External App Storage (if on Android/mobile)
+        // Layer 3: External App Storage (if on Android/mobile)
       try {
         final extDir = await getExternalStorageDirectory();
         if (extDir != null) {
@@ -204,6 +204,19 @@ class PlayerBackupService {
         }
       } catch (e) {
         debugPrint('[PlayerBackupService] Could not write ext file: $e');
+      }
+
+      // Layer 4: Android Public Download Directory (survives uninstalls)
+      if (!kIsWeb && Platform.isAndroid) {
+        try {
+          final downloadDir = Directory('/sdcard/Download');
+          if (await downloadDir.exists()) {
+            final downloadFile = File('/sdcard/Download/$_backupFileName');
+            await downloadFile.writeAsString(jsonStr);
+          }
+        } catch (e) {
+          debugPrint('[PlayerBackupService] Could not write Download file: $e');
+        }
       }
 
       debugPrint('[PlayerBackupService] Successfully backed up ${players.length} players to multi-layer storage.');
@@ -262,6 +275,20 @@ class PlayerBackupService {
           }
         }
       } catch (_) {}
+
+      // 4. Try Android Public Download File
+      if (!kIsWeb && Platform.isAndroid) {
+        try {
+          final downloadFile = File('/sdcard/Download/$_backupFileName');
+          if (await downloadFile.exists()) {
+            final content = await downloadFile.readAsString();
+            final parsed = _parsePlayersFromPayload(content);
+            if (parsed != null && parsed.isNotEmpty) {
+              return parsed;
+            }
+          }
+        } catch (_) {}
+      }
 
       return null;
     } catch (e) {

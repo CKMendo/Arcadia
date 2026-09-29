@@ -739,13 +739,14 @@ class TripOverviewScreen extends StatelessWidget {
   void _showSettingsModal(BuildContext context, Tournament? tournament) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: const Color(0xFF0C1927),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (bottomSheetCtx) {
         return SafeArea(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
             child: Column(
               mainAxisSize: MainAxisSize.min,
