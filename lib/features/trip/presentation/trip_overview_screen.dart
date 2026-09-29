@@ -19,6 +19,7 @@ import '../../rounds/presentation/round_summary_screen.dart';
 import '../../rounds/repository/round_repository.dart';
 import '../../tournaments/presentation/tournament_setup_screen.dart';
 import '../../tournaments/repository/tournament_repository.dart';
+import '../../publish/presentation/github_token_config_dialog.dart';
 import 'edit_website_links_dialog.dart';
 
 class TripOverviewScreen extends StatelessWidget {
@@ -46,45 +47,7 @@ class TripOverviewScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.cloud_upload_outlined, color: AppColors.lakeCyan, size: 28),
             tooltip: 'Push Standings to Website',
-            onPressed: () async {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Row(
-                    children: [
-                      SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.lakeCyan),
-                      ),
-                      SizedBox(width: 14),
-                      Text('Pushing updated standings to live website...'),
-                    ],
-                  ),
-                  duration: Duration(seconds: 1),
-                ),
-              );
-              final result = await WebsitePublishService.publishTournament(
-                tournamentRepo: tournamentRepository,
-                courseRepo: courseRepository,
-                playerRepo: playerRepository,
-                roundRepo: roundRepository,
-              );
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      result.success
-                          ? '✅ Standings pushed to website successfully (${DateFormat('h:mm a').format(DateTime.now())})'
-                          : '⚠️ ${result.message}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    backgroundColor: result.success ? const Color(0xFF0F382A) : const Color(0xFF381515),
-                    duration: const Duration(seconds: 3),
-                  ),
-                );
-              }
-            },
+            onPressed: () => _publishToWebsite(context),
           ),
           StreamBuilder<Tournament?>(
             stream: tournamentRepository.watchActiveTournament(),
@@ -715,6 +678,64 @@ class TripOverviewScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _publishToWebsite(BuildContext context) async {
+    final token = await AppSettingsService.getGitHubToken();
+    if (token == null || token.isEmpty) {
+      if (!context.mounted) return;
+      final configured = await GitHubTokenConfigDialog.show(context);
+      if (configured != true) return;
+    }
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.lakeCyan),
+            ),
+            SizedBox(width: 14),
+            Text('Publishing live tournament standings to website...'),
+          ],
+        ),
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    final result = await WebsitePublishService.publishTournament(
+      tournamentRepo: tournamentRepository,
+      courseRepo: courseRepository,
+      playerRepo: playerRepository,
+      roundRepo: roundRepository,
+    );
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      if (result.message == 'NEEDS_GITHUB_TOKEN') {
+        final configured = await GitHubTokenConfigDialog.show(context);
+        if (configured == true && context.mounted) {
+          await _publishToWebsite(context);
+        }
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.success
+                ? '✅ Standings pushed to website successfully (${DateFormat('h:mm a').format(DateTime.now())})'
+                : '⚠️ ${result.message}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: result.success ? const Color(0xFF0F382A) : const Color(0xFF381515),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
   void _showSettingsModal(BuildContext context, Tournament? tournament) {
     showModalBottomSheet(
       context: context,
@@ -832,6 +853,30 @@ class TripOverviewScreen extends StatelessWidget {
                   onTap: () {
                     Navigator.of(bottomSheetCtx).pop();
                     GeminiKeyConfigDialog.show(context);
+                  },
+                ),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.lakeCyan.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.key, color: AppColors.lakeCyan, size: 26),
+                  ),
+                  title: const Text(
+                    'GitHub Publishing Token',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  subtitle: const Text(
+                    'Configure token to push live standings to ckmendo.github.io/Arcadia',
+                    style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.white60),
+                  onTap: () {
+                    Navigator.of(bottomSheetCtx).pop();
+                    GitHubTokenConfigDialog.show(context);
                   },
                 ),
                 ListTile(

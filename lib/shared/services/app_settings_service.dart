@@ -256,4 +256,58 @@ class AppSettingsService {
     }
     return false;
   }
+
+  static const String _keyGitHubToken = 'github_personal_access_token';
+  static const String defaultGitHubRepo = 'CKMendo/Arcadia';
+
+  /// Retrieves the saved GitHub Personal Access Token for live website publishing.
+  static Future<String?> getGitHubToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString(_keyGitHubToken)?.trim();
+      if (saved != null && saved.isNotEmpty) {
+        return saved;
+      }
+    } catch (e) {
+      debugPrint('Error reading SharedPreferences for GitHub token: $e');
+    }
+    const compileTime = String.fromEnvironment('GITHUB_TOKEN', defaultValue: '');
+    if (compileTime.isNotEmpty) return compileTime;
+    return null;
+  }
+
+  /// Saves or clears the GitHub Personal Access Token.
+  static Future<bool> setGitHubToken(String? token) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (token == null || token.trim().isEmpty) {
+        return await prefs.remove(_keyGitHubToken);
+      }
+      return await prefs.setString(_keyGitHubToken, token.trim());
+    } catch (e) {
+      debugPrint('Error saving GitHub token: $e');
+      return false;
+    }
+  }
+
+  /// Validates a GitHub Personal Access Token against the CKMendo/Arcadia repository.
+  static Future<bool> validateGitHubToken(String token) async {
+    final trimmed = token.trim();
+    if (trimmed.isEmpty) return false;
+    try {
+      final url = Uri.parse('https://api.github.com/repos/$defaultGitHubRepo');
+      final res = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $trimmed',
+          'Accept': 'application/vnd.github+json',
+          'User-Agent': 'ArcadiaApp',
+        },
+      ).timeout(const Duration(seconds: 8));
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('GitHub token validation error: $e');
+      return false;
+    }
+  }
 }

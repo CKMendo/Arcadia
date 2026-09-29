@@ -8,6 +8,7 @@ import '../../rounds/models/active_round_session.dart';
 import '../../rounds/repository/round_repository.dart';
 import '../../tournaments/repository/tournament_repository.dart';
 import '../../../shared/services/app_settings_service.dart';
+import 'package:flutter/foundation.dart';
 
 class PublishResult {
   final bool success;
@@ -57,43 +58,74 @@ class WebsitePublishService {
 
       final encoded = jsonEncode(payload);
 
-      // 1. Direct local file update if accessible
+      // 1. Direct local file update if accessible (e.g. running on desktop or test)
+      bool localUpdated = false;
       try {
         final localFile = File('public_site/tournament_data.json');
         if (await localFile.exists()) {
           await localFile.writeAsString(encoded, flush: true);
+          localUpdated = true;
         }
         final docsFile = File('docs/tournament_data.json');
         if (await docsFile.exists()) {
           await docsFile.writeAsString(encoded, flush: true);
+          localUpdated = true;
         }
       } catch (_) {}
 
-      // 2. HTTP POST to /api/publication endpoint
-      bool webSuccess = false;
-      String webMessage = '';
-      try {
-        final currentWebUrl = await AppSettingsService.getWebsiteUrl();
-        final endpoint = '$currentWebUrl/api/publication';
-        final response = await http.post(
-          Uri.parse(endpoint),
-          headers: {'Content-Type': 'application/json'},
-          body: encoded,
-        ).timeout(const Duration(seconds: 12));
-
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-          webSuccess = true;
-          webMessage = 'Standings successfully pushed to live website!';
+      // 2. Direct GitHub API update (used on mobile / Android to commit to repo)
+      final githubToken = await AppSettingsService.getGitHubToken();
+      if (githubToken != null && githubToken.isNotEmpty) {
+        final ghResult = await _publishViaGitHubApi(githubToken, encoded);
+        if (ghResult.success) {
+          return PublishResult(
+            success: true,
+            message: 'Standings successfully pushed to live website!',
+            publishedAt: now,
+          );
         } else {
-          webMessage = 'Web server responded with status ${response.statusCode}';
+          return PublishResult(
+            success: false,
+            message: 'GitHub publish error: ${ghResult.message}',
+            publishedAt: now,
+          );
         }
-      } catch (e) {
-        webMessage = 'Local sync complete; web push error: $e';
       }
 
+      // 3. Fallback: custom HTTP server if configured (e.g. local Python server)
+      final currentWebUrl = await AppSettingsService.getWebsiteUrl();
+      if (!currentWebUrl.contains('github.io')) {
+        try {
+          final endpoint = '$currentWebUrl/api/publication';
+          final response = await http.post(
+            Uri.parse(endpoint),
+            headers: {'Content-Type': 'application/json'},
+            body: encoded,
+          ).timeout(const Duration(seconds: 12));
+
+          if (response.statusCode >= 200 && response.statusCode < 300) {
+            return PublishResult(
+              success: true,
+              message: 'Standings successfully pushed to live website!',
+              publishedAt: now,
+            );
+          }
+        } catch (_) {}
+      }
+
+      // If local files were updated (e.g. during desktop dev/testing), consider success
+      if (localUpdated && kDebugMode) {
+        return PublishResult(
+          success: true,
+          message: 'Website data updated successfully!',
+          publishedAt: now,
+        );
+      }
+
+      // Needs token to push to GitHub Pages from mobile
       return PublishResult(
-        success: webSuccess,
-        message: webSuccess ? 'Website updated successfully!' : webMessage,
+        success: false,
+        message: 'NEEDS_GITHUB_TOKEN',
         publishedAt: now,
       );
     } catch (e) {
@@ -102,6 +134,109 @@ class WebsitePublishService {
         message: 'Publishing failed: $e',
         publishedAt: now,
       );
+    }
+  }
+
+  static Future<({bool success, String message})> _publishViaGitHubApi(
+    String token,
+    String jsonPayload,
+  ) async {
+    const repo = 'CKMendo/Arcadia';
+    const filePath = 'docs/tournament_data.json';
+    const branch = 'master';
+
+    try {
+      final getUri = Uri.parse('https://api.github.com/repos/$repo/contents/$filePath?ref=$branch');
+      final getRes = await http.get(
+        getUri,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/vnd.github+json',
+          'User-Agent': 'ArcadiaApp',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      String? sha;
+      if (getRes.statusCode == 200) {
+        final getMap = jsonDecode(getRes.body) as Map<String, dynamic>;
+        sha = getMap['sha'] as String?;
+      }
+
+      final putUri = Uri.parse('https://api.github.com/repos/$repo/contents/$filePath');
+      final contentBase64 = base64Encode(utf8.encode(jsonPayload));
+
+      final body = <String, dynamic>{
+        'message': 'Update tournament standings and roster [skip ci]',
+        'content': contentBase64,
+        'branch': branch,
+      };
+      if (sha != null) {
+        body['sha'] = sha;
+      }
+
+      final putRes = await http.put(
+        putUri,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json',
+          'User-Agent': 'ArcadiaApp',
+        },
+        body: jsonEncode(body),
+      ).timeout(const Duration(seconds: 15));
+
+      if (putRes.statusCode == 200 || putRes.statusCode == 201) {
+        // Also update public_site/tournament_data.json on GitHub for consistency
+        try {
+          final pubGetUri = Uri.parse('https://api.github.com/repos/$repo/contents/public_site/tournament_data.json?ref=$branch');
+          final pubGetRes = await http.get(
+            pubGetUri,
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Accept': 'application/vnd.github+json',
+              'User-Agent': 'ArcadiaApp',
+            },
+          ).timeout(const Duration(seconds: 8));
+
+          String? pubSha;
+          if (pubGetRes.statusCode == 200) {
+            final pubMap = jsonDecode(pubGetRes.body) as Map<String, dynamic>;
+            pubSha = pubMap['sha'] as String?;
+          }
+
+          final pubPutUri = Uri.parse('https://api.github.com/repos/$repo/contents/public_site/tournament_data.json');
+          final pubBody = <String, dynamic>{
+            'message': 'Sync public_site tournament data [skip ci]',
+            'content': contentBase64,
+            'branch': branch,
+          };
+          if (pubSha != null) pubBody['sha'] = pubSha;
+
+          await http.put(
+            pubPutUri,
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Accept': 'application/vnd.github+json',
+              'Content-Type': 'application/json',
+              'User-Agent': 'ArcadiaApp',
+            },
+            body: jsonEncode(pubBody),
+          ).timeout(const Duration(seconds: 10));
+        } catch (_) {}
+
+        return (success: true, message: 'Published successfully!');
+      } else {
+        String errDetail = 'HTTP ${putRes.statusCode}';
+        try {
+          final errJson = jsonDecode(putRes.body) as Map<String, dynamic>;
+          if (errJson['message'] != null) {
+            errDetail += ': ${errJson['message']}';
+          }
+        } catch (_) {}
+        return (success: false, message: errDetail);
+      }
+    } catch (e) {
+      return (success: false, message: '$e');
     }
   }
 
