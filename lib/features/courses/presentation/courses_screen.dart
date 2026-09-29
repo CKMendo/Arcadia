@@ -83,6 +83,15 @@ class CoursesScreen extends StatelessWidget {
                       ),
                     );
                   }
+                } else if (val == 'regional_gems') {
+                  await courseRepository.seedNorthernMichiganGems();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Loaded Northern Michigan Gems (Crystal Downs, Kingsley, Bay Harbor, The Bear...)', style: TextStyle(fontSize: 17)),
+                      ),
+                    );
+                  }
                 }
               },
               itemBuilder: (ctx) => [
@@ -123,6 +132,16 @@ class CoursesScreen extends StatelessWidget {
                       Icon(Icons.forest, color: Color(0xFF34D399), size: 22),
                       SizedBox(width: 10),
                       Text('Load Forest Dunes (4 Courses)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'regional_gems',
+                  child: Row(
+                    children: [
+                      Icon(Icons.stars, color: Color(0xFFFBBF24), size: 22),
+                      SizedBox(width: 10),
+                      Text('Load Northern MI Gems (9 Courses)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
@@ -250,6 +269,24 @@ class CoursesScreen extends StatelessWidget {
                     label: const Text('Load Forest Dunes (4 Courses)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF34D399))),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Color(0xFF34D399)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      await courseRepository.seedNorthernMichiganGems();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Loaded Northern MI Gems (Crystal Downs, Kingsley, Bay Harbor, The Bear...)!', style: TextStyle(fontSize: 17)),
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.stars, color: Color(0xFFFBBF24), size: 26),
+                    label: const Text('Load Northern MI Gems (9 Courses)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFFBBF24))),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFFFBBF24)),
                     ),
                   ),
                 ],

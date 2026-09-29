@@ -737,7 +737,366 @@ Gold (67.9/122),420,135,435,335,485,140,375,350,145,385,535,335,130,270,420,390,
         ],
       ),
 
-      // 8. Pebble Beach Golf Links - 18 Holes
+      // 8. Crystal Downs Country Club (Frankfort, MI) - Alister MacKenzie & Perry Maxwell (World Top 15)
+      const CourseImportData(
+        name: 'Crystal Downs Country Club',
+        city: 'Frankfort',
+        state: 'MI',
+        holeCount: 18,
+        pars: [4, 4, 3, 4, 4, 4, 4, 5, 3, 4, 3, 4, 4, 3, 4, 5, 4, 4],
+        strokeIndexes: [3, 5, 17, 7, 9, 13, 11, 1, 15, 6, 16, 4, 8, 18, 14, 2, 12, 10],
+        tees: [
+          TeeBoxInput(
+            name: 'Blue',
+            colorHex: '#2563EB',
+            courseRating: 72.9,
+            slopeRating: 143,
+            totalYardage: 6518,
+            holeYardages: {
+              1: 460, 2: 425, 3: 191, 4: 409, 5: 353, 6: 384, 7: 335, 8: 550, 9: 175,
+              10: 395, 11: 196, 12: 430, 13: 442, 14: 147, 15: 327, 16: 588, 17: 311, 18: 400,
+            },
+          ),
+          TeeBoxInput(
+            name: 'White',
+            colorHex: '#E2E8F0',
+            courseRating: 71.0,
+            slopeRating: 133,
+            totalYardage: 6183,
+            holeYardages: {
+              1: 435, 2: 405, 3: 175, 4: 385, 5: 335, 6: 365, 7: 315, 8: 520, 9: 160,
+              10: 375, 11: 180, 12: 405, 13: 420, 14: 135, 15: 310, 16: 560, 17: 295, 18: 378,
+            },
+          ),
+        ],
+      ),
+
+      // 9. The Kingsley Club (Kingsley, MI) - Mike DeVries (US Top 20 Modern)
+      const CourseImportData(
+        name: 'The Kingsley Club',
+        city: 'Kingsley',
+        state: 'MI',
+        holeCount: 18,
+        pars: [5, 3, 4, 4, 3, 4, 5, 4, 3, 4, 3, 4, 4, 5, 4, 3, 5, 4],
+        strokeIndexes: [4, 6, 2, 18, 12, 14, 8, 16, 10, 11, 13, 3, 17, 7, 1, 9, 15, 5],
+        tees: [
+          TeeBoxInput(
+            name: 'Gold',
+            colorHex: '#EAB308',
+            courseRating: 74.8,
+            slopeRating: 148,
+            totalYardage: 7005,
+            holeYardages: {
+              1: 602, 2: 161, 3: 426, 4: 470, 5: 222, 6: 396, 7: 569, 8: 360, 9: 165,
+              10: 446, 11: 180, 12: 455, 13: 292, 14: 605, 15: 465, 16: 225, 17: 544, 18: 422,
+            },
+          ),
+          TeeBoxInput(
+            name: 'Blue',
+            colorHex: '#2563EB',
+            courseRating: 71.5,
+            slopeRating: 137,
+            totalYardage: 6309,
+            holeYardages: {
+              1: 535, 2: 145, 3: 385, 4: 420, 5: 200, 6: 360, 7: 515, 8: 330, 9: 150,
+              10: 405, 11: 160, 12: 410, 13: 265, 14: 555, 15: 415, 16: 205, 17: 495, 18: 374,
+            },
+          ),
+        ],
+      ),
+
+      // 10. Bay Harbor Golf Club - Links/Quarry (Bay Harbor, MI) - Arthur Hills (US Top 100 Public)
+      const CourseImportData(
+        name: 'Bay Harbor Golf Club (Links/Quarry)',
+        city: 'Bay Harbor',
+        state: 'MI',
+        holeCount: 18,
+        pars: [4, 4, 4, 3, 4, 4, 5, 3, 5, 4, 3, 5, 4, 5, 4, 4, 3, 4],
+        strokeIndexes: [5, 1, 9, 17, 13, 11, 7, 15, 3, 12, 18, 2, 8, 4, 14, 6, 16, 10],
+        tees: [
+          TeeBoxInput(
+            name: 'Black',
+            colorHex: '#1A1A1A',
+            courseRating: 73.9,
+            slopeRating: 146,
+            totalYardage: 6845,
+            holeYardages: {
+              1: 442, 2: 434, 3: 379, 4: 178, 5: 337, 6: 421, 7: 502, 8: 223, 9: 509,
+              10: 359, 11: 206, 12: 578, 13: 438, 14: 507, 15: 341, 16: 414, 17: 199, 18: 392,
+            },
+          ),
+          TeeBoxInput(
+            name: 'Blue',
+            colorHex: '#2563EB',
+            courseRating: 72.0,
+            slopeRating: 139,
+            totalYardage: 6437,
+            holeYardages: {
+              1: 415, 2: 410, 3: 355, 4: 165, 5: 315, 6: 395, 7: 480, 8: 205, 9: 485,
+              10: 340, 11: 190, 12: 545, 13: 410, 14: 480, 15: 320, 16: 390, 17: 180, 18: 367,
+            },
+          ),
+          TeeBoxInput(
+            name: 'White',
+            colorHex: '#E2E8F0',
+            courseRating: 69.9,
+            slopeRating: 133,
+            totalYardage: 6005,
+            holeYardages: {
+              1: 385, 2: 380, 3: 330, 4: 150, 5: 290, 6: 365, 7: 450, 8: 185, 9: 455,
+              10: 315, 11: 175, 12: 510, 13: 380, 14: 450, 15: 295, 16: 360, 17: 165, 18: 340,
+            },
+          ),
+        ],
+      ),
+
+      // 11. Grand Traverse Resort - The Bear (Acme, MI) - Jack Nicklaus
+      const CourseImportData(
+        name: 'Grand Traverse Resort (The Bear)',
+        city: 'Acme',
+        state: 'MI',
+        holeCount: 18,
+        pars: [4, 4, 5, 3, 4, 5, 4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 3, 4],
+        strokeIndexes: [11, 5, 9, 15, 1, 17, 3, 7, 13, 2, 8, 4, 18, 16, 12, 6, 14, 10],
+        tees: [
+          TeeBoxInput(
+            name: 'Black',
+            colorHex: '#1A1A1A',
+            courseRating: 76.1,
+            slopeRating: 150,
+            totalYardage: 7078,
+            holeYardages: {
+              1: 435, 2: 421, 3: 545, 4: 167, 5: 465, 6: 543, 7: 451, 8: 430, 9: 220,
+              10: 505, 11: 421, 12: 413, 13: 167, 14: 390, 15: 543, 16: 451, 17: 220, 18: 467,
+            },
+          ),
+          TeeBoxInput(
+            name: 'Blue',
+            colorHex: '#2563EB',
+            courseRating: 73.3,
+            slopeRating: 147,
+            totalYardage: 6601,
+            holeYardages: {
+              1: 364, 2: 407, 3: 528, 4: 151, 5: 376, 6: 532, 7: 364, 8: 386, 9: 168,
+              10: 393, 11: 451, 12: 528, 13: 194, 14: 413, 15: 532, 16: 423, 17: 386, 18: 181,
+            },
+          ),
+          TeeBoxInput(
+            name: 'White',
+            colorHex: '#E2E8F0',
+            courseRating: 71.1,
+            slopeRating: 139,
+            totalYardage: 6122,
+            holeYardages: {
+              1: 340, 2: 390, 3: 472, 4: 135, 5: 376, 6: 471, 7: 364, 8: 351, 9: 142,
+              10: 446, 11: 364, 12: 355, 13: 134, 14: 347, 15: 494, 16: 367, 17: 188, 18: 386,
+            },
+          ),
+        ],
+      ),
+
+      // 12. Belvedere Golf Club (Charlevoix, MI) - William Watson (1925)
+      const CourseImportData(
+        name: 'Belvedere Golf Club',
+        city: 'Charlevoix',
+        state: 'MI',
+        holeCount: 18,
+        pars: [4, 4, 4, 3, 5, 4, 4, 3, 5, 5, 4, 4, 4, 3, 5, 4, 3, 4],
+        strokeIndexes: [11, 3, 5, 13, 1, 15, 7, 17, 9, 8, 12, 4, 10, 16, 2, 14, 18, 6],
+        tees: [
+          TeeBoxInput(
+            name: 'Watson',
+            colorHex: '#1A1A1A',
+            courseRating: 73.8,
+            slopeRating: 136,
+            totalYardage: 6950,
+            holeYardages: {
+              1: 370, 2: 442, 3: 433, 4: 227, 5: 537, 6: 380, 7: 460, 8: 160, 9: 480,
+              10: 527, 11: 390, 12: 423, 13: 413, 14: 198, 15: 466, 16: 342, 17: 180, 18: 456,
+            },
+          ),
+          TeeBoxInput(
+            name: 'Blue',
+            colorHex: '#2563EB',
+            courseRating: 71.4,
+            slopeRating: 130,
+            totalYardage: 6410,
+            holeYardages: {
+              1: 350, 2: 415, 3: 405, 4: 200, 5: 505, 6: 355, 7: 430, 8: 145, 9: 450,
+              10: 495, 11: 365, 12: 395, 13: 385, 14: 175, 15: 435, 16: 315, 17: 160, 18: 425,
+            },
+          ),
+          TeeBoxInput(
+            name: 'White',
+            colorHex: '#E2E8F0',
+            courseRating: 69.5,
+            slopeRating: 125,
+            totalYardage: 6012,
+            holeYardages: {
+              1: 330, 2: 390, 3: 380, 4: 180, 5: 475, 6: 335, 7: 400, 8: 130, 9: 425,
+              10: 465, 11: 340, 12: 370, 13: 360, 14: 155, 15: 405, 16: 295, 17: 145, 18: 395,
+            },
+          ),
+        ],
+      ),
+
+      // 13. Boyne Highlands - The Heather (Harbor Springs, MI) - Robert Trent Jones Sr.
+      const CourseImportData(
+        name: 'Boyne Highlands (The Heather)',
+        city: 'Harbor Springs',
+        state: 'MI',
+        holeCount: 18,
+        pars: [4, 4, 4, 3, 5, 3, 4, 4, 5, 4, 5, 3, 4, 4, 5, 3, 4, 4],
+        strokeIndexes: [15, 5, 13, 11, 1, 17, 7, 3, 9, 6, 18, 16, 8, 10, 2, 14, 12, 4],
+        tees: [
+          TeeBoxInput(
+            name: 'Brown',
+            colorHex: '#78350F',
+            courseRating: 75.4,
+            slopeRating: 147,
+            totalYardage: 7143,
+            holeYardages: {
+              1: 383, 2: 397, 3: 403, 4: 202, 5: 560, 6: 161, 7: 406, 8: 450, 9: 617,
+              10: 416, 11: 550, 12: 174, 13: 419, 14: 418, 15: 506, 16: 196, 17: 403, 18: 482,
+            },
+          ),
+          TeeBoxInput(
+            name: 'Purple',
+            colorHex: '#7C3AED',
+            courseRating: 72.5,
+            slopeRating: 137,
+            totalYardage: 6554,
+            holeYardages: {
+              1: 355, 2: 370, 3: 375, 4: 180, 5: 525, 6: 145, 7: 375, 8: 415, 9: 575,
+              10: 385, 11: 515, 12: 155, 13: 385, 14: 385, 15: 475, 16: 175, 17: 370, 18: 445,
+            },
+          ),
+          TeeBoxInput(
+            name: 'White',
+            colorHex: '#E2E8F0',
+            courseRating: 69.9,
+            slopeRating: 130,
+            totalYardage: 6036,
+            holeYardages: {
+              1: 330, 2: 345, 3: 350, 4: 160, 5: 490, 6: 130, 7: 345, 8: 385, 9: 535,
+              10: 355, 11: 480, 12: 140, 13: 355, 14: 355, 15: 440, 16: 155, 17: 340, 18: 410,
+            },
+          ),
+        ],
+      ),
+
+      // 14. The Club at LochenHeath (Williamsburg, MI) - Steve Smyers
+      const CourseImportData(
+        name: 'The Club at LochenHeath',
+        city: 'Williamsburg',
+        state: 'MI',
+        holeCount: 18,
+        pars: [4, 5, 3, 4, 4, 4, 5, 3, 4, 5, 3, 4, 4, 4, 3, 4, 4, 5],
+        strokeIndexes: [9, 5, 13, 11, 3, 15, 1, 17, 7, 6, 18, 14, 12, 2, 16, 8, 4, 10],
+        tees: [
+          TeeBoxInput(
+            name: 'Black',
+            colorHex: '#1A1A1A',
+            courseRating: 75.8,
+            slopeRating: 144,
+            totalYardage: 7232,
+            holeYardages: {
+              1: 440, 2: 526, 3: 226, 4: 459, 5: 458, 6: 307, 7: 574, 8: 181, 9: 379,
+              10: 559, 11: 248, 12: 314, 13: 459, 14: 469, 15: 167, 16: 442, 17: 491, 18: 533,
+            },
+          ),
+          TeeBoxInput(
+            name: 'Blue',
+            colorHex: '#2563EB',
+            courseRating: 73.2,
+            slopeRating: 139,
+            totalYardage: 6701,
+            holeYardages: {
+              1: 410, 2: 495, 3: 205, 4: 425, 5: 425, 6: 285, 7: 535, 8: 165, 9: 350,
+              10: 520, 11: 225, 12: 290, 13: 425, 14: 435, 15: 150, 16: 410, 17: 455, 18: 495,
+            },
+          ),
+          TeeBoxInput(
+            name: 'White',
+            colorHex: '#E2E8F0',
+            courseRating: 69.8,
+            slopeRating: 131,
+            totalYardage: 5935,
+            holeYardages: {
+              1: 365, 2: 445, 3: 175, 4: 380, 5: 380, 6: 250, 7: 480, 8: 140, 9: 310,
+              10: 465, 11: 195, 12: 255, 13: 380, 14: 390, 15: 130, 16: 365, 17: 405, 18: 440,
+            },
+          ),
+        ],
+      ),
+
+      // 15. Treetops Resort - Signature Course (Gaylord, MI) - Rick Smith
+      const CourseImportData(
+        name: 'Treetops Resort (Signature)',
+        city: 'Gaylord',
+        state: 'MI',
+        holeCount: 18,
+        pars: [4, 4, 3, 4, 5, 4, 3, 4, 4, 4, 3, 4, 4, 4, 5, 4, 3, 4],
+        strokeIndexes: [7, 3, 17, 1, 13, 9, 15, 11, 5, 8, 16, 2, 12, 10, 4, 6, 18, 14],
+        tees: [
+          TeeBoxInput(
+            name: 'Blue',
+            colorHex: '#2563EB',
+            courseRating: 72.6,
+            slopeRating: 136,
+            totalYardage: 6653,
+            holeYardages: {
+              1: 390, 2: 435, 3: 180, 4: 440, 5: 515, 6: 415, 7: 175, 8: 380, 9: 420,
+              10: 410, 11: 190, 12: 445, 13: 375, 14: 395, 15: 560, 16: 425, 17: 165, 18: 420,
+            },
+          ),
+          TeeBoxInput(
+            name: 'White',
+            colorHex: '#E2E8F0',
+            courseRating: 70.8,
+            slopeRating: 135,
+            totalYardage: 6188,
+            holeYardages: {
+              1: 360, 2: 405, 3: 160, 4: 410, 5: 480, 6: 385, 7: 155, 8: 350, 9: 390,
+              10: 380, 11: 170, 12: 415, 13: 350, 14: 365, 15: 525, 16: 395, 17: 145, 18: 390,
+            },
+          ),
+        ],
+      ),
+
+      // 16. Treetops Resort - Threetops (Gaylord, MI) - Rick Smith (9 Holes Par 27)
+      const CourseImportData(
+        name: 'Treetops Resort (Threetops)',
+        city: 'Gaylord',
+        state: 'MI',
+        holeCount: 9,
+        pars: [3, 3, 3, 3, 3, 3, 3, 3, 3],
+        strokeIndexes: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+        tees: [
+          TeeBoxInput(
+            name: 'Championship',
+            colorHex: '#1A1A1A',
+            courseRating: 27.0,
+            slopeRating: 95,
+            totalYardage: 1425,
+            holeYardages: {
+              1: 147, 2: 161, 3: 219, 4: 169, 5: 148, 6: 172, 7: 143, 8: 145, 9: 139,
+            },
+          ),
+          TeeBoxInput(
+            name: 'Regular',
+            colorHex: '#10B981',
+            courseRating: 27.0,
+            slopeRating: 90,
+            totalYardage: 1180,
+            holeYardages: {
+              1: 120, 2: 135, 3: 175, 4: 135, 5: 125, 6: 140, 7: 130, 8: 120, 9: 115,
+            },
+          ),
+        ],
+      ),
+
+      // 17. Pebble Beach Golf Links - 18 Holes
       const CourseImportData(
         name: 'Pebble Beach Golf Links',
         city: 'Pebble Beach',

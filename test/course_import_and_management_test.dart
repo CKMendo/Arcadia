@@ -263,6 +263,32 @@ White (70.1/126),385,365,155,490,355,390,140,370,480,380,150,500,395,365,145,375
       expect(loopRed.totalPar, equals(70));
       expect(bootlegger.holeCount, equals(10));
       expect(bootlegger.totalPar, equals(30));
+
+      // Northern Michigan World-Class Gems
+      final crystal = presets.firstWhere((p) => p.name.contains('Crystal Downs'));
+      final kingsley = presets.firstWhere((p) => p.name.contains('Kingsley'));
+      final bayHarbor = presets.firstWhere((p) => p.name.contains('Bay Harbor'));
+      final bear = presets.firstWhere((p) => p.name.contains('The Bear'));
+      final belvedere = presets.firstWhere((p) => p.name.contains('Belvedere'));
+      final heather = presets.firstWhere((p) => p.name.contains('The Heather'));
+      final lochen = presets.firstWhere((p) => p.name.contains('LochenHeath'));
+      final treetopSig = presets.firstWhere((p) => p.name.contains('Treetops Resort (Signature)'));
+      final threetops = presets.firstWhere((p) => p.name.contains('Threetops'));
+
+      expect(crystal.totalPar, equals(70));
+      expect(crystal.holeCount, equals(18));
+      expect(kingsley.totalPar, equals(71));
+      expect(kingsley.holeCount, equals(18));
+      expect(bayHarbor.totalPar, equals(72));
+      expect(bayHarbor.holeCount, equals(18));
+      expect(bear.totalPar, equals(72));
+      expect(bear.holeCount, equals(18));
+      expect(belvedere.totalPar, equals(72));
+      expect(heather.totalPar, equals(72));
+      expect(lochen.totalPar, equals(72));
+      expect(treetopSig.totalPar, equals(70));
+      expect(threetops.totalPar, equals(27));
+      expect(threetops.holeCount, equals(9));
     });
 
     test('seedArcadiaBluffsTemplates loads 3 courses and seedForestDunesTemplates loads 4 courses', () async {
@@ -284,6 +310,34 @@ White (70.1/126),385,365,155,490,355,390,140,370,480,380,150,500,395,365,145,375
         'Forest Dunes (The Loop - Red)',
         'Forest Dunes (The Bootlegger)',
       ]));
+    });
+
+    test('seedNorthernMichiganGems loads 9 premier regional world-class courses', () async {
+      await repo.seedNorthernMichiganGems();
+      final gems = await repo.getAllCourses();
+      expect(gems.length, equals(9));
+
+      final names = gems.map((c) => c.name).toSet();
+      expect(names, containsAll([
+        'Crystal Downs Country Club',
+        'The Kingsley Club',
+        'Bay Harbor Golf Club (Links/Quarry)',
+        'Grand Traverse Resort (The Bear)',
+        'Belvedere Golf Club',
+        'Boyne Highlands (The Heather)',
+        'The Club at LochenHeath',
+        'Treetops Resort (Signature)',
+        'Treetops Resort (Threetops)',
+      ]));
+
+      final crystalCourse = gems.firstWhere((c) => c.name.contains('Crystal Downs'));
+      final crystalDetails = await repo.getCourseDetails(crystalCourse.id);
+      expect(crystalDetails, isNotNull);
+      expect(crystalDetails!.holes.length, equals(18));
+      expect(crystalDetails.teeBoxes.length, equals(2));
+      expect(crystalDetails.teeBoxes.first.teeBox.name, equals('Blue'));
+      expect(crystalDetails.teeBoxes.first.holeYardages[1], equals(460));
+      expect(crystalDetails.teeBoxes.first.holeYardages[8], equals(550));
     });
   });
 }
