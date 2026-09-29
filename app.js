@@ -76,14 +76,33 @@ function setupRefresh() {
 
 function setupTabs() {
   const tabButtons = document.querySelectorAll('.tab-btn');
+
+  function activateTab(tabId) {
+    if (!['standings', 'roster', 'pairings', 'ledger', 'rules'].includes(tabId)) return;
+    currentTab = tabId;
+    tabButtons.forEach(b => {
+      if (b.getAttribute('data-tab') === currentTab) {
+        b.classList.add('active');
+        b.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      } else {
+        b.classList.remove('active');
+      }
+    });
+    renderTabContent();
+  }
+
   tabButtons.forEach(btn => {
     btn.addEventListener('click', () => {
-      tabButtons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentTab = btn.getAttribute('data-tab');
-      renderTabContent();
+      const tab = btn.getAttribute('data-tab');
+      window.location.hash = tab;
+      activateTab(tab);
     });
   });
+
+  const hash = window.location.hash.replace('#', '');
+  if (hash && ['standings', 'roster', 'pairings', 'ledger', 'rules'].includes(hash)) {
+    activateTab(hash);
+  }
 }
 
 function renderAll() {
@@ -177,14 +196,26 @@ function renderRosterTab(container) {
   const roster = (tournamentData.tournament && tournamentData.tournament.roster) || [];
   const standings = tournamentData.standings || [];
 
+  const isRound1Finished = tournamentData.isRound1Finished === true ||
+    standings.some(s => (s.roundsPlayed || 0) > 0);
+
   const players = roster.map((p, idx) => {
     const stand = standings.find(s => s.playerId === p.id) || {};
     const hcp = typeof p.handicapIndex === 'number' ? p.handicapIndex : (stand.handicapIndex ?? 10.0);
     const bluffsHcp = p.courseHcpBluffs ?? Math.round(hcp * (137 / 113) + (73.5 - 72.0));
     const southHcp = p.courseHcpSouth ?? Math.round(hcp * (134 / 113) + (72.8 - 72.0));
     const rank = p.rank ?? stand.rank ?? (idx + 1);
-    const isCaptain = rank <= 4;
-    const seed = p.seed ?? stand.seed ?? (isCaptain ? `Seed #${rank} Captain` : `Draft Pool #${rank}`);
+    const isCaptain = isRound1Finished && (p.isCaptain ?? (rank <= 4));
+    let seed = 'TBD';
+    if (isRound1Finished) {
+      if (p.seed && p.seed !== 'TBD') {
+        seed = p.seed;
+      } else if (stand.seed && stand.seed !== 'TBD') {
+        seed = stand.seed;
+      } else {
+        seed = isCaptain ? `Seed #${rank} Captain` : `Draft Pool #${rank}`;
+      }
+    }
     const nameParts = p.name ? p.name.split(' ') : ['Golfer'];
     const initials = p.initials || nameParts.map(n => n[0]).join('').substring(0, 2).toUpperCase();
 
@@ -207,6 +238,7 @@ function renderRosterTab(container) {
   });
 
   const filteredPlayers = players.filter(p => {
+    if (!isRound1Finished) return true;
     if (rosterFilter === 'captains') return p.isCaptain;
     if (rosterFilter === 'pool') return !p.isCaptain;
     return true;
@@ -233,11 +265,13 @@ function renderRosterTab(container) {
         </div>
         <div class="stat-pill">
           <span class="stat-pill-label">CAPTAIN SEEDS</span>
-          <span class="stat-pill-val">Top 4 (#1–#4)</span>
+          <span class="stat-pill-val ${!isRound1Finished ? 'tbd-val' : ''}">${isRound1Finished ? 'Top 4 (#1–#4)' : 'TBD'}</span>
+          ${!isRound1Finished ? '<span class="stat-pill-hint">Determined After Round 1</span>' : ''}
         </div>
         <div class="stat-pill">
           <span class="stat-pill-label">DRAFT POOL</span>
-          <span class="stat-pill-val">Seeds #5–#8</span>
+          <span class="stat-pill-val ${!isRound1Finished ? 'tbd-val' : ''}">${isRound1Finished ? 'Seeds #5–#8' : 'TBD'}</span>
+          ${!isRound1Finished ? '<span class="stat-pill-hint">Determined After Round 1</span>' : ''}
         </div>
         <div class="stat-pill">
           <span class="stat-pill-label">FIELD AVG HCP</span>
@@ -248,14 +282,18 @@ function renderRosterTab(container) {
       <!-- FILTER TABS (All / Captains / Draft Pool) -->
       <div class="roster-filters" role="group" aria-label="Roster Filters">
         <button class="filter-chip ${rosterFilter === 'all' ? 'active' : ''}" onclick="setRosterFilter('all')" type="button">
-          All Players (8)
+          All Players (${players.length})
         </button>
-        <button class="filter-chip ${rosterFilter === 'captains' ? 'active' : ''}" onclick="setRosterFilter('captains')" type="button">
-          👑 Captain Seeds (4)
-        </button>
-        <button class="filter-chip ${rosterFilter === 'pool' ? 'active' : ''}" onclick="setRosterFilter('pool')" type="button">
-          🎯 Draft Pool (4)
-        </button>
+        ${isRound1Finished ? `
+          <button class="filter-chip ${rosterFilter === 'captains' ? 'active' : ''}" onclick="setRosterFilter('captains')" type="button">
+            👑 Captain Seeds (4)
+          </button>
+          <button class="filter-chip ${rosterFilter === 'pool' ? 'active' : ''}" onclick="setRosterFilter('pool')" type="button">
+            🎯 Draft Pool (4)
+          </button>
+        ` : `
+          <span class="filter-tbd-note">⏳ Captain seeds (#1–#4) &amp; draft pool (#5–#8) assigned after Round 1</span>
+        `}
       </div>
     </div>
 
@@ -265,7 +303,9 @@ function renderRosterTab(container) {
 
   filteredPlayers.forEach(p => {
     const isCaptain = p.isCaptain;
-    const badgeClass = isCaptain ? 'captain-badge' : 'pool-badge';
+    const isTbd = p.seed === 'TBD' || !isRound1Finished;
+    const badgeClass = isTbd ? 'tbd-badge' : (isCaptain ? 'captain-badge' : 'pool-badge');
+    const badgeText = isTbd ? 'Seed: TBD' : p.seed;
     const teeColor = (p.tee || 'Blue').toLowerCase().includes('blue') ? '#1e88e5' : '#e0e0e0';
     const cleanPhone = (p.phone || '').replace(/[^0-9]/g, '');
 
@@ -282,7 +322,7 @@ function renderRosterTab(container) {
               <h3 class="player-full-name">${p.name}</h3>
               <span class="nickname-badge">"${p.nickname}"</span>
             </div>
-            <div class="seed-badge ${badgeClass}">${p.seed}</div>
+            <div class="seed-badge ${badgeClass}">${badgeText}</div>
           </div>
         </div>
 
@@ -349,6 +389,8 @@ function renderRosterTab(container) {
 // -------------------------------------------------------------
 function renderStandingsTab(container) {
   const standings = tournamentData.standings || [];
+  const isRound1Finished = tournamentData.isRound1Finished === true ||
+    standings.some(s => (s.roundsPlayed || 0) > 0);
 
   let html = `
     <div class="section-header">
@@ -357,6 +399,12 @@ function renderStandingsTab(container) {
         <p class="section-sub">Click any player to inspect hole-by-hole scorecards, handicap strokes & team point contribution.</p>
       </div>
     </div>
+
+    ${!isRound1Finished ? `
+      <div class="standings-notice-card">
+        ⛳ <strong>Pre-Tournament Standings:</strong> Official Captain seeds (#1–#4) and Draft Pool positions (#5–#8) are determined by Round 1 scores at Arcadia Bluffs.
+      </div>
+    ` : ''}
 
     <div class="table-card">
       <table class="standings-table">
@@ -374,19 +422,21 @@ function renderStandingsTab(container) {
         <tbody>
   `;
 
-  standings.forEach(player => {
-    const isLeader = player.rank === 1;
+  standings.forEach((player, idx) => {
+    const isLeader = isRound1Finished && player.rank === 1;
     const rankClass = isLeader ? 'rank-1' : 'rank-other';
     const rowClass = isLeader ? 'clickable-row leader-row' : 'clickable-row';
+    const seedDisplay = isRound1Finished ? (player.seed || `Seed #${player.rank}`) : 'TBD';
+    const rankDisplay = isRound1Finished ? player.rank : (idx + 1);
 
     html += `
       <tr class="${rowClass}" onclick="openPlayerModal('${player.playerId}')">
         <td>
           <div class="player-cell">
-            <span class="rank-badge ${rankClass}">${player.rank}</span>
+            <span class="rank-badge ${rankClass}">${rankDisplay}</span>
             <div>
               <div class="player-name-link">${player.name}</div>
-              <span class="player-seed-tag">${player.seed}</span>
+              <span class="player-seed-tag ${!isRound1Finished ? 'tbd-tag' : ''}">${seedDisplay}</span>
             </div>
           </div>
         </td>
@@ -395,7 +445,7 @@ function renderStandingsTab(container) {
         <td><strong style="color: var(--cyan);">${player.birdies}</strong></td>
         <td>${player.grossAvg.toFixed(1)}</td>
         <td>${player.netAvg.toFixed(1)}</td>
-        <td><span style="font-weight: 700; color: ${player.rank <= 4 ? 'var(--gold-light)' : 'var(--text-muted)'};">${player.seed}</span></td>
+        <td><span style="font-weight: 700; color: ${isRound1Finished && player.rank <= 4 ? 'var(--gold-light)' : 'var(--text-muted)'};">${seedDisplay}</span></td>
       </tr>
     `;
   });
@@ -729,8 +779,15 @@ function openPlayerModal(playerId) {
   const bluffsHcp = rPlayer.courseHcpBluffs ?? Math.round(hcp * (137 / 113) + (73.5 - 72.0));
   const southHcp = rPlayer.courseHcpSouth ?? Math.round(hcp * (134 / 113) + (72.8 - 72.0));
   const rank = sPlayer.rank ?? rPlayer.rank ?? 1;
-  const isCaptain = rank <= 4;
-  const seed = sPlayer.seed ?? rPlayer.seed ?? (isCaptain ? `Seed #${rank} Captain` : `Draft Pool #${rank}`);
+  const isRound1Finished = tournamentData.isRound1Finished === true ||
+    ((tournamentData.standings || []).some(s => (s.roundsPlayed || 0) > 0));
+  const isCaptain = isRound1Finished && (rank <= 4);
+  let seed = 'Seed: TBD';
+  if (isRound1Finished) {
+    seed = (sPlayer.seed && sPlayer.seed !== 'TBD') ? sPlayer.seed :
+           ((rPlayer.seed && rPlayer.seed !== 'TBD') ? rPlayer.seed :
+           (isCaptain ? `Seed #${rank} Captain` : `Draft Pool #${rank}`));
+  }
   const tee = rPlayer.tee || sPlayer.tee || 'Blue';
   const phone = rPlayer.phone || sPlayer.phone || '';
   const cleanPhone = phone.replace(/[^0-9]/g, '');
