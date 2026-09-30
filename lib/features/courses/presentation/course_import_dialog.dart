@@ -1,6 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../../shared/services/app_settings_service.dart';
+import '../../../shared/services/gemini_ocr_service.dart';
 import '../../../shared/theme/app_colors.dart';
+import '../../rounds/import/presentation/gemini_key_config_dialog.dart';
 import '../repository/course_repository.dart';
 import '../services/course_import_service.dart';
 
@@ -42,6 +47,8 @@ class _CourseImportDialogState extends State<CourseImportDialog> with SingleTick
   CourseImportData? _previewData;
   String? _parseError;
   bool _isImporting = false;
+  bool _isScanningScorecard = false;
+  final ImagePicker _imagePicker = ImagePicker();
 
   final List<CourseImportData> _presets = CourseImportService.getBuiltInPresets();
   int _selectedPresetIndex = 0;
@@ -535,6 +542,48 @@ class _CourseImportDialogState extends State<CourseImportDialog> with SingleTick
               ),
             ],
           ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _isScanningScorecard
+                      ? null
+                      : () => _pickAndScanCourseScorecard(ImageSource.camera),
+                  icon: _isScanningScorecard
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.cyanLight),
+                        )
+                      : const Icon(Icons.camera_alt, size: 18),
+                  label: const Text('Scan Scorecard (Camera)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.cyanLight,
+                    side: BorderSide(color: AppColors.lakeCyan.withValues(alpha: 0.6)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _isScanningScorecard
+                      ? null
+                      : () => _pickAndScanCourseScorecard(ImageSource.gallery),
+                  icon: const Icon(Icons.photo_library, size: 18),
+                  label: const Text('Scan from Photos', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.duneSand,
+                    side: BorderSide(color: AppColors.duneSand.withValues(alpha: 0.4)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+            ],
+          ),
           if (_isPromptExpanded) ...[
             const SizedBox(height: 12),
             Container(
@@ -557,6 +606,72 @@ class _CourseImportDialogState extends State<CourseImportDialog> with SingleTick
         ],
       ),
     );
+  }
+
+  Future<void> _pickAndScanCourseScorecard(ImageSource source) async {
+    final hasKey = await AppSettingsService.hasAnyGeminiApiKey();
+    if (!hasKey) {
+      if (!mounted) return;
+      final configured = await GeminiKeyConfigDialog.show(context);
+      if (configured != true) return;
+    }
+
+    try {
+      final image = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 92,
+      );
+      if (image == null) return;
+
+      setState(() {
+        _isScanningScorecard = true;
+      });
+
+      final parsed = await GeminiOcrService.analyzeCourseScorecard(
+        image.path,
+        defaultCourseName: _promptCourseController.text.trim().isNotEmpty
+            ? _promptCourseController.text.trim()
+            : null,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _previewData = parsed;
+        _jsonController.text = const JsonEncoder.withIndent('  ').convert(parsed.toJson());
+        _parseError = null;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF0F3826),
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Color(0xFF34D399), size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('✅ Scorecard scanned with Gemini 3.8/3.7: ${parsed.name} (${parsed.holeCount} holes)!'),
+              ),
+            ],
+          ),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red.shade900,
+          content: Text('Scorecard scan failed: $e'),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isScanningScorecard = false;
+        });
+      }
+    }
   }
 
   Widget _buildJsonTab() {

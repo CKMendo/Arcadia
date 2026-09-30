@@ -47,7 +47,7 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
       try {
         final clip = await Clipboard.getData(Clipboard.kTextPlain);
         final text = clip?.text?.trim();
-        if (text != null && text.startsWith('AIzaSy') && text.length > 20) {
+        if (text != null && (text.startsWith('AIzaSy') || text.startsWith('AQ.')) && text.length > 20) {
           clipKey = text;
         }
       } catch (_) {}

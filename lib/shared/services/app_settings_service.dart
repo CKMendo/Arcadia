@@ -1,7 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'credentials_backup_service.dart';
+import 'gemini_ocr_service.dart';
 
 class AppSettingsService {
   static const String _keyGeminiApiKey = CredentialsBackupService.keyGeminiApiKey;
@@ -176,58 +176,13 @@ class AppSettingsService {
     return defaultTinyUrl;
   }
 
-  /// Tests a Gemini API key by making a lightweight ping to a specified model
-  /// (defaulting to Gemini 3.8 Flash, or specified model such as Gemini 3.7 Flash).
+  /// Tests a Gemini API key using the centralized GeminiOcrService
+  /// (Gemini 3.8 Flash primary, Gemini 3.7 Flash backup, Gemini 3.6 fallback).
   static Future<bool> validateGeminiApiKey(
     String apiKey, {
-    String model = 'gemini-2.0-flash',
+    String? model,
   }) async {
-    final trimmedKey = apiKey.trim();
-    if (trimmedKey.isEmpty) return false;
-
-    final modelsToTry = [
-      'gemini-2.0-flash',
-      'gemini-1.5-flash',
-      'gemini-2.5-flash',
-      model,
-      'gemini-3.8-flash',
-      'gemini-3.7-flash',
-    ];
-    for (final m in modelsToTry) {
-      try {
-        final url = Uri.parse(
-          'https://generativelanguage.googleapis.com/v1beta/models/$m:generateContent?key=$trimmedKey',
-        );
-        final payload = {
-          'contents': [
-            {
-              'parts': [
-                {'text': 'Ping'}
-              ]
-            }
-          ]
-        };
-        final response = await http
-            .post(
-              url,
-              headers: {'Content-Type': 'application/json'},
-              body: jsonEncode(payload),
-            )
-            .timeout(const Duration(seconds: 10));
-
-        if (response.statusCode == 200) {
-          return true;
-        }
-        // A 503 or 429 indicates Google Cloud authenticated the API key and project,
-        // but the specific model cluster is momentarily saturated.
-        if (response.statusCode == 503 || response.statusCode == 429) {
-          return true;
-        }
-      } catch (e) {
-        debugPrint('Gemini key validation attempt on $m failed: $e');
-      }
-    }
-    return false;
+    return GeminiOcrService.validateApiKey(apiKey);
   }
 
   static const String _keyGitHubToken = CredentialsBackupService.keyGitHubToken;

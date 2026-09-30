@@ -17,6 +17,8 @@ import 'package:arcadia/features/tournaments/repository/tournament_repository.da
 import 'package:arcadia/features/rounds/import/presentation/gemini_key_config_dialog.dart';
 import 'package:arcadia/features/trip/presentation/edit_website_links_dialog.dart';
 import 'package:arcadia/shared/services/app_settings_service.dart';
+import 'package:arcadia/shared/services/gemini_ocr_service.dart';
+import 'package:arcadia/features/rounds/import/services/gemini_round_scorecard_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -314,6 +316,17 @@ Neal P. 5 3 5 6 4 4 7 4 4 42
       expect(find.text('Save Links'), findsOneWidget);
       expect(find.text('https://custom-site.com'), findsOneWidget);
       expect(find.text('https://tinyurl.com/custom123'), findsOneWidget);
+    });
+
+    test('GeminiOcrService centrally configures Gemini 3.8 primary and 3.7 backup without 2.5', () {
+      expect(GeminiOcrService.primaryModel, 'gemini-3.8-flash');
+      expect(GeminiOcrService.backupModel, 'gemini-3.7-flash');
+      expect(GeminiOcrService.fallbackModel, 'gemini-3.6-flash');
+
+      // Scoring service delegates directly to centralized GeminiOcrService
+      expect(GeminiRoundScorecardService.primaryModel, GeminiOcrService.primaryModel);
+      expect(GeminiRoundScorecardService.fallbackModel, GeminiOcrService.backupModel);
+      expect(GeminiRoundScorecardService.emergencyModel, GeminiOcrService.fallbackModel);
     });
   });
 }
