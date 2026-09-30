@@ -62,6 +62,7 @@ class _ArcadiaShellState extends State<ArcadiaShell> {
         playerRepository: widget.playerRepository,
         roundRepository: widget.roundRepository,
         tripScheduleRepository: _tripScheduleRepository,
+        tournamentRepository: widget.tournamentRepository,
       ),
       PlayersScreen(playerRepository: widget.playerRepository),
       RulesScreen(playerRepository: widget.playerRepository),

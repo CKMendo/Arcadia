@@ -3,6 +3,7 @@ import '../../../database/app_database.dart';
 import '../../../shared/theme/app_colors.dart';
 import '../../players/repository/player_repository.dart';
 import '../../rounds/repository/round_repository.dart';
+import '../../tournaments/repository/tournament_repository.dart';
 import '../models/course_models.dart';
 import '../repository/course_repository.dart';
 import '../repository/trip_schedule_repository.dart';
@@ -15,6 +16,7 @@ class CoursesScreen extends StatelessWidget {
   final PlayerRepository? playerRepository;
   final TripScheduleRepository? tripScheduleRepository;
   final RoundRepository? roundRepository;
+  final TournamentRepository? tournamentRepository;
   final int initialTabIndex;
 
   const CoursesScreen({
@@ -23,6 +25,7 @@ class CoursesScreen extends StatelessWidget {
     this.playerRepository,
     this.tripScheduleRepository,
     this.roundRepository,
+    this.tournamentRepository,
     this.initialTabIndex = 0,
   });
 
@@ -65,6 +68,51 @@ class CoursesScreen extends StatelessWidget {
                   _openCourseImportDialog(context);
                 } else if (val == 'add_course') {
                   _openCourseEditor(context);
+                } else if (val == 'unlock_pairings') {
+                  final tripRepo = tripScheduleRepository ?? TripScheduleRepository();
+                  final isFinalized = await tripRepo.isScheduleFinalized();
+                  if (!isFinalized) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Pairings are not currently finalized.')),
+                      );
+                    }
+                  } else {
+                    if (context.mounted) {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Undo Finalized Pairings?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                          content: const Text(
+                            'Unlocking will reopen the schedule so you can choose different pairings or edit rounds and tee times.',
+                            style: TextStyle(fontSize: 16, height: 1.35),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text('Cancel', style: TextStyle(fontSize: 16)),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD97706)),
+                              child: const Text('Unlock Pairings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm == true) {
+                        await tripRepo.unlockSchedule();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              backgroundColor: Color(0xFF78350F),
+                              content: Text('🔓 Pairings unlocked. You can now adjust or re-generate pairings.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            ),
+                          );
+                        }
+                      }
+                    }
+                  }
                 } else if (val == 'arcadia_templates') {
                   await courseRepository.seedArcadiaBluffsTemplates();
                   if (context.mounted) {
@@ -95,6 +143,16 @@ class CoursesScreen extends StatelessWidget {
                 }
               },
               itemBuilder: (ctx) => [
+                const PopupMenuItem(
+                  value: 'unlock_pairings',
+                  child: Row(
+                    children: [
+                      Icon(Icons.lock_open, color: AppColors.duneSand, size: 22),
+                      SizedBox(width: 10),
+                      Text('Undo / Unlock Finalized Pairings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
                 const PopupMenuItem(
                   value: 'import_course',
                   child: Row(
@@ -157,6 +215,7 @@ class CoursesScreen extends StatelessWidget {
               playerRepository: playerRepository ?? PlayerRepository(AppDatabase()),
               tripScheduleRepository: tripScheduleRepository ?? TripScheduleRepository(),
               roundRepository: roundRepository ?? RoundRepository(AppDatabase()),
+              tournamentRepository: tournamentRepository,
             ),
 
             // Tab 2: Courses & Tees Editor

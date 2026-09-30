@@ -395,15 +395,70 @@ class TournamentPairingsEngine {
         ? bestAssignments[_random.nextInt(bestAssignments.length)]
         : bestAssignments.first;
 
-    final t1P1 = playerList[chosen.f1Pairs[0][0]];
-    final t1P2 = playerList[chosen.f1Pairs[0][1]];
-    final t2P1 = playerList[chosen.f1Pairs[1][0]];
-    final t2P2 = playerList[chosen.f1Pairs[1][1]];
+    var f1Pairs = chosen.f1Pairs;
+    var f2Pairs = chosen.f2Pairs;
 
-    final t3P1 = playerList[chosen.f2Pairs[0][0]];
-    final t3P2 = playerList[chosen.f2Pairs[0][1]];
-    final t4P1 = playerList[chosen.f2Pairs[1][0]];
-    final t4P2 = playerList[chosen.f2Pairs[1][1]];
+    // Randomize which foursome is Group 1 vs Group 2
+    if (_random.nextBool()) {
+      final tmp = f1Pairs;
+      f1Pairs = f2Pairs;
+      f2Pairs = tmp;
+    }
+
+    // Inside Foursome 1, randomize which team is Team A vs Team B
+    var f1tA = f1Pairs[0];
+    var f1tB = f1Pairs[1];
+    if (_random.nextBool()) {
+      f1tA = f1Pairs[1];
+      f1tB = f1Pairs[0];
+    }
+
+    // Inside Foursome 2, randomize which team is Team A vs Team B
+    var f2tA = f2Pairs[0];
+    var f2tB = f2Pairs[1];
+    if (_random.nextBool()) {
+      f2tA = f2Pairs[1];
+      f2tB = f2Pairs[0];
+    }
+
+    // Inside each team, randomize player 1 vs player 2 so no single golfer is always lead-off
+    var t1P1Idx = f1tA[0];
+    var t1P2Idx = f1tA[1];
+    if (_random.nextBool()) {
+      t1P1Idx = f1tA[1];
+      t1P2Idx = f1tA[0];
+    }
+
+    var t2P1Idx = f1tB[0];
+    var t2P2Idx = f1tB[1];
+    if (_random.nextBool()) {
+      t2P1Idx = f1tB[1];
+      t2P2Idx = f1tB[0];
+    }
+
+    var t3P1Idx = f2tA[0];
+    var t3P2Idx = f2tA[1];
+    if (_random.nextBool()) {
+      t3P1Idx = f2tA[1];
+      t3P2Idx = f2tA[0];
+    }
+
+    var t4P1Idx = f2tB[0];
+    var t4P2Idx = f2tB[1];
+    if (_random.nextBool()) {
+      t4P1Idx = f2tB[1];
+      t4P2Idx = f2tB[0];
+    }
+
+    final t1P1 = playerList[t1P1Idx];
+    final t1P2 = playerList[t1P2Idx];
+    final t2P1 = playerList[t2P1Idx];
+    final t2P2 = playerList[t2P2Idx];
+
+    final t3P1 = playerList[t3P1Idx];
+    final t3P2 = playerList[t3P2Idx];
+    final t4P1 = playerList[t4P1Idx];
+    final t4P2 = playerList[t4P2Idx];
 
     return RoundPairingPlan(
       roundNumber: roundNumber,
@@ -439,6 +494,180 @@ class TournamentPairingsEngine {
         ),
       ),
     );
+  }
+
+  /// Mathematically proven 7-round 1-factorization & balanced 4-some schedule for 8 players.
+  /// Properties:
+  /// - Exact 1-factorization of K_8: every pair partners EXACTLY once across 7 rounds (0 partner repeats).
+  /// - Opponent balance: every pair plays as opponents in the same 4-some EXACTLY 2 times.
+  /// - Total co-foursome count: every pair shares a 4-some EXACTLY 3 times (1 partner + 2 opponent).
+  /// - All 14 foursomes across the 7 rounds are distinct.
+  static const List<List<List<List<int>>>> optimal7RoundSchedule = [
+    // Round 1
+    [
+      [[0, 4], [1, 6]],
+      [[2, 5], [3, 7]],
+    ],
+    // Round 2
+    [
+      [[0, 5], [1, 7]],
+      [[2, 4], [3, 6]],
+    ],
+    // Round 3
+    [
+      [[0, 6], [2, 7]],
+      [[1, 4], [3, 5]],
+    ],
+    // Round 4
+    [
+      [[0, 1], [2, 3]],
+      [[4, 6], [5, 7]],
+    ],
+    // Round 5
+    [
+      [[0, 7], [3, 4]],
+      [[1, 5], [2, 6]],
+    ],
+    // Round 6
+    [
+      [[0, 3], [5, 6]],
+      [[1, 2], [4, 7]],
+    ],
+    // Round 7
+    [
+      [[0, 2], [4, 5]],
+      [[1, 3], [6, 7]],
+    ],
+  ];
+
+  /// Generates a globally optimal, non-repeating tournament pairing schedule across ALL scheduled rounds.
+  /// When 8 players are present with up to 7 rounds, utilizes the exact 1-factorization schedule
+  /// embedded with a randomized player isomorphism, randomized group order (Group 1 vs Group 2),
+  /// randomized team order (Team 1 vs Team 2), and randomized player order within teams.
+  /// This guarantees:
+  /// 1. ZERO partner repeats across rounds.
+  /// 2. Optimal opponent variety in every 4-some.
+  /// 3. Completely random lead-off players so no single golfer (e.g. Akash Bhakta) is ever player 1 every round.
+  List<RoundPairingPlan> generateFullSchedulePairings({
+    required List<Player> players,
+    required List<ScheduledRoundInfo> scheduledRounds,
+    List<ActiveRoundSession> pastCompletedRounds = const [],
+  }) {
+    if (players.length < 8) {
+      return scheduledRounds.map((r) => _generateFallback(players, r.roundNumber)).toList();
+    }
+
+    final nonFinalRounds = scheduledRounds.where((r) => r.pairingPlan?.isFinalRound != true).toList();
+
+    // For 8 players with up to 7 non-final rounds and no past completed rounds,
+    // apply the mathematically perfect 1-factorization schedule
+    if (players.length >= 8 && pastCompletedRounds.isEmpty && nonFinalRounds.length <= 7) {
+      // Map 8 players randomly to vertices 0..7
+      final shuffledPlayers = List<Player>.from(players.take(8))..shuffle(_random);
+      final templateRoundIndices = List.generate(7, (i) => i)..shuffle(_random);
+      final plans = <int, RoundPairingPlan>{};
+
+      var templateIdx = 0;
+      for (final sRound in scheduledRounds) {
+        if (sRound.pairingPlan?.isFinalRound == true) {
+          plans[sRound.roundNumber] = generateFinalRoundPairings(
+            players: players,
+            pastRounds: pastCompletedRounds,
+            roundNumber: sRound.roundNumber,
+          );
+        } else {
+          final tRnd = optimal7RoundSchedule[templateRoundIndices[templateIdx++]];
+
+          var gA = tRnd[0];
+          var gB = tRnd[1];
+          // Randomize which foursome is Group 1 (early tee time) vs Group 2 (late tee time)
+          if (_random.nextBool()) {
+            final tmp = gA;
+            gA = gB;
+            gB = tmp;
+          }
+
+          TwoManTeamPlan buildTeam(String teamId, List<int> pairIndices) {
+            var p1Idx = pairIndices[0];
+            var p2Idx = pairIndices[1];
+            // Randomize player 1 vs player 2 inside each 2-man team
+            if (_random.nextBool()) {
+              p1Idx = pairIndices[1];
+              p2Idx = pairIndices[0];
+            }
+            final p1 = shuffledPlayers[p1Idx];
+            final p2 = shuffledPlayers[p2Idx];
+            return TwoManTeamPlan(
+              teamId: teamId,
+              teamName: '${_shortName(p1)} & ${_shortName(p2)}',
+              player1: p1,
+              player2: p2,
+            );
+          }
+
+          var g1t1 = gA[0];
+          var g1t2 = gA[1];
+          if (_random.nextBool()) {
+            g1t1 = gA[1];
+            g1t2 = gA[0];
+          }
+
+          var g2t1 = gB[0];
+          var g2t2 = gB[1];
+          if (_random.nextBool()) {
+            g2t1 = gB[1];
+            g2t2 = gB[0];
+          }
+
+          plans[sRound.roundNumber] = RoundPairingPlan(
+            roundNumber: sRound.roundNumber,
+            isFinalRound: false,
+            foursome1: FoursomePlan(
+              groupNumber: 1,
+              teamA: buildTeam('T1', g1t1),
+              teamB: buildTeam('T2', g1t2),
+            ),
+            foursome2: FoursomePlan(
+              groupNumber: 2,
+              teamA: buildTeam('T3', g2t1),
+              teamB: buildTeam('T4', g2t2),
+            ),
+          );
+        }
+      }
+
+      return scheduledRounds.map((r) => plans[r.roundNumber]!).toList();
+    }
+
+    // Dynamic greedy optimization for general case
+    final plans = <RoundPairingPlan>[];
+    final priorInfos = <ScheduledRoundInfo>[];
+
+    for (final sRound in scheduledRounds) {
+      RoundPairingPlan plan;
+      if (sRound.pairingPlan?.isFinalRound == true && players.length >= 8) {
+        plan = generateFinalRoundPairings(
+          players: players,
+          pastRounds: pastCompletedRounds,
+          roundNumber: sRound.roundNumber,
+        );
+      } else {
+        plan = generateSchedulePairingsForDate(
+          players: players,
+          roundDate: sRound.date,
+          roundNumber: sRound.roundNumber,
+          pastCompletedRounds: pastCompletedRounds,
+          priorScheduledRounds: List.from(priorInfos),
+        );
+      }
+      plans.add(plan);
+      priorInfos.add(ScheduledRoundInfo(
+        roundNumber: sRound.roundNumber,
+        date: sRound.date,
+        pairingPlan: plan,
+      ));
+    }
+    return plans;
   }
 
   /// Draft-based pairings for the Final Championship Round.

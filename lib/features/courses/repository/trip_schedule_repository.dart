@@ -333,51 +333,54 @@ class TripScheduleRepository {
     await setScheduleFinalized(false);
   }
 
-  /// Finalizes the trip schedule and generates AI pairings for ALL scheduled rounds.
-  /// Examines past team pairings and avoids pairing people who have been paired up before.
-  Future<void> finalizeScheduleAndGeneratePairings({
+  /// Generates optimal AI pairings for ALL scheduled rounds without locking/finalizing the schedule.
+  /// Allows organizers to review, shuffle, and choose pairings prior to locking them in.
+  Future<List<ScheduledRound>> generatePairingsForSchedule({
     required List<Player> players,
     required List<ActiveRoundSession> pastSavedRounds,
   }) async {
     final schedule = await getSchedule();
-    if (schedule.isEmpty || players.length < 4) return;
+    if (schedule.isEmpty || players.length < 4) return schedule;
+
+    final infos = schedule
+        .map((r) => ScheduledRoundInfo(
+              roundNumber: r.roundNumber,
+              date: r.date,
+              pairingPlan: r.pairingPlan,
+            ))
+        .toList();
+
+    final plans = _pairingsEngine.generateFullSchedulePairings(
+      players: players,
+      scheduledRounds: infos,
+      pastCompletedRounds: pastSavedRounds,
+    );
 
     final updatedSchedule = <ScheduledRound>[];
-    final priorScheduledInfos = <ScheduledRoundInfo>[];
-
-    for (final round in schedule) {
-      RoundPairingPlan plan;
-      if (round.isFinalRound && players.length >= 8) {
-        // Championship final round pairings
-        plan = _pairingsEngine.generateFinalRoundPairings(
-          players: players,
-          pastRounds: pastSavedRounds,
-          roundNumber: round.roundNumber,
-        );
-      } else {
-        // Look at all team pairings prior to that date and avoid pairing people who've been paired up before
-        plan = _pairingsEngine.generateSchedulePairingsForDate(
-          players: players,
-          roundDate: round.date,
-          roundNumber: round.roundNumber,
-          pastCompletedRounds: pastSavedRounds,
-          priorScheduledRounds: List.from(priorScheduledInfos),
-        );
-      }
-
-      final updatedRound = round.copyWith(pairingPlan: plan);
-      updatedSchedule.add(updatedRound);
-      priorScheduledInfos.add(
-        ScheduledRoundInfo(
-          roundNumber: round.roundNumber,
-          date: round.date,
-          pairingPlan: plan,
-        ),
-      );
+    for (var i = 0; i < schedule.length; i++) {
+      final plan = i < plans.length ? plans[i] : null;
+      updatedSchedule.add(schedule[i].copyWith(pairingPlan: plan));
     }
 
     await saveSchedule(updatedSchedule);
+    return updatedSchedule;
+  }
+
+  /// Locks and finalizes the current schedule with its chosen pairings.
+  Future<void> finalizeScheduleAndLock() async {
     await setScheduleFinalized(true);
+  }
+
+  /// Finalizes the trip schedule and generates AI pairings for ALL scheduled rounds.
+  Future<void> finalizeScheduleAndGeneratePairings({
+    required List<Player> players,
+    required List<ActiveRoundSession> pastSavedRounds,
+  }) async {
+    await generatePairingsForSchedule(
+      players: players,
+      pastSavedRounds: pastSavedRounds,
+    );
+    await finalizeScheduleAndLock();
   }
 
   /// Synchronizes scheduled round pairing plans with updated player names, nicknames, and handicaps.

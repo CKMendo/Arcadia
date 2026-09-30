@@ -157,5 +157,120 @@ void main() {
       await repo.unlockSchedule();
       expect(await repo.isScheduleFinalized(), isFalse);
     });
+
+    test('generateFullSchedulePairings produces optimal 1-factorization across 7 rounds with ZERO partner repeats and rotating lead golfer', () {
+      final engine = TournamentPairingsEngine();
+      final fullRounds = List.generate(
+        7,
+        (i) => ScheduledRoundInfo(
+          roundNumber: i + 1,
+          date: DateTime(2026, 6, 10 + i),
+        ),
+      );
+
+      final pairedPlans = engine.generateFullSchedulePairings(
+        players: testPlayers,
+        scheduledRounds: fullRounds,
+      );
+
+      expect(pairedPlans.length, 7);
+
+      final partnerMatrix = <String, Set<String>>{};
+      for (final p in testPlayers) {
+        partnerMatrix[p.id] = <String>{};
+      }
+
+      final foursomeSets = <Set<String>>[];
+      final leadOffGolfers = <String>[];
+
+      for (int r = 0; r < pairedPlans.length; r++) {
+        final plan = pairedPlans[r];
+        leadOffGolfers.add(plan.foursome1.teamA.player1.id);
+
+        final f1Players = <String>{
+          plan.foursome1.teamA.player1.id,
+          plan.foursome1.teamA.player2.id,
+          plan.foursome1.teamB.player1.id,
+          plan.foursome1.teamB.player2.id,
+        };
+        final f2Players = <String>{
+          plan.foursome2.teamA.player1.id,
+          plan.foursome2.teamA.player2.id,
+          plan.foursome2.teamB.player1.id,
+          plan.foursome2.teamB.player2.id,
+        };
+
+        expect(f1Players.length, 4);
+        expect(f2Players.length, 4);
+        expect(f1Players.intersection(f2Players).isEmpty, isTrue);
+
+        // Record partners
+        final teams = [
+          plan.foursome1.teamA,
+          plan.foursome1.teamB,
+          plan.foursome2.teamA,
+          plan.foursome2.teamB,
+        ];
+        for (final t in teams) {
+          final p1 = t.player1.id;
+          final p2 = t.player2.id;
+          expect(partnerMatrix[p1]!.contains(p2), isFalse, reason: 'Duplicate partner in round ${r + 1}');
+          expect(partnerMatrix[p2]!.contains(p1), isFalse, reason: 'Duplicate partner in round ${r + 1}');
+          partnerMatrix[p1]!.add(p2);
+          partnerMatrix[p2]!.add(p1);
+        }
+
+        foursomeSets.add(f1Players);
+        foursomeSets.add(f2Players);
+      }
+
+      // Check all 8 players have partnered with all 7 other players exactly once
+      for (final p in testPlayers) {
+        expect(partnerMatrix[p.id]!.length, 7);
+      }
+
+      // Check lead-off golfer is NOT the same golfer in every round
+      final uniqueLeadGolfers = leadOffGolfers.toSet();
+      expect(uniqueLeadGolfers.length, greaterThan(1), reason: 'Lead golfer should vary across rounds');
+
+      // Check all 14 foursomes are distinct
+      for (int i = 0; i < foursomeSets.length; i++) {
+        for (int j = i + 1; j < foursomeSets.length; j++) {
+          final isSame = foursomeSets[i].length == foursomeSets[j].length &&
+              foursomeSets[i].containsAll(foursomeSets[j]);
+          expect(isSame, isFalse, reason: 'Duplicate foursome found between groups');
+        }
+      }
+    });
+
+    test('Choose pairings generates proposed pairings WITHOUT finalizing or locking', () async {
+      final repo = TripScheduleRepository();
+      await repo.seedDefaultArcadiaSchedule([]);
+
+      expect(await repo.isScheduleFinalized(), isFalse);
+
+      // 1. Choose pairings (generates proposed plan, but leaves unlocked)
+      await repo.generatePairingsForSchedule(
+        players: testPlayers,
+        pastSavedRounds: const [],
+      );
+
+      final scheduleWithPairings = await repo.getSchedule();
+      expect(scheduleWithPairings.length, 3);
+      for (final r in scheduleWithPairings) {
+        expect(r.pairingPlan, isNotNull);
+      }
+      // Schedule is NOT yet finalized
+      expect(await repo.isScheduleFinalized(), isFalse);
+
+      // 2. Finalize & lock pairings
+      await repo.finalizeScheduleAndLock();
+      expect(await repo.isScheduleFinalized(), isTrue);
+
+      // 3. Undo / unlock pairings
+      await repo.unlockSchedule();
+      expect(await repo.isScheduleFinalized(), isFalse);
+    });
   });
 }
+

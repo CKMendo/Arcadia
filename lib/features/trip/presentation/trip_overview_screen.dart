@@ -8,6 +8,7 @@ import '../../../database/app_database.dart';
 import '../../../shared/services/app_settings_service.dart';
 import '../../../shared/theme/app_colors.dart';
 import '../../courses/repository/course_repository.dart';
+import '../../courses/repository/trip_schedule_repository.dart';
 import '../../players/repository/player_repository.dart';
 import '../../publish/services/website_publish_service.dart';
 import '../../rounds/import/presentation/gemini_key_config_dialog.dart';
@@ -837,6 +838,30 @@ class TripOverviewScreen extends StatelessWidget {
                   leading: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.lock_reset, color: Color(0xFF34D399), size: 26),
+                  ),
+                  title: const Text(
+                    'Undo / Unlock Finalized Pairings',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  subtitle: const Text(
+                    'Reopen schedule pairings to generate new matchups or edit rounds',
+                    style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.white60),
+                  onTap: () async {
+                    Navigator.of(bottomSheetCtx).pop();
+                    await _showUnlockScheduleDialog(context);
+                  },
+                ),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
                       color: Colors.amber.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -910,6 +935,56 @@ class TripOverviewScreen extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<void> _showUnlockScheduleDialog(BuildContext context) async {
+    final tripRepo = TripScheduleRepository();
+    final isFinalized = await tripRepo.isScheduleFinalized();
+    if (!isFinalized) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Trip schedule pairings are not currently finalized.'),
+          ),
+        );
+      }
+      return;
+    }
+
+    if (!context.mounted) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Undo Finalized Pairings?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        content: const Text(
+          'Unlocking will reopen the tournament schedule so you can choose new pairings or edit rounds and tee times.',
+          style: TextStyle(fontSize: 16, height: 1.35),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(fontSize: 16)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD97706)),
+            child: const Text('Unlock Pairings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await tripRepo.unlockSchedule();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Color(0xFF78350F),
+            content: Text('🔓 Pairings unlocked. You can now re-generate or adjust pairings in Courses & Schedule.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
+        );
+      }
+    }
   }
 
   void _showActiveRoundOptions(BuildContext context, ActiveRoundSession draft) {

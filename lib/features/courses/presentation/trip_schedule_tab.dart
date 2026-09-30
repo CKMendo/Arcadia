@@ -12,11 +12,16 @@ import '../models/scheduled_round.dart';
 import '../repository/course_repository.dart';
 import '../repository/trip_schedule_repository.dart';
 
+import '../../tournaments/repository/tournament_repository.dart';
+import '../../publish/services/website_publish_service.dart';
+import '../../../database/app_database.dart';
+
 class TripScheduleTab extends StatelessWidget {
   final CourseRepository courseRepository;
   final PlayerRepository playerRepository;
   final TripScheduleRepository tripScheduleRepository;
   final RoundRepository roundRepository;
+  final TournamentRepository? tournamentRepository;
 
   const TripScheduleTab({
     super.key,
@@ -24,6 +29,7 @@ class TripScheduleTab extends StatelessWidget {
     required this.playerRepository,
     required this.tripScheduleRepository,
     required this.roundRepository,
+    this.tournamentRepository,
   });
 
   @override
@@ -66,16 +72,17 @@ class TripScheduleTab extends StatelessWidget {
     List<ScheduledRound> schedule,
     bool isFinalized,
   ) {
+    final hasPairings = schedule.any((r) => r.pairingPlan != null);
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isFinalized ? const Color(0xFF0B291E) : const Color(0xFF1F1A08),
-        borderRadius: BorderRadius.circular(14),
+        color: AppColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isFinalized
-              ? const Color(0xFF34D399)
-              : const Color(0xFFF59E0B),
-          width: 1.5,
+          color: isFinalized ? const Color(0xFF10B981) : AppColors.cardBorder,
+          width: isFinalized ? 1.8 : 1.2,
         ),
       ),
       child: Column(
@@ -84,21 +91,27 @@ class TripScheduleTab extends StatelessWidget {
           Row(
             children: [
               Icon(
-                isFinalized ? Icons.check_circle : Icons.schedule,
-                color: isFinalized ? const Color(0xFF34D399) : const Color(0xFFFBBF24),
+                isFinalized ? Icons.check_circle : (hasPairings ? Icons.group_work : Icons.schedule),
+                color: isFinalized
+                    ? const Color(0xFF34D399)
+                    : (hasPairings ? AppColors.lakeCyan : const Color(0xFFFBBF24)),
                 size: 26,
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   isFinalized
-                      ? 'TRIP SCHEDULE FINALIZED (${schedule.length} ROUNDS)'
-                      : 'TRIP SCHEDULE (${schedule.length} ROUND${schedule.length == 1 ? '' : 'S'} ENTERED)',
+                      ? 'TRIP SCHEDULE FINALIZED (${schedule.length} ROUNDS) • LIVE ON SITE'
+                      : (hasPairings
+                          ? 'PAIRINGS CHOSEN (${schedule.length} ROUNDS) • NOT FINALIZED'
+                          : 'TRIP SCHEDULE (${schedule.length} ROUND${schedule.length == 1 ? '' : 'S'} ENTERED)'),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.1,
-                    color: isFinalized ? const Color(0xFF6EE7B7) : const Color(0xFFFDE68A),
+                    color: isFinalized
+                        ? const Color(0xFF6EE7B7)
+                        : (hasPairings ? AppColors.cyanLight : const Color(0xFFFDE68A)),
                   ),
                 ),
               ),
@@ -107,8 +120,10 @@ class TripScheduleTab extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             isFinalized
-                ? 'All rounds, course play, and tee times are confirmed. 2-man teams and foursomes are locked in with zero repeat teammates across prior dates.'
-                : 'Pairings and 2-man teams cannot be finalized until all rounds have been entered on the schedule. Ensure course play and tee times for the entire trip before finalizing.',
+                ? 'All rounds, 2-man teams, and foursomes are locked and published to the website with zero repeat partners. To change pairings or edit rounds, tap "Undo Finalized Pairings" below or in the 3 dots menu.'
+                : (hasPairings
+                    ? 'Optimal pairings generated with zero partner repeats. Review teams on each round card below. Tap "Finalize & Lock Pairings" to publish live to the website, or "Re-Generate / Shuffle Pairings" for another optimal draw.'
+                    : 'Pairings and 2-man teams can be generated once rounds are entered on the schedule. Tap "Choose Pairings" below to generate optimal, non-repeating teams.'),
             style: const TextStyle(
               fontSize: 15,
               height: 1.35,
@@ -121,43 +136,60 @@ class TripScheduleTab extends StatelessWidget {
             spacing: 10,
             runSpacing: 8,
             children: [
-              ElevatedButton.icon(
-                onPressed: () => _openAddEditRoundDialog(context),
-                icon: const Icon(Icons.add, size: 22),
-                label: const Text(
-                  'Add Round to Schedule',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.lakeCyan,
-                  foregroundColor: const Color(0xFF04111D),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-              ),
-              if (!isFinalized && schedule.isNotEmpty)
+              if (!isFinalized)
                 ElevatedButton.icon(
-                  onPressed: () => _finalizeSchedule(context, schedule),
-                  icon: const Icon(Icons.lock_clock, size: 22),
+                  onPressed: () => _openAddEditRoundDialog(context),
+                  icon: const Icon(Icons.add, size: 22),
                   label: const Text(
-                    'Finalize Schedule & Generate Pairings',
+                    'Add Round to Schedule',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.lakeCyan,
+                    foregroundColor: const Color(0xFF04111D),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                 ),
+              if (!isFinalized && schedule.isNotEmpty) ...[
+                ElevatedButton.icon(
+                  onPressed: () => _choosePairings(context, schedule),
+                  icon: Icon(hasPairings ? Icons.shuffle : Icons.auto_awesome, size: 22),
+                  label: Text(
+                    hasPairings ? 'Re-Generate / Shuffle Pairings' : 'Choose Pairings',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: hasPairings ? const Color(0xFF0F384C) : AppColors.lakeCyan,
+                    foregroundColor: hasPairings ? AppColors.cyanLight : const Color(0xFF04111D),
+                    side: hasPairings ? const BorderSide(color: AppColors.lakeCyan, width: 1.5) : BorderSide.none,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                ),
+                if (hasPairings)
+                  ElevatedButton.icon(
+                    onPressed: () => _finalizeAndPublishPairings(context, schedule),
+                    icon: const Icon(Icons.lock, size: 22),
+                    label: const Text(
+                      'Finalize & Lock Pairings',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                  ),
+              ],
               if (isFinalized)
                 OutlinedButton.icon(
                   onPressed: () => _unlockSchedule(context),
                   icon: const Icon(Icons.lock_open, size: 22, color: AppColors.duneSand),
                   label: const Text(
-                    'Unlock Schedule to Edit',
+                    'Undo / Unlock Finalized Pairings',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.duneSand),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.duneSand),
+                    side: const BorderSide(color: AppColors.duneSand, width: 1.5),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                 ),
@@ -426,8 +458,8 @@ class TripScheduleTab extends StatelessWidget {
             const SizedBox(height: 12),
 
             // Pairings & 2-Man Teams Block
-            if (isFinalized && round.pairingPlan != null)
-              _buildFinalizedPairingsBlock(round.pairingPlan!, round)
+            if (round.pairingPlan != null)
+              _buildFinalizedPairingsBlock(round.pairingPlan!, round, isFinalized)
             else
               Container(
                 width: double.infinity,
@@ -437,16 +469,14 @@ class TripScheduleTab extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: AppColors.cardBorder),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
-                    const Icon(Icons.lock_outline, color: Colors.white54, size: 20),
-                    const SizedBox(width: 10),
+                    Icon(Icons.lock_outline, color: Colors.white54, size: 20),
+                    SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        isFinalized
-                            ? 'Pairings will be generated upon finalization.'
-                            : '🔒 Pairings Pending: Enter all rounds on schedule, then tap "Finalize Schedule & Generate Pairings".',
-                        style: const TextStyle(fontSize: 14, color: Colors.white70, fontWeight: FontWeight.w600),
+                        '🔒 Pairings Not Chosen: Tap "Choose Pairings" above to generate balanced 2-man teams with zero repeats.',
+                        style: TextStyle(fontSize: 14, color: Colors.white70, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ],
@@ -461,6 +491,7 @@ class TripScheduleTab extends StatelessWidget {
   Widget _buildFinalizedPairingsBlock(
     RoundPairingPlan plan,
     ScheduledRound round,
+    bool isFinalized,
   ) {
     final isSouth = round.courseName.toLowerCase().contains('south');
 
@@ -469,7 +500,12 @@ class TripScheduleTab extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF0A1624),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.lakeCyan.withValues(alpha: 0.5), width: 1.2),
+        border: Border.all(
+          color: isFinalized
+              ? const Color(0xFF10B981).withValues(alpha: 0.7)
+              : AppColors.lakeCyan.withValues(alpha: 0.5),
+          width: 1.2,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -477,16 +513,22 @@ class TripScheduleTab extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.groups, color: AppColors.lakeCyan, size: 20),
-                  SizedBox(width: 6),
+                  Icon(
+                    isFinalized ? Icons.verified : Icons.groups,
+                    color: isFinalized ? const Color(0xFF34D399) : AppColors.lakeCyan,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 6),
                   Text(
-                    'LOCKED-IN 2-MAN TEAMS & FOURSOMES',
+                    isFinalized
+                        ? 'FINALIZED 2-MAN TEAMS & FOURSOMES'
+                        : 'PROPOSED 2-MAN TEAMS (REVIEW)',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w900,
-                      color: AppColors.cyanLight,
+                      color: isFinalized ? const Color(0xFF6EE7B7) : AppColors.cyanLight,
                       letterSpacing: 1.0,
                     ),
                   ),
@@ -495,13 +537,19 @@ class TripScheduleTab extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0D281E),
+                  color: isFinalized ? const Color(0xFF0D281E) : const Color(0xFF192534),
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0xFF34D399)),
+                  border: Border.all(
+                    color: isFinalized ? const Color(0xFF34D399) : AppColors.lakeCyan,
+                  ),
                 ),
-                child: const Text(
-                  'NON-REPEATING',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF34D399)),
+                child: Text(
+                  isFinalized ? 'LOCKED & PUBLISHED' : 'PENDING FINALIZATION',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: isFinalized ? const Color(0xFF34D399) : AppColors.cyanLight,
+                  ),
                 ),
               ),
             ],
@@ -686,13 +734,13 @@ class TripScheduleTab extends StatelessWidget {
     }
   }
 
-  Future<void> _finalizeSchedule(BuildContext context, List<ScheduledRound> schedule) async {
+  Future<void> _choosePairings(BuildContext context, List<ScheduledRound> schedule) async {
     final players = await playerRepository.getAllPlayers();
     if (players.length < 4) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please add at least 4 players (or all 8) to the roster before finalizing pairings.', style: TextStyle(fontSize: 16)),
+            content: Text('Please add at least 4 players (or all 8) to the roster before choosing pairings.', style: TextStyle(fontSize: 16)),
           ),
         );
       }
@@ -708,7 +756,7 @@ class TripScheduleTab extends StatelessWidget {
       } catch (_) {}
     }
 
-    await tripScheduleRepository.finalizeScheduleAndGeneratePairings(
+    await tripScheduleRepository.generatePairingsForSchedule(
       players: players,
       pastSavedRounds: sessions,
     );
@@ -718,8 +766,68 @@ class TripScheduleTab extends StatelessWidget {
         const SnackBar(
           backgroundColor: Color(0xFF0F382A),
           content: Text(
-            '✅ Trip schedule finalized! Non-repeating 2-man teams and foursomes locked in for all rounds.',
+            '✅ Pairings generated! Review the 2-man teams and foursomes below. Tap "Finalize & Lock Pairings" when ready to publish to website.',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _finalizeAndPublishPairings(BuildContext context, List<ScheduledRound> schedule) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Finalize & Publish Pairings?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        content: Text(
+          'This will lock in the 2-man teams and foursomes across all ${schedule.length} scheduled rounds and publish them to the official tournament website.\n\nYou can undo or unlock pairings anytime via the 3 dots menu at the top or below.',
+          style: const TextStyle(fontSize: 16, height: 1.35),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(fontSize: 16)),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(ctx, true),
+            icon: const Icon(Icons.verified, size: 20),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+            label: const Text('Finalize & Publish', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    await tripScheduleRepository.finalizeScheduleAndLock();
+
+    // Publish to website
+    try {
+      final tRepo = tournamentRepository ?? TournamentRepository(AppDatabase());
+      await WebsitePublishService.publishTournament(
+        tournamentRepo: tRepo,
+        courseRepo: courseRepository,
+        playerRepo: playerRepository,
+        roundRepo: roundRepository,
+      );
+    } catch (_) {}
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFF0F382A),
+          content: Row(
+            children: [
+              Icon(Icons.check_circle, color: Color(0xFF34D399), size: 22),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  '🔒 Pairings finalized & published live to the tournament website!',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -730,10 +838,10 @@ class TripScheduleTab extends StatelessWidget {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Unlock Trip Schedule?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        title: const Text('Undo Finalized Pairings?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         content: const Text(
-          'Unlocking will allow you to edit dates, courses, and tee times. You will re-finalize pairings once your changes are complete.',
-          style: TextStyle(fontSize: 16),
+          'Unlocking will reopen the schedule so you can choose different pairings or edit rounds and tee times. Pairings will not be locked until you finalize them again.',
+          style: TextStyle(fontSize: 16, height: 1.35),
         ),
         actions: [
           TextButton(
@@ -743,7 +851,7 @@ class TripScheduleTab extends StatelessWidget {
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.duneSand),
-            child: const Text('Unlock', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+            child: const Text('Unlock Pairings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
           ),
         ],
       ),
@@ -751,6 +859,14 @@ class TripScheduleTab extends StatelessWidget {
 
     if (confirm == true) {
       await tripScheduleRepository.unlockSchedule();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Color(0xFF0F2B20),
+            content: Text('Pairings unlocked! You can now choose new pairings or edit rounds.', style: TextStyle(fontSize: 16)),
+          ),
+        );
+      }
     }
   }
 
