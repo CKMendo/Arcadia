@@ -935,6 +935,35 @@ class _RoundScorecardImportScreenState
                     }
                   },
                 ),
+              ] else ...[
+                IconButton(
+                  icon: const Icon(Icons.paste, size: 20, color: AppColors.duneSand),
+                  tooltip: 'Paste Key from Clipboard',
+                  onPressed: () async {
+                    final data = await Clipboard.getData(Clipboard.kTextPlain);
+                    final text = data?.text?.trim();
+                    if (text != null && text.isNotEmpty) {
+                      await AppSettingsService.setGeminiPrimaryApiKey(text);
+                      if (context.mounted) {
+                        setState(() {});
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('✅ Pasted and saved Gemini API Key!'),
+                            backgroundColor: Color(0xFF0F382A),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    } else if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Clipboard is empty. Copy your API key first, then tap Paste.'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  },
+                ),
               ],
               const SizedBox(width: 4),
               FilledButton.tonal(

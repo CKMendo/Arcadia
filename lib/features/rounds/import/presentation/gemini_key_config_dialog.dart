@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -24,10 +26,11 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
 
   bool _isLoading = true;
   bool _isValidating = false;
-  bool _obscurePrimary = true;
+  bool _obscurePrimary = false;
   bool _obscureSecondary = true;
   String? _statusMessage;
   bool _isSuccess = false;
+  String? _clipboardCandidate;
 
   @override
   void initState() {
@@ -38,10 +41,23 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
   Future<void> _loadKeys() async {
     final primary = await AppSettingsService.getGeminiPrimaryApiKey();
     final secondary = await AppSettingsService.getGeminiSecondaryApiKey();
+
+    String? clipKey;
+    if (!kIsWeb && Platform.environment['FLUTTER_TEST'] != 'true') {
+      try {
+        final clip = await Clipboard.getData(Clipboard.kTextPlain);
+        final text = clip?.text?.trim();
+        if (text != null && text.startsWith('AIzaSy') && text.length > 20) {
+          clipKey = text;
+        }
+      } catch (_) {}
+    }
+
     if (mounted) {
       setState(() {
         _primaryController.text = primary ?? '';
         _secondaryController.text = secondary ?? '';
+        _clipboardCandidate = clipKey;
         _isLoading = false;
       });
     }
@@ -90,9 +106,11 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
     final primary = _primaryController.text.trim();
     final secondary = _secondaryController.text.trim();
 
+    // 1. Immediately persist entered keys so they are NEVER lost regardless of validation outcome
+    await AppSettingsService.setGeminiPrimaryApiKey(primary.isEmpty ? null : primary);
+    await AppSettingsService.setGeminiSecondaryApiKey(secondary.isEmpty ? null : secondary);
+
     if (primary.isEmpty && secondary.isEmpty) {
-      await AppSettingsService.setGeminiPrimaryApiKey(null);
-      await AppSettingsService.setGeminiSecondaryApiKey(null);
       if (mounted) Navigator.of(context).pop(true);
       return;
     }
@@ -100,7 +118,7 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
     if (validate) {
       setState(() {
         _isValidating = true;
-        _statusMessage = 'Validating keys with Google Gemini...';
+        _statusMessage = 'Testing keys with Google Gemini...';
         _isSuccess = false;
       });
 
@@ -126,15 +144,14 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
               : !primaryValid
                   ? 'Primary Key (Gemini 3.8)'
                   : 'Backup Key (Gemini 3.7)';
-          _statusMessage = '$failedDesc could not reach Google API. Ensure API is enabled or choose "Save Anyway".';
+          _statusMessage = '⚠️ Keys saved! Note: $failedDesc could not reach Google API. Ensure API is enabled in Google Cloud Console.';
           _isSuccess = false;
         });
+        await Future.delayed(const Duration(milliseconds: 1400));
+        if (mounted) Navigator.of(context).pop(true);
         return;
       }
     }
-
-    await AppSettingsService.setGeminiPrimaryApiKey(primary.isEmpty ? null : primary);
-    await AppSettingsService.setGeminiSecondaryApiKey(secondary.isEmpty ? null : secondary);
 
     if (mounted) {
       setState(() {
@@ -210,7 +227,37 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    if (_clipboardCandidate != null && _primaryController.text != _clipboardCandidate) ...[
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            _primaryController.text = _clipboardCandidate!;
+                            _obscurePrimary = false;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: AppColors.lakeCyan.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.lakeCyan),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.paste, color: AppColors.lakeCyan, size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Gemini key found in clipboard (${_clipboardCandidate!.substring(0, 10)}...). Tap to paste into Primary.',
+                                  style: const TextStyle(color: AppColors.cyanLight, fontSize: 12, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
 
                     // Primary Key Field
                     const Row(
