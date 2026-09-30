@@ -325,16 +325,19 @@ class TripScheduleTab extends StatelessWidget {
                     ),
                     if (isShort) ...[
                       const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF3B154D),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: const Color(0xFFA855F7)),
-                        ),
-                        child: Text(
-                          '⛳ SHORT COURSE (${round.holeCount}H) • BIRDIE POT ONLY',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFF3E8FF)),
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3B154D),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFA855F7)),
+                          ),
+                          child: Text(
+                            '⛳ SHORT COURSE (${round.holeCount}H) • BIRDIE POT ONLY',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFF3E8FF)),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ),
                     ] else if (round.isFinalRound) ...[
@@ -483,7 +486,7 @@ class TripScheduleTab extends StatelessWidget {
 
             // Pairings & 2-Man Teams Block
             if (round.isShortCourse)
-              _buildShortCourseCardBlock(round)
+              _buildShortCourseCardBlock(round, isFinalized)
             else if (round.pairingPlan != null)
               _buildFinalizedPairingsBlock(round.pairingPlan!, round, isFinalized)
             else
@@ -514,10 +517,13 @@ class TripScheduleTab extends StatelessWidget {
     );
   }
 
-  Widget _buildShortCourseCardBlock(ScheduledRound round) {
+  Widget _buildShortCourseCardBlock(ScheduledRound round, bool isFinalized) {
+    final isSouth = round.courseName.toLowerCase().contains('south');
+    final plan = round.pairingPlan;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFF130A1C),
         borderRadius: BorderRadius.circular(12),
@@ -526,27 +532,227 @@ class TripScheduleTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.stars, color: Color(0xFFA855F7), size: 22),
-              SizedBox(width: 8),
-              Expanded(
+              const Icon(Icons.groups_3, color: Color(0xFFA855F7), size: 18),
+              const SizedBox(width: 6),
+              const Expanded(
                 child: Text(
-                  'BIRDIE POT GAME ONLY • NOT IN STABLEFORD',
+                  'ALL 8 PLAYERS IN ONE GROUP • BIRDIE POT',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w900,
                     color: Color(0xFFE9D5FF),
-                    letterSpacing: 0.9,
+                    letterSpacing: 0.5,
                   ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3B154D),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFFA855F7)),
+                ),
+                child: const Text(
+                  'TEE NOTATION',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFF3E8FF)),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
+
+          // Explanatory Note
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E1033),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFA855F7).withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.info_outline, color: Color(0xFFA855F7), size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Most likely, all 8 players will play together at one time as a big group. For golf course tee sheet notation, players are grouped into the two balanced foursomes below (2 Lower HC + 2 Higher HC). Excluded from 2-man teams and Stableford standings. All birdies count for the cash Birdie Pot (\$2/birdie)!',
+                    style: const TextStyle(fontSize: 12.5, color: Color(0xFFE9D5FF), height: 1.35),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          if (plan != null) ...[
+            _buildShortCourseFoursomeGroupRow(
+              groupNum: 1,
+              teeTime: round.teeTimeGroup1,
+              players: plan.foursome1.allPlayers,
+              isSouth: isSouth,
+            ),
+            const SizedBox(height: 10),
+            _buildShortCourseFoursomeGroupRow(
+              groupNum: 2,
+              teeTime: round.teeTimeGroup2,
+              players: plan.foursome2.allPlayers,
+              isSouth: isSouth,
+            ),
+          ] else
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E1033),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.auto_awesome, color: Color(0xFFA855F7), size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Tap "Choose Pairings" above to generate balanced 2 Low HC + 2 High HC tee time notation foursomes.',
+                      style: TextStyle(fontSize: 12, color: Colors.white70),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShortCourseFoursomeGroupRow({
+    required int groupNum,
+    required String teeTime,
+    required List<Player> players,
+    required bool isSouth,
+  }) {
+    // Sort group players by handicap index for clean presentation (Low to High)
+    final sorted = List<Player>.from(players)
+      ..sort((a, b) => a.handicapIndex.compareTo(b.handicapIndex));
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1033),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFA855F7).withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  'GROUP $groupNum • TEE TIME $teeTime',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFFE9D5FF),
+                    letterSpacing: 0.6,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3B154D),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: const Color(0xFFA855F7).withValues(alpha: 0.6)),
+                ),
+                child: const Text(
+                  '2 LOW + 2 HIGH HC',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFD8B4FE)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // 4 players in a 2-column layout (no "VS", no 2-man teams)
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    if (sorted.isNotEmpty) _buildCasualPlayerTile(sorted[0], isSouth, isLowHc: true),
+                    if (sorted.length > 2) ...[
+                      const SizedBox(height: 4),
+                      _buildCasualPlayerTile(sorted[2], isSouth, isLowHc: false),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  children: [
+                    if (sorted.length > 1) _buildCasualPlayerTile(sorted[1], isSouth, isLowHc: true),
+                    if (sorted.length > 3) ...[
+                      const SizedBox(height: 4),
+                      _buildCasualPlayerTile(sorted[3], isSouth, isLowHc: false),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCasualPlayerTile(Player player, bool isSouth, {required bool isLowHc}) {
+    final ch = isSouth
+        ? CourseHandicapCalculator.forSouth(player.handicapIndex, player.preferredTee ?? 'White')
+        : CourseHandicapCalculator.forBluffs(player.handicapIndex, player.preferredTee ?? 'White');
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F0818),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: isLowHc
+              ? const Color(0xFFA855F7).withValues(alpha: 0.5)
+              : const Color(0xFFC084FC).withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          PlayerAvatar(
+            name: player.fullName,
+            initials: player.initials,
+            photoPath: player.photoPath,
+            radius: 11,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              player.fullName,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 4),
           Text(
-            'This course has ${round.holeCount} holes (not an 18-hole regulation tournament course). Per tournament rules, it is excluded from 2-man partner pairings and Stableford standings. All 8 golfers play individually, and all birdies made count toward the Birdie Pot game!',
-            style: const TextStyle(fontSize: 14, color: Colors.white70, height: 1.35),
+            'H$ch',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              color: isLowHc ? const Color(0xFF38BDF8) : const Color(0xFFE879F9),
+            ),
           ),
         ],
       ),
@@ -576,31 +782,30 @@ class TripScheduleTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(
-                    isFinalized ? Icons.verified : Icons.groups,
-                    color: isFinalized ? const Color(0xFF34D399) : AppColors.lakeCyan,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    isFinalized
-                        ? 'FINALIZED 2-MAN TEAMS & FOURSOMES'
-                        : 'PROPOSED 2-MAN TEAMS (REVIEW)',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      color: isFinalized ? const Color(0xFF6EE7B7) : AppColors.cyanLight,
-                      letterSpacing: 1.0,
-                    ),
-                  ),
-                ],
+              Icon(
+                isFinalized ? Icons.verified : Icons.groups,
+                color: isFinalized ? const Color(0xFF34D399) : AppColors.lakeCyan,
+                size: 18,
               ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  isFinalized
+                      ? 'FINALIZED 2-MAN TEAMS'
+                      : 'PROPOSED 2-MAN TEAMS',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: isFinalized ? const Color(0xFF6EE7B7) : AppColors.cyanLight,
+                    letterSpacing: 0.6,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
                   color: isFinalized ? const Color(0xFF0D281E) : const Color(0xFF192534),
                   borderRadius: BorderRadius.circular(6),
@@ -608,13 +813,22 @@ class TripScheduleTab extends StatelessWidget {
                     color: isFinalized ? const Color(0xFF34D399) : AppColors.lakeCyan,
                   ),
                 ),
-                child: Text(
-                  isFinalized ? 'LOCKED & PUBLISHED' : 'PENDING FINALIZATION',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: isFinalized ? const Color(0xFF34D399) : AppColors.cyanLight,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isFinalized) ...[
+                      const Icon(Icons.lock, size: 10, color: Color(0xFF34D399)),
+                      const SizedBox(width: 3),
+                    ],
+                    Text(
+                      isFinalized ? 'LOCKED' : 'PENDING',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: isFinalized ? const Color(0xFF34D399) : AppColors.cyanLight,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -661,18 +875,22 @@ class TripScheduleTab extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'GROUP $groupNum • TEE TIME $teeTime',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.duneSand,
-                  letterSpacing: 0.8,
+              Expanded(
+                child: Text(
+                  'GROUP $groupNum • TEE TIME $teeTime',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.duneSand,
+                    letterSpacing: 0.6,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 6),
               const Text(
                 '2-Man Match',
-                style: TextStyle(fontSize: 12, color: Colors.white54, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 11, color: Colors.white54, fontWeight: FontWeight.bold),
               ),
             ],
           ),

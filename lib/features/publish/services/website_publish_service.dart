@@ -454,6 +454,28 @@ class WebsitePublishService {
         final matchingSession = sessions.where((s) => s.roundNumber == round.roundNumber).firstOrNull;
 
         if (round.isShortCourse) {
+          final scGroups = <Map<String, dynamic>>[];
+          if (round.pairingPlan != null) {
+            scGroups.add({
+              'groupNumber': 1,
+              'teeTime': round.teeTimeGroup1.isNotEmpty ? round.teeTimeGroup1 : '9:30 AM',
+              'players': round.pairingPlan!.foursome1.allPlayers.map((p) => {
+                'name': p.fullName,
+                'nickname': p.nickname.isNotEmpty ? p.nickname : p.fullName.split(' ').first,
+                'handicap': p.handicapIndex.round(),
+              }).toList(),
+            });
+            scGroups.add({
+              'groupNumber': 2,
+              'teeTime': round.teeTimeGroup2.isNotEmpty ? round.teeTimeGroup2 : '9:42 AM',
+              'players': round.pairingPlan!.foursome2.allPlayers.map((p) => {
+                'name': p.fullName,
+                'nickname': p.nickname.isNotEmpty ? p.nickname : p.fullName.split(' ').first,
+                'handicap': p.handicapIndex.round(),
+              }).toList(),
+            });
+          }
+
           pairings.add({
             'roundNumber': round.roundNumber,
             'title': 'Round ${round.roundNumber} — ${round.courseName}',
@@ -462,7 +484,7 @@ class WebsitePublishService {
             'format': 'Birdie Pot Only (Short Course)',
             'holeCount': round.holeCount,
             'isShortCourse': true,
-            'groups': [],
+            'groups': scGroups,
           });
         } else if (round.isFinalRound) {
           pairings.add({

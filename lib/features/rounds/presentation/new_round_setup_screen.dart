@@ -223,10 +223,18 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
       _isFinalRound = matchingScheduled.isFinalRound;
 
       if (isShort) {
-        _currentPairingPlan = null;
-        _playerFoursomes.clear();
+        _currentPairingPlan = matchingScheduled.pairingPlan?.withLatestPlayers(_allPlayers);
         _playerTwoManTeams.clear();
         _twoManTeamNames.clear();
+        _playerFoursomes.clear();
+        if (_currentPairingPlan != null) {
+          for (final f in _currentPairingPlan!.foursomes) {
+            for (final p in f.allPlayers) {
+              _playerFoursomes[p.id] = f.groupNumber;
+              _playerTwoManTeams[p.id] = 'none';
+            }
+          }
+        }
       } else if (matchingScheduled.pairingPlan != null) {
         final plan = matchingScheduled.pairingPlan!.withLatestPlayers(_allPlayers);
         _applyPairingPlan(plan);
@@ -237,7 +245,6 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
       final isShort = (_selectedCourseDetails != null && _selectedCourseDetails!.holes.length != 18);
       if (isShort) {
         _currentPairingPlan = null;
-        _playerFoursomes.clear();
         _playerTwoManTeams.clear();
         _twoManTeamNames.clear();
       } else if (_currentPairingPlan == null && _allPlayers.length >= 8 && !_isFinalRound) {
@@ -801,9 +808,25 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        'This course has fewer than 18 regulation holes. Per tournament rules, it is NOT used for 2-man pairings and does NOT count towards Stableford tournament standings.\n\nAll golfers play for the cash Birdie Pot (\$2/birdie per player) — all birdies made are automatically added to the trip pot!',
-                        style: TextStyle(fontSize: 14, color: Color(0xFFF3E8FF), height: 1.45),
+                        'Most likely, all 8 players will play together at one time as a big group. For golf course tee times, players are grouped into the two balanced notation foursomes below (2 Lower HC + 2 Higher HC). Excluded from 2-man teams and Stableford standings. All birdies made count for the cash Birdie Pot (\$2/birdie per player)!',
+                        style: TextStyle(fontSize: 13.5, color: Color(0xFFF3E8FF), height: 1.4),
                       ),
+                      if (_currentPairingPlan != null) ...[
+                        const SizedBox(height: 14),
+                        const Text(
+                          'TEE TIME NOTATION FOURSOMES (2 LOW + 2 HIGH HC):',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.8,
+                            color: Color(0xFFD8B4FE),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildShortCourseFoursomeSetupCard(1, _currentPairingPlan!.foursome1),
+                        const SizedBox(height: 8),
+                        _buildShortCourseFoursomeSetupCard(2, _currentPairingPlan!.foursome2),
+                      ],
                     ],
                   ),
                 ),
@@ -1125,6 +1148,71 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
             ),
           ),
           const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShortCourseFoursomeSetupCard(int groupNumber, FoursomePlan foursome) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF140B22),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFA855F7).withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'GROUP $groupNumber (4 PLAYERS)',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFFE9D5FF),
+                  letterSpacing: 0.6,
+                ),
+              ),
+              const Text(
+                'No 2-Man Teams',
+                style: TextStyle(fontSize: 11, color: Color(0xFFC084FC), fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: foursome.allPlayers.map((p) {
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF26153E),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFFA855F7).withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    PlayerAvatar(name: p.fullName, initials: p.initials, photoPath: p.photoPath, radius: 10),
+                    const SizedBox(width: 6),
+                    Text(
+                      p.fullName,
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'H${p.handicapIndex.round()}',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF38BDF8)),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
         ],
       ),
     );

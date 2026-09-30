@@ -372,11 +372,17 @@ class TripScheduleRepository {
     }
 
     final updatedSchedule = <ScheduledRound>[];
+    var shortCourseIdx = 0;
     for (final round in schedule) {
       if (round.isShortCourse) {
+        final shortPlan = _pairingsEngine.generateShortCourseFoursomes(
+          players: players,
+          roundNumber: round.roundNumber,
+          shortCourseIndex: shortCourseIdx++,
+        );
         updatedSchedule.add(round.copyWith(
-          clearPairingPlan: true,
-          format: 'Birdie Pot Only (Short Course)',
+          pairingPlan: shortPlan,
+          format: 'Casual Play • Birdie Pot Only (${round.holeCount}H)',
         ));
       } else {
         final plan = planMap[round.roundNumber];

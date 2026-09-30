@@ -825,6 +825,122 @@ class TournamentPairingsEngine {
     return parts.first;
   }
 
+  /// Generates balanced tee time notation foursomes for short courses (< 18 holes).
+  /// Rules:
+  /// 1. Short courses are casual play & Birdie Pot only (no 2-man match teams, no Stableford points).
+  /// 2. For golf course tee times/notation, players are grouped into TWO foursomes.
+  /// 3. Each foursome contains an equal number of lower HC and higher HC players (2 Low + 2 High).
+  /// 4. Foursome compositions vary across short courses using [shortCourseIndex].
+  RoundPairingPlan generateShortCourseFoursomes({
+    required List<Player> players,
+    required int roundNumber,
+    int shortCourseIndex = 0,
+  }) {
+    if (players.isEmpty) {
+      return _generateFallback(players, roundNumber, isFinal: false);
+    }
+
+    // Sort players by handicap index ascending
+    final sorted = List<Player>.from(players)
+      ..sort((a, b) => a.handicapIndex.compareTo(b.handicapIndex));
+
+    List<Player> g1 = [];
+    List<Player> g2 = [];
+
+    if (sorted.length == 8) {
+      // 4 Lower HC players (0..3) and 4 Higher HC players (4..7)
+      final l = sorted.sublist(0, 4);
+      final h = sorted.sublist(4, 8);
+
+      // Define 6 distinct balanced variants (each has exactly 2 Low + 2 High in Group 1, and 2 Low + 2 High in Group 2)
+      final variant = shortCourseIndex % 6;
+      switch (variant) {
+        case 0:
+          g1 = [l[0], l[3], h[0], h[3]];
+          g2 = [l[1], l[2], h[1], h[2]];
+          break;
+        case 1:
+          g1 = [l[0], l[2], h[1], h[3]];
+          g2 = [l[1], l[3], h[0], h[2]];
+          break;
+        case 2:
+          g1 = [l[0], l[1], h[1], h[2]];
+          g2 = [l[2], l[3], h[0], h[3]];
+          break;
+        case 3:
+          g1 = [l[1], l[2], h[0], h[3]];
+          g2 = [l[0], l[3], h[1], h[2]];
+          break;
+        case 4:
+          g1 = [l[1], l[3], h[1], h[3]];
+          g2 = [l[0], l[2], h[0], h[2]];
+          break;
+        case 5:
+        default:
+          g1 = [l[2], l[3], h[0], h[2]];
+          g2 = [l[0], l[1], h[1], h[3]];
+          break;
+      }
+    } else {
+      // General balanced split for arbitrary player counts
+      final half = sorted.length ~/ 2;
+      final lows = sorted.sublist(0, half);
+      final highs = sorted.sublist(half);
+      final offset = shortCourseIndex % (lows.isNotEmpty ? lows.length : 1);
+
+      for (var i = 0; i < lows.length; i++) {
+        final shiftedIdx = (i + offset) % lows.length;
+        if (i % 2 == 0) {
+          g1.add(lows[shiftedIdx]);
+        } else {
+          g2.add(lows[shiftedIdx]);
+        }
+      }
+      for (var i = 0; i < highs.length; i++) {
+        final shiftedIdx = (i + offset) % highs.length;
+        if (i % 2 == 0) {
+          g1.add(highs[shiftedIdx]);
+        } else {
+          g2.add(highs[shiftedIdx]);
+        }
+      }
+    }
+
+    final pDefault = sorted.first;
+    final t1 = TwoManTeamPlan(
+      teamId: 'SC_G1_A',
+      teamName: 'Group 1',
+      player1: g1.isNotEmpty ? g1[0] : pDefault,
+      player2: g1.length > 1 ? g1[1] : pDefault,
+    );
+    final t2 = TwoManTeamPlan(
+      teamId: 'SC_G1_B',
+      teamName: 'Group 1',
+      player1: g1.length > 2 ? g1[2] : pDefault,
+      player2: g1.length > 3 ? g1[3] : pDefault,
+    );
+
+    final t3 = TwoManTeamPlan(
+      teamId: 'SC_G2_A',
+      teamName: 'Group 2',
+      player1: g2.isNotEmpty ? g2[0] : pDefault,
+      player2: g2.length > 1 ? g2[1] : pDefault,
+    );
+    final t4 = TwoManTeamPlan(
+      teamId: 'SC_G2_B',
+      teamName: 'Group 2',
+      player1: g2.length > 2 ? g2[2] : pDefault,
+      player2: g2.length > 3 ? g2[3] : pDefault,
+    );
+
+    return RoundPairingPlan(
+      roundNumber: roundNumber,
+      isFinalRound: false,
+      foursome1: FoursomePlan(groupNumber: 1, teamA: t1, teamB: t2),
+      foursome2: FoursomePlan(groupNumber: 2, teamA: t3, teamB: t4),
+    );
+  }
+
   static bool isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }

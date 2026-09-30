@@ -517,12 +517,34 @@ function renderPairingsTab(container) {
               <div class="pairing-meta" style="color: #c084fc;">${round.date} &bull; Birdie Pot Challenge Only (Not Counted in Stableford)</div>
             </div>
           </div>
-          <div style="padding: 24px 20px; text-align: center; color: #e9d5ff;">
-            <div style="font-size: 2.2rem; margin-bottom: 8px;">💰</div>
-            <div style="font-size: 1.15rem; font-weight: 800; color: #fff; margin-bottom: 6px;">Casual Play &bull; Birdie Pot Game Only</div>
-            <p style="max-width: 580px; margin: 0 auto; font-size: 0.92rem; color: #d8b4fe; line-height: 1.55;">
-              Short courses are played for casual fun and the Birdie Pot challenge ($2/birdie per player). Per tournament rules, no 2-man pairings are assigned and points earned do NOT count towards the Stableford tournament standings.
+          <div style="padding: 16px 20px; text-align: left; color: #e9d5ff;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <span style="font-size: 1.3rem;">🏌️‍♂️</span>
+              <strong style="font-size: 1.05rem; color: #fff;">8-Player Big Group Play &bull; Birdie Pot Only</strong>
+            </div>
+            <p style="margin: 0 0 14px 0; font-size: 0.90rem; color: #d8b4fe; line-height: 1.5;">
+              Most likely, all 8 players will play together at one time as a big group. For golf course tee times, players are grouped into the two balanced notation foursomes below (2 Lower HC + 2 Higher HC). Excluded from 2-man teams and Stableford standings. All birdies count for the cash Birdie Pot ($2/birdie per player)!
             </p>
+            ${round.groups && round.groups.length > 0 ? `
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;">
+                ${round.groups.map(g => `
+                  <div style="background: rgba(30, 16, 51, 0.7); border: 1px solid rgba(168, 85, 247, 0.5); border-radius: 10px; padding: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid rgba(168, 85, 247, 0.3); padding-bottom: 6px;">
+                      <strong style="color: #f3e8ff; font-size: 0.88rem;">GROUP ${g.groupNumber} &bull; ⏱ ${g.teeTime}</strong>
+                      <span style="font-size: 0.72rem; color: #d8b4fe; background: rgba(168, 85, 247, 0.3); padding: 2px 6px; border-radius: 4px; font-weight: 800;">2 LOW + 2 HIGH HC</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                      ${g.players ? g.players.map(p => `
+                        <div style="background: rgba(15, 8, 24, 0.8); border: 1px solid rgba(168, 85, 247, 0.25); border-radius: 6px; padding: 6px 8px; display: flex; justify-content: space-between; align-items: center;">
+                          <span style="font-size: 0.85rem; font-weight: 700; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.name}</span>
+                          <span style="font-size: 0.78rem; font-weight: 900; color: #38bdf8; margin-left: 4px;">H${p.handicap}</span>
+                        </div>
+                      `).join('') : ''}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            ` : ''}
           </div>
         </div>
       `;

@@ -305,13 +305,27 @@ void main() {
         pastSavedRounds: const [],
       );
 
-      // Bootlegger (10 holes) must NOT have a pairingPlan and must be formatted for Birdie Pot Only
+      // Bootlegger (10 holes) has balanced 2 Low HC + 2 High HC notation foursomes and is Birdie Pot Only
       final bootlegger = updated.firstWhere((r) => r.courseId == 'c_bootlegger');
       expect(bootlegger.isShortCourse, isTrue);
-      expect(bootlegger.pairingPlan, isNull);
       expect(bootlegger.format, contains('Birdie Pot Only'));
+      expect(bootlegger.pairingPlan, isNotNull);
+      expect(bootlegger.pairingPlan!.foursome1.allPlayers.length, equals(4));
+      expect(bootlegger.pairingPlan!.foursome2.allPlayers.length, equals(4));
 
-      // Original (18 holes) MUST have a pairingPlan
+      // Check handicap balance in short course notation foursome: 2 Low + 2 High
+      final sortedHcs = testPlayers.map((p) => p.handicapIndex).toList()..sort();
+      final medianHc = sortedHcs[3]; // threshold between low and high 4
+      final g1Low = bootlegger.pairingPlan!.foursome1.allPlayers
+          .where((p) => p.handicapIndex <= medianHc)
+          .length;
+      final g1High = bootlegger.pairingPlan!.foursome1.allPlayers
+          .where((p) => p.handicapIndex > medianHc)
+          .length;
+      expect(g1Low, equals(2));
+      expect(g1High, equals(2));
+
+      // Original (18 holes) MUST have a regulation pairingPlan
       final original = updated.firstWhere((r) => r.courseId == 'c_original');
       expect(original.isShortCourse, isFalse);
       expect(original.pairingPlan, isNotNull);
