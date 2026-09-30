@@ -304,6 +304,7 @@ class TripScheduleRepository {
         teeTimeGroup2: '9:42 AM',
         notes: 'Opening Round • Championship Links',
         isFinalRound: false,
+        holeCount: 18,
       ),
       ScheduledRound(
         id: 'sched_r2',
@@ -315,6 +316,7 @@ class TripScheduleRepository {
         teeTimeGroup2: '9:42 AM',
         notes: 'C.B. Macdonald Geometric Classic',
         isFinalRound: false,
+        holeCount: 18,
       ),
       ScheduledRound(
         id: 'sched_r3',
@@ -326,6 +328,7 @@ class TripScheduleRepository {
         teeTimeGroup2: '9:42 AM',
         notes: 'Championship Final Round • Top 4 Draft Partners',
         isFinalRound: true,
+        holeCount: 18,
       ),
     ];
 
@@ -333,8 +336,9 @@ class TripScheduleRepository {
     await setScheduleFinalized(false);
   }
 
-  /// Generates optimal AI pairings for ALL scheduled rounds without locking/finalizing the schedule.
-  /// Allows organizers to review, shuffle, and choose pairings prior to locking them in.
+  /// Generates optimal AI pairings for ALL scheduled regulation rounds without locking/finalizing the schedule.
+  /// Rounds on courses with fewer than 18 regulation holes are excluded from 2-man pairings
+  /// and count exclusively toward the Birdie Pot.
   Future<List<ScheduledRound>> generatePairingsForSchedule({
     required List<Player> players,
     required List<ActiveRoundSession> pastSavedRounds,
@@ -342,11 +346,15 @@ class TripScheduleRepository {
     final schedule = await getSchedule();
     if (schedule.isEmpty || players.length < 4) return schedule;
 
-    final infos = schedule
+    // Filter regulation rounds (18 holes) - short courses (<18 holes) are for Birdie Pot only
+    final regulationSchedule = schedule.where((r) => !r.isShortCourse).toList();
+
+    final infos = regulationSchedule
         .map((r) => ScheduledRoundInfo(
               roundNumber: r.roundNumber,
               date: r.date,
               pairingPlan: r.pairingPlan,
+              holeCount: r.holeCount,
             ))
         .toList();
 
@@ -356,10 +364,24 @@ class TripScheduleRepository {
       pastCompletedRounds: pastSavedRounds,
     );
 
+    final planMap = <int, RoundPairingPlan>{};
+    for (var i = 0; i < regulationSchedule.length; i++) {
+      if (i < plans.length) {
+        planMap[regulationSchedule[i].roundNumber] = plans[i];
+      }
+    }
+
     final updatedSchedule = <ScheduledRound>[];
-    for (var i = 0; i < schedule.length; i++) {
-      final plan = i < plans.length ? plans[i] : null;
-      updatedSchedule.add(schedule[i].copyWith(pairingPlan: plan));
+    for (final round in schedule) {
+      if (round.isShortCourse) {
+        updatedSchedule.add(round.copyWith(
+          clearPairingPlan: true,
+          format: 'Birdie Pot Only (Short Course)',
+        ));
+      } else {
+        final plan = planMap[round.roundNumber];
+        updatedSchedule.add(round.copyWith(pairingPlan: plan));
+      }
     }
 
     await saveSchedule(updatedSchedule);

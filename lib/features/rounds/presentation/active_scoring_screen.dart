@@ -868,6 +868,32 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
       ),
       body: Column(
         children: [
+          if (widget.session.holeCount != 18)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: const BoxDecoration(
+                color: Color(0xFF2E1065),
+                border: Border(bottom: BorderSide(color: Color(0xFFA855F7), width: 1.5)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.stars, color: Color(0xFFD8B4FE), size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '⛳ SHORT COURSE (${widget.session.holeCount} HOLES) • BIRDIE POT ONLY • Excluded from Stableford standings',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFF3E8FF),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // Header Status Bar
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -883,7 +909,7 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                     Icon(_isGridView ? Icons.grid_on : Icons.golf_course, size: 18, color: AppColors.lakeCyan),
                     const SizedBox(width: 8),
                     Text(
-                      _isGridView ? '8-PLAYER SCORING GRID (HOLES 1-18)' : 'HOLE $_currentHole OF 18',
+                      _isGridView ? '8-PLAYER SCORING GRID (HOLES 1-${widget.session.holeCount})' : 'HOLE $_currentHole OF ${widget.session.holeCount}',
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w900,

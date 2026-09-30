@@ -319,20 +319,23 @@ class WebsitePublishService {
     for (var rIdx = 0; rIdx < sessions.length; rIdx++) {
       final s = sessions[rIdx];
       final roundNum = s.roundNumber;
+      final isShort = s.holeCount != 18;
 
       for (final p in s.players) {
         final pid = p.playerId;
-        final pts = s.effectivePlayerStableford(pid);
+        final pts = isShort ? 0 : s.effectivePlayerStableford(pid);
         final gross = s.totalGross(pid);
         final net = s.totalNet(pid);
 
-        playerPoints[pid] = (playerPoints[pid] ?? 0) + pts;
-        playerRoundScores[pid] = [...(playerRoundScores[pid] ?? []), pts];
-        playerGrossTotal[pid] = (playerGrossTotal[pid] ?? 0) + gross;
-        playerNetTotal[pid] = (playerNetTotal[pid] ?? 0) + net;
-        playerRoundsCount[pid] = (playerRoundsCount[pid] ?? 0) + 1;
+        if (!isShort) {
+          playerPoints[pid] = (playerPoints[pid] ?? 0) + pts;
+          playerRoundScores[pid] = [...(playerRoundScores[pid] ?? []), pts];
+          playerGrossTotal[pid] = (playerGrossTotal[pid] ?? 0) + gross;
+          playerNetTotal[pid] = (playerNetTotal[pid] ?? 0) + net;
+          playerRoundsCount[pid] = (playerRoundsCount[pid] ?? 0) + 1;
+        }
 
-        // Count birdies
+        // Count birdies across ALL courses (including short courses)
         for (var h = 1; h <= s.holeCount; h++) {
           final gScore = s.getGrossScore(pid, h);
           final par = s.getHole(h).par;
@@ -444,34 +447,142 @@ class WebsitePublishService {
       });
     }
 
-    // Pairings
+    // Pairings - build from schedule (with live session scores if completed)
     final pairings = <Map<String, dynamic>>[];
-    for (var rIdx = 0; rIdx < sessions.length; rIdx++) {
-      final s = sessions[rIdx];
-      final pList = s.players.map((p) => p.name).toList();
-      pairings.add({
-        'roundNumber': s.roundNumber,
-        'title': 'Round ${s.roundNumber} — ${s.courseName}',
-        'courseName': s.courseName,
-        'date': 'Round ${s.roundNumber}',
-        'format': '2-Man Best Ball Net Stableford',
-        'groups': [
-          {
-            'groupNumber': 1,
-            'teeTime': '9:00 AM',
-            'teamA': {
-              'name': 'Team 1',
-              'players': pList.take(2).toList(),
-              'score': s.effectivePlayerStableford(s.players.firstOrNull?.playerId ?? ''),
+    if (schedule.isNotEmpty) {
+      for (final round in schedule) {
+        final matchingSession = sessions.where((s) => s.roundNumber == round.roundNumber).firstOrNull;
+
+        if (round.isShortCourse) {
+          pairings.add({
+            'roundNumber': round.roundNumber,
+            'title': 'Round ${round.roundNumber} — ${round.courseName}',
+            'courseName': round.courseName,
+            'date': 'Round ${round.roundNumber}',
+            'format': 'Birdie Pot Only (Short Course)',
+            'holeCount': round.holeCount,
+            'isShortCourse': true,
+            'groups': [],
+          });
+        } else if (round.isFinalRound) {
+          pairings.add({
+            'roundNumber': round.roundNumber,
+            'title': 'Round ${round.roundNumber} — ${round.courseName} (Final Championship)',
+            'courseName': round.courseName,
+            'date': 'Round ${round.roundNumber}',
+            'format': 'Modified Stableford',
+            'holeCount': round.holeCount,
+            'isShortCourse': false,
+            'isFinalDraft': true,
+            'banner': 'LIVE DRAFT & CHAMPIONSHIP',
+            'bannerSub': 'Top 4 seeds choose their partners for the final showdown.',
+            'draftRules': [
+              'Seed #1 drafts first partner from seeds #5-#8',
+              'Seed #2 drafts second partner',
+              'Seed #3 drafts third partner',
+              'Seed #4 receives remaining golfer',
+            ],
+            'groups': [
+              {
+                'groupNumber': 1,
+                'teeTime': round.teeTimeGroup1.isNotEmpty ? round.teeTimeGroup1 : '8:30 AM',
+                'flight': 'Championship Match 1',
+                'teamA': {'name': 'Team 1', 'captain': 'Seed #1 Captain', 'partner': 'Draft Pick 1'},
+                'teamB': {'name': 'Team 4', 'captain': 'Seed #4 Captain', 'partner': 'Draft Pick 4'},
+              },
+              {
+                'groupNumber': 2,
+                'teeTime': round.teeTimeGroup2.isNotEmpty ? round.teeTimeGroup2 : '8:41 AM',
+                'flight': 'Championship Match 2',
+                'teamA': {'name': 'Team 2', 'captain': 'Seed #2 Captain', 'partner': 'Draft Pick 2'},
+                'teamB': {'name': 'Team 3', 'captain': 'Seed #3 Captain', 'partner': 'Draft Pick 3'},
+              },
+            ],
+          });
+        } else if (round.pairingPlan != null) {
+          final groups = round.pairingPlan!.foursomes.map((f) {
+            final pFirstA = f.teamA.players.firstOrNull;
+            final pFirstB = f.teamB.players.firstOrNull;
+            final teamAScore = matchingSession != null && pFirstA != null
+                ? matchingSession.effectivePlayerStableford(pFirstA.id)
+                : null;
+            final teamBScore = matchingSession != null && pFirstB != null
+                ? matchingSession.effectivePlayerStableford(pFirstB.id)
+                : null;
+
+            final tTime = f.groupNumber == 1
+                ? (round.teeTimeGroup1.isNotEmpty ? round.teeTimeGroup1 : '9:00 AM')
+                : (round.teeTimeGroup2.isNotEmpty ? round.teeTimeGroup2 : '9:11 AM');
+
+            return {
+              'groupNumber': f.groupNumber,
+              'teeTime': tTime,
+              'teamA': {
+                'name': f.teamA.teamName,
+                'players': f.teamA.players.map((p) => p.nickname.isNotEmpty ? p.nickname : p.fullName).toList(),
+                if (teamAScore != null && teamAScore > 0) 'score': teamAScore,
+              },
+              'teamB': {
+                'name': f.teamB.teamName,
+                'players': f.teamB.players.map((p) => p.nickname.isNotEmpty ? p.nickname : p.fullName).toList(),
+                if (teamBScore != null && teamBScore > 0) 'score': teamBScore,
+              },
+            };
+          }).toList();
+
+          pairings.add({
+            'roundNumber': round.roundNumber,
+            'title': 'Round ${round.roundNumber} — ${round.courseName}',
+            'courseName': round.courseName,
+            'date': 'Round ${round.roundNumber}',
+            'format': '2-Man Best Ball Net Stableford',
+            'holeCount': round.holeCount,
+            'isShortCourse': false,
+            'groups': groups,
+          });
+        } else {
+          pairings.add({
+            'roundNumber': round.roundNumber,
+            'title': 'Round ${round.roundNumber} — ${round.courseName}',
+            'courseName': round.courseName,
+            'date': 'Round ${round.roundNumber}',
+            'format': round.format,
+            'holeCount': round.holeCount,
+            'isShortCourse': false,
+            'groups': [],
+          });
+        }
+      }
+    } else {
+      for (var rIdx = 0; rIdx < sessions.length; rIdx++) {
+        final s = sessions[rIdx];
+        final pList = s.players.map((p) => p.name).toList();
+        pairings.add({
+          'roundNumber': s.roundNumber,
+          'title': 'Round ${s.roundNumber} — ${s.courseName}',
+          'courseName': s.courseName,
+          'date': 'Round ${s.roundNumber}',
+          'format': s.format,
+          'holeCount': s.holeCount,
+          'isShortCourse': s.isShortCourse,
+          'groups': [
+            {
+              'groupNumber': 1,
+              'teeTime': '9:00 AM',
+              'teamA': {
+                'name': 'Team 1',
+                'players': pList.take(2).toList(),
+                'score': s.effectivePlayerStableford(s.players.firstOrNull?.playerId ?? ''),
+              },
+              'teamB': {
+                'name': 'Team 2',
+                'players': pList.skip(2).take(2).toList(),
+                'score': s.effectivePlayerStableford(s.players.length > 2 ? s.players[2].playerId : ''),
+              },
             },
-            'teamB': {
-              'name': 'Team 2',
-              'players': pList.skip(2).take(2).toList(),
-              'score': s.effectivePlayerStableford(s.players.length > 2 ? s.players[2].playerId : ''),
-            },
-          },
-        ],
-      });
+          ],
+        });
+      }
     }
 
     final courseList = courses.isNotEmpty

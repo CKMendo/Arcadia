@@ -226,19 +226,21 @@ class _StandingsScreenState extends State<StandingsScreen> {
     }
 
     final players = playerMap.values.toList();
+    final regulationSessions = sessions.where((s) => s.holeCount == 18).toList();
+    final shortSessions = sessions.where((s) => s.holeCount != 18).toList();
 
     if (_activeTab == 'stableford') {
-      return _buildStablefordLeaderboard(sessions, players, roundCount);
+      return _buildStablefordLeaderboard(regulationSessions, shortSessions, players, regulationSessions.length);
     } else if (_activeTab == 'birdie_pot') {
-      return _buildBirdiePotLeaderboard(sessions, players);
+      return _buildBirdiePotLeaderboard(sessions, shortSessions, players);
     } else if (_activeTab == 'net') {
-      return _buildNetLeaderboard(sessions, players, roundCount);
+      return _buildNetLeaderboard(regulationSessions, players, regulationSessions.length);
     } else if (_activeTab == 'gross') {
-      return _buildGrossLeaderboard(sessions, players, roundCount);
+      return _buildGrossLeaderboard(regulationSessions, players, regulationSessions.length);
     } else if (_activeTab == 'skins') {
-      return _buildSkinsLeaderboard(sessions, players);
+      return _buildSkinsLeaderboard(regulationSessions, players);
     } else {
-      return _buildTeamsLeaderboard(sessions, players);
+      return _buildTeamsLeaderboard(regulationSessions, players);
     }
   }
 
@@ -293,7 +295,7 @@ class _StandingsScreenState extends State<StandingsScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Total Net ($roundCount rounds)',
+                        'Total Net ($roundCount regulation rounds)',
                         style: const TextStyle(fontSize: 16, color: Colors.white70, fontWeight: FontWeight.w600),
                       ),
                     ],
@@ -317,6 +319,7 @@ class _StandingsScreenState extends State<StandingsScreen> {
 
   Widget _buildStablefordLeaderboard(
     List<ActiveRoundSession> sessions,
+    List<ActiveRoundSession> shortSessions,
     List<PlayerSessionInfo> players,
     int roundCount,
   ) {
@@ -373,6 +376,29 @@ class _StandingsScreenState extends State<StandingsScreen> {
             ],
           ),
         ),
+
+        if (shortSessions.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E1033),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFA855F7), width: 1.2),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.stars, color: Color(0xFFD8B4FE), size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Short courses (${shortSessions.map((s) => '${s.courseName} [${s.holeCount}H]').join(', ')}) are excluded from Stableford scoring and count exclusively toward the Birdie Pot.',
+                    style: const TextStyle(fontSize: 13, color: Color(0xFFE9D5FF), height: 1.3),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
         ...sorted.asMap().entries.map((entry) {
           final idx = entry.key;
@@ -465,6 +491,7 @@ class _StandingsScreenState extends State<StandingsScreen> {
 
   Widget _buildBirdiePotLeaderboard(
     List<ActiveRoundSession> sessions,
+    List<ActiveRoundSession> shortSessions,
     List<PlayerSessionInfo> players,
   ) {
     final ledger = TripBirdiePotLedger.calculate(sessions);
@@ -472,6 +499,29 @@ class _StandingsScreenState extends State<StandingsScreen> {
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
+        if (shortSessions.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E1033),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFA855F7), width: 1.2),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.stars, color: Color(0xFFD8B4FE), size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Birdie Pot counts all birdies made across all regulation and short courses (${shortSessions.map((s) => '${s.courseName} [${s.holeCount}H]').join(', ')}).',
+                    style: const TextStyle(fontSize: 13, color: Color(0xFFE9D5FF), height: 1.3),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
         // Hero Cumulative Pot Card
         Container(
           padding: const EdgeInsets.all(18),

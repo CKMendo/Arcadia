@@ -306,6 +306,7 @@ class ActiveRoundSession {
   }
 
   int get holeCount => holes.length;
+  bool get isShortCourse => holeCount != 18;
 
   HoleSessionInfo getHole(int holeNumber) {
     return holes.firstWhere(
@@ -481,7 +482,9 @@ class ActiveRoundSession {
   /// Effective Stableford points for this player:
   /// Under Arcadia rules, if the player is on a 2-man team, each teammate records
   /// the 2-man team's Stableford score for that round.
+  /// Courses with fewer than 18 holes are short courses and do not count toward Stableford.
   int effectivePlayerStableford(String playerId) {
+    if (isShortCourse) return 0;
     final p = players.where((x) => x.playerId == playerId).firstOrNull;
     if (p == null) return 0;
     final teamId = p.twoManTeamId != 'none' ? p.twoManTeamId : p.teamId;

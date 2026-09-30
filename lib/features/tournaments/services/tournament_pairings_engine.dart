@@ -138,12 +138,16 @@ class ScheduledRoundInfo {
   final int roundNumber;
   final DateTime date;
   final RoundPairingPlan? pairingPlan;
+  final int holeCount;
 
   const ScheduledRoundInfo({
     required this.roundNumber,
     required this.date,
     this.pairingPlan,
+    this.holeCount = 18,
   });
+
+  bool get isShortCourse => holeCount != 18;
 }
 
 class TournamentPairingsEngine {
@@ -153,6 +157,7 @@ class TournamentPairingsEngine {
 
   /// Calculates cumulative Stableford points for all players from previous rounds
   /// and ranks them #1 through #8.
+  /// (Only 18-hole regulation tournament rounds count toward Stableford points).
   List<PlayerStandingSeed> computeRankings(
     List<Player> players,
     List<ActiveRoundSession> pastRounds,
@@ -160,6 +165,7 @@ class TournamentPairingsEngine {
     final pointsMap = {for (final p in players) p.id: 0};
 
     for (final session in pastRounds) {
+      if (session.holeCount != 18) continue; // Exclude short courses from tournament Stableford scoring!
       for (final p in players) {
         pointsMap[p.id] = (pointsMap[p.id] ?? 0) + session.effectivePlayerStableford(p.id);
       }

@@ -271,6 +271,51 @@ void main() {
       await repo.unlockSchedule();
       expect(await repo.isScheduleFinalized(), isFalse);
     });
+
+    test('Short courses (<18 holes) are excluded from pairings and Stableford scoring', () async {
+      final repo = TripScheduleRepository();
+      final scheduleWithShortCourse = [
+        ScheduledRound(
+          id: 'sr1',
+          roundNumber: 1,
+          courseId: 'c_bootlegger',
+          courseName: 'Forest Dunes (The Bootlegger)',
+          holeCount: 10,
+          date: DateTime(2026, 6, 10),
+          teeTimeGroup1: '11:00 AM',
+          teeTimeGroup2: '11:11 AM',
+        ),
+        ScheduledRound(
+          id: 'sr2',
+          roundNumber: 2,
+          courseId: 'c_original',
+          courseName: 'Forest Dunes (Original)',
+          holeCount: 18,
+          date: DateTime(2026, 6, 11),
+          teeTimeGroup1: '09:00 AM',
+          teeTimeGroup2: '09:12 AM',
+        ),
+      ];
+
+      await repo.saveSchedule(scheduleWithShortCourse);
+
+      // Generate pairings for the schedule
+      final updated = await repo.generatePairingsForSchedule(
+        players: testPlayers,
+        pastSavedRounds: const [],
+      );
+
+      // Bootlegger (10 holes) must NOT have a pairingPlan and must be formatted for Birdie Pot Only
+      final bootlegger = updated.firstWhere((r) => r.courseId == 'c_bootlegger');
+      expect(bootlegger.isShortCourse, isTrue);
+      expect(bootlegger.pairingPlan, isNull);
+      expect(bootlegger.format, contains('Birdie Pot Only'));
+
+      // Original (18 holes) MUST have a pairingPlan
+      final original = updated.firstWhere((r) => r.courseId == 'c_original');
+      expect(original.isShortCourse, isFalse);
+      expect(original.pairingPlan, isNotNull);
+    });
   });
 }
 

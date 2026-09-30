@@ -476,6 +476,13 @@ function renderStandingsTab(container) {
         </tbody>
       </table>
     </div>
+
+    <div style="margin-top: 14px; padding: 12px 16px; background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 10px; font-size: 0.86rem; color: #d8b4fe; display: flex; align-items: center; gap: 10px;">
+      <span style="font-size: 1.2rem;">⛳</span>
+      <div>
+        <strong>Regulation Play Only:</strong> Stableford tournament standings and point totals reflect 18-hole regulation courses only. Short courses (e.g., Bootlegger, The Dozen) are excluded from Stableford points and count solely toward the Birdie Pot challenge.
+      </div>
+    </div>
   `;
 
   container.innerHTML = html;
@@ -497,7 +504,29 @@ function renderPairingsTab(container) {
   `;
 
   pairings.forEach(round => {
-    if (round.isFinalDraft) {
+    if (round.isShortCourse) {
+      // SPECIAL SHORT COURSE CARD (NO 2-MAN TEAMS, BIRDIE POT ONLY)
+      html += `
+        <div class="pairing-round-card" style="border: 2px solid #a855f7; background: linear-gradient(145deg, #181028, #100b1e); box-shadow: 0 4px 20px rgba(168, 85, 247, 0.15);">
+          <div class="pairing-round-header" style="border-bottom: 1px solid rgba(168, 85, 247, 0.3);">
+            <div>
+              <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #d8b4fe; padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px;">
+                ⛳ SHORT COURSE (${round.holeCount || ''} HOLES) &bull; BIRDIE POT ONLY
+              </div>
+              <div class="pairing-round-title" style="color: #f3e8ff;">${round.title}</div>
+              <div class="pairing-meta" style="color: #c084fc;">${round.date} &bull; Birdie Pot Challenge Only (Not Counted in Stableford)</div>
+            </div>
+          </div>
+          <div style="padding: 24px 20px; text-align: center; color: #e9d5ff;">
+            <div style="font-size: 2.2rem; margin-bottom: 8px;">💰</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #fff; margin-bottom: 6px;">Casual Play &bull; Birdie Pot Game Only</div>
+            <p style="max-width: 580px; margin: 0 auto; font-size: 0.92rem; color: #d8b4fe; line-height: 1.55;">
+              Short courses are played for casual fun and the Birdie Pot challenge ($2/birdie per player). Per tournament rules, no 2-man pairings are assigned and points earned do NOT count towards the Stableford tournament standings.
+            </p>
+          </div>
+        </div>
+      `;
+    } else if (round.isFinalDraft) {
       // SPECIAL "TBD BEFORE FINAL ROUND" BLANK PAIRING DISPLAY
       html += `
         <div class="tbd-banner-card">

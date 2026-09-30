@@ -265,16 +265,20 @@ class TripScheduleTab extends StatelessWidget {
     bool isFinalized,
   ) {
     final dateFormat = DateFormat('EEEE, MMMM d, yyyy');
+    final isShort = round.isShortCourse;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 14),
+      color: isShort ? const Color(0xFF181022) : null,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: round.isFinalRound
-              ? AppColors.duneSand.withValues(alpha: 0.8)
-              : AppColors.cardBorder,
-          width: round.isFinalRound ? 1.8 : 1.2,
+          color: isShort
+              ? const Color(0xFFA855F7)
+              : (round.isFinalRound
+                  ? AppColors.duneSand.withValues(alpha: 0.8)
+                  : AppColors.cardBorder),
+          width: isShort || round.isFinalRound ? 1.8 : 1.2,
         ),
       ),
       child: Padding(
@@ -291,14 +295,18 @@ class TripScheduleTab extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: round.isFinalRound
-                            ? AppColors.duneSand.withValues(alpha: 0.3)
-                            : AppColors.lakeCyan.withValues(alpha: 0.2),
+                        color: isShort
+                            ? const Color(0xFFA855F7).withValues(alpha: 0.25)
+                            : (round.isFinalRound
+                                ? AppColors.duneSand.withValues(alpha: 0.3)
+                                : AppColors.lakeCyan.withValues(alpha: 0.2)),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: round.isFinalRound
-                              ? AppColors.duneSand
-                              : AppColors.lakeCyan,
+                          color: isShort
+                              ? const Color(0xFFA855F7)
+                              : (round.isFinalRound
+                                  ? AppColors.duneSand
+                                  : AppColors.lakeCyan),
                         ),
                       ),
                       child: Text(
@@ -307,13 +315,29 @@ class TripScheduleTab extends StatelessWidget {
                           fontSize: 14,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1.1,
-                          color: round.isFinalRound
-                              ? AppColors.duneSand
-                              : AppColors.cyanLight,
+                          color: isShort
+                              ? const Color(0xFFE9D5FF)
+                              : (round.isFinalRound
+                                  ? AppColors.duneSand
+                                  : AppColors.cyanLight),
                         ),
                       ),
                     ),
-                    if (round.isFinalRound) ...[
+                    if (isShort) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3B154D),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: const Color(0xFFA855F7)),
+                        ),
+                        child: Text(
+                          '⛳ SHORT COURSE (${round.holeCount}H) • BIRDIE POT ONLY',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFF3E8FF)),
+                        ),
+                      ),
+                    ] else if (round.isFinalRound) ...[
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -458,7 +482,9 @@ class TripScheduleTab extends StatelessWidget {
             const SizedBox(height: 12),
 
             // Pairings & 2-Man Teams Block
-            if (round.pairingPlan != null)
+            if (round.isShortCourse)
+              _buildShortCourseCardBlock(round)
+            else if (round.pairingPlan != null)
               _buildFinalizedPairingsBlock(round.pairingPlan!, round, isFinalized)
             else
               Container(
@@ -484,6 +510,45 @@ class TripScheduleTab extends StatelessWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildShortCourseCardBlock(ScheduledRound round) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF130A1C),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFA855F7).withValues(alpha: 0.6), width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.stars, color: Color(0xFFA855F7), size: 22),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'BIRDIE POT GAME ONLY • NOT IN STABLEFORD',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFFE9D5FF),
+                    letterSpacing: 0.9,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'This course has ${round.holeCount} holes (not an 18-hole regulation tournament course). Per tournament rules, it is excluded from 2-man partner pairings and Stableford standings. All 8 golfers play individually, and all birdies made count toward the Birdie Pot game!',
+            style: const TextStyle(fontSize: 14, color: Colors.white70, height: 1.35),
+          ),
+        ],
       ),
     );
   }
@@ -1160,6 +1225,7 @@ class TripScheduleTab extends StatelessWidget {
                       ElevatedButton(
                         onPressed: () async {
                           final selectedCourse = courses.firstWhere((c) => c.id == selectedCourseId);
+                          final isShort = selectedCourse.holeCount != 18;
                           final newRound = ScheduledRound(
                             id: round?.id ?? 'sched_${DateTime.now().millisecondsSinceEpoch}',
                             roundNumber: defaultRoundNumber,
@@ -1169,8 +1235,10 @@ class TripScheduleTab extends StatelessWidget {
                             teeTimeGroup1: formatTime(selectedTime1),
                             teeTimeGroup2: formatTime(selectedTime2),
                             notes: notesController.text.trim().isNotEmpty ? notesController.text.trim() : null,
-                            isFinalRound: isFinal,
-                            pairingPlan: round?.pairingPlan,
+                            isFinalRound: isShort ? false : isFinal,
+                            holeCount: selectedCourse.holeCount,
+                            format: isShort ? 'Birdie Pot Only (Short Course)' : '2-Man Best Ball Net Stableford',
+                            pairingPlan: isShort ? null : round?.pairingPlan,
                           );
 
                           await tripScheduleRepository.addOrUpdateScheduledRound(newRound);

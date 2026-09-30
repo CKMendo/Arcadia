@@ -66,6 +66,8 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
   bool _isLoading = true;
   StreamSubscription<List<Player>>? _playersSubscription;
   StreamSubscription<List<Course>>? _coursesSubscription;
+  StreamSubscription<List<ScheduledRound>>? _scheduleSubscription;
+  StreamSubscription<bool>? _finalizedSubscription;
 
   @override
   void initState() {
@@ -81,13 +83,33 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
         _onCoursesUpdated(courses);
       }
     });
+    _scheduleSubscription = _scheduleRepo.watchSchedule().listen((schedule) {
+      if (mounted) {
+        _onScheduleUpdated(schedule);
+      }
+    });
+    _finalizedSubscription = _scheduleRepo.watchIsFinalized().listen((finalized) {
+      if (mounted) {
+        setState(() {
+          _isScheduleFinalized = finalized;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
     _playersSubscription?.cancel();
     _coursesSubscription?.cancel();
+    _scheduleSubscription?.cancel();
+    _finalizedSubscription?.cancel();
     super.dispose();
+  }
+
+  Future<void> _onScheduleUpdated(List<ScheduledRound> freshSchedule) async {
+    _tripSchedule = freshSchedule;
+    await _syncWithScheduleForRound(_roundNumber, updateCourse: true);
+    if (mounted) setState(() {});
   }
 
   void _onRosterPlayersUpdated(List<Player> freshPlayers) {
@@ -109,24 +131,33 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
     // Reconcile default tees
     _assignDefaultTees(freshPlayers, _selectedCourseDetails);
 
-    // Reconcile pairing plan
-    if (_currentPairingPlan != null) {
+    final matchingScheduled = _tripSchedule.where((r) => r.roundNumber == _roundNumber).firstOrNull;
+    final isShort = (matchingScheduled != null && matchingScheduled.isShortCourse) ||
+        (_selectedCourseDetails != null && _selectedCourseDetails!.holes.length != 18);
+
+    if (isShort) {
+      _currentPairingPlan = null;
+      _playerFoursomes.clear();
+      _playerTwoManTeams.clear();
+      _twoManTeamNames.clear();
+    } else if (matchingScheduled?.pairingPlan != null) {
+      // Reconcile with scheduled pairing plan
+      final refreshedPlan = matchingScheduled!.pairingPlan!.withLatestPlayers(freshPlayers);
+      _applyPairingPlan(refreshedPlan);
+    } else if (_currentPairingPlan != null) {
       final planPlayerIds = _currentPairingPlan!.allTeams
           .expand((t) => t.players.map((p) => p.id))
           .toSet();
 
-      // Check if all players in the existing plan still exist in the fresh roster
       final allPlanPlayersStillExist = planPlayerIds.every((id) => freshIds.contains(id));
 
       if (allPlanPlayersStillExist && planPlayerIds.length == freshPlayers.length) {
-        // Refresh player details (names, nicknames, handicaps) and dynamic team names
         final refreshedPlan = _currentPairingPlan!.withLatestPlayers(freshPlayers);
         _applyPairingPlan(refreshedPlan);
-      } else if (freshPlayers.length >= 8) {
-        // Player set changed (added/removed) - re-generate balanced AI pairings
+      } else if (freshPlayers.length >= 8 && !_isFinalRound) {
         _generateAIPairingsInternal(freshPlayers, _pastSavedRounds, _roundNumber);
       }
-    } else if (freshPlayers.length >= 8) {
+    } else if (freshPlayers.length >= 8 && !_isFinalRound) {
       _generateAIPairingsInternal(freshPlayers, _pastSavedRounds, _roundNumber);
     }
 
@@ -167,6 +198,52 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
         _playerTeeIds.clear();
       }
     });
+
+    await _syncWithScheduleForRound(_roundNumber, updateCourse: false);
+  }
+
+  Future<void> _syncWithScheduleForRound(int rNum, {bool updateCourse = true}) async {
+    final matchingScheduled = _tripSchedule.where((r) => r.roundNumber == rNum).firstOrNull;
+
+    if (matchingScheduled != null) {
+      if (updateCourse && matchingScheduled.courseId.isNotEmpty) {
+        final matchingCourse = _courses.where((c) => c.id == matchingScheduled.courseId).firstOrNull;
+        if (matchingCourse != null && _selectedCourseId != matchingCourse.id) {
+          _selectedCourseId = matchingCourse.id;
+          _selectedCourseDetails = await widget.courseRepository.getCourseDetails(matchingCourse.id);
+          if (_selectedCourseDetails != null) {
+            _assignDefaultTees(_allPlayers, _selectedCourseDetails);
+          }
+        }
+      }
+
+      final isShort = matchingScheduled.isShortCourse ||
+          (_selectedCourseDetails != null && _selectedCourseDetails!.holes.length != 18);
+
+      _isFinalRound = matchingScheduled.isFinalRound;
+
+      if (isShort) {
+        _currentPairingPlan = null;
+        _playerFoursomes.clear();
+        _playerTwoManTeams.clear();
+        _twoManTeamNames.clear();
+      } else if (matchingScheduled.pairingPlan != null) {
+        final plan = matchingScheduled.pairingPlan!.withLatestPlayers(_allPlayers);
+        _applyPairingPlan(plan);
+      } else if (_allPlayers.length >= 8 && !_isFinalRound) {
+        await _generateAIPairingsInternal(_allPlayers, _pastSavedRounds, rNum);
+      }
+    } else {
+      final isShort = (_selectedCourseDetails != null && _selectedCourseDetails!.holes.length != 18);
+      if (isShort) {
+        _currentPairingPlan = null;
+        _playerFoursomes.clear();
+        _playerTwoManTeams.clear();
+        _twoManTeamNames.clear();
+      } else if (_currentPairingPlan == null && _allPlayers.length >= 8 && !_isFinalRound) {
+        await _generateAIPairingsInternal(_allPlayers, _pastSavedRounds, rNum);
+      }
+    }
   }
 
   Future<void> _loadInitialData() async {
@@ -175,6 +252,8 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
     final savedRounds = await widget.roundRepository.getAllSavedRounds();
     final schedule = await _scheduleRepo.getSchedule();
     final finalized = await _scheduleRepo.isScheduleFinalized();
+    _courses = courses;
+    _allPlayers = players;
     _tripSchedule = schedule;
     _isScheduleFinalized = finalized;
 
@@ -198,39 +277,17 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
       }
     }
 
-    // Check if scheduled round exists for this roundNumber
-    final matchingScheduled = schedule.where((r) => r.roundNumber == _roundNumber).firstOrNull;
-    if (matchingScheduled != null) {
-      final matchingCourse = courses.where((c) => c.id == matchingScheduled.courseId).firstOrNull;
-      if (matchingCourse != null) {
-        _selectedCourseId = matchingCourse.id;
-        _selectedCourseDetails =
-            await widget.courseRepository.getCourseDetails(matchingCourse.id);
-      } else if (courses.isNotEmpty) {
-        _selectedCourseId = courses.first.id;
-        _selectedCourseDetails =
-            await widget.courseRepository.getCourseDetails(courses.first.id);
-      }
-      _isFinalRound = matchingScheduled.isFinalRound;
-    } else if (courses.isNotEmpty) {
-      _selectedCourseId = courses.first.id;
-      _selectedCourseDetails =
-          await widget.courseRepository.getCourseDetails(courses.first.id);
-    }
-
     _selectedPlayerIds.addAll(players.map((p) => p.id));
-    _assignDefaultTees(players, _selectedCourseDetails);
 
-    // Apply scheduled pairing plan if available, or generate one
-    if (matchingScheduled != null && matchingScheduled.pairingPlan != null) {
-      _applyPairingPlan(matchingScheduled.pairingPlan!);
-    } else if (players.length >= 8) {
-      await _generateAIPairingsInternal(players, sessions, _roundNumber);
+    if (_courses.isNotEmpty) {
+      _selectedCourseId = _courses.first.id;
+      _selectedCourseDetails = await widget.courseRepository.getCourseDetails(_selectedCourseId!);
+      _assignDefaultTees(players, _selectedCourseDetails);
     }
+
+    await _syncWithScheduleForRound(_roundNumber, updateCourse: true);
 
     setState(() {
-      _courses = courses;
-      _allPlayers = players;
       _isLoading = false;
     });
   }
@@ -303,10 +360,19 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
   Future<void> _onCourseChanged(String? courseId) async {
     if (courseId == null) return;
     final details = await widget.courseRepository.getCourseDetails(courseId);
+    final isShort = (details?.holes.length ?? 0) != 18;
     setState(() {
       _selectedCourseId = courseId;
       _selectedCourseDetails = details;
-      _assignDefaultTees(_allPlayers, details);
+      if (details != null) {
+        _assignDefaultTees(_allPlayers, details);
+      }
+      if (isShort) {
+        _currentPairingPlan = null;
+        _playerFoursomes.clear();
+        _playerTwoManTeams.clear();
+        _twoManTeamNames.clear();
+      }
     });
   }
 
@@ -379,7 +445,11 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
         .where((p) => _selectedPlayerIds.contains(p.id))
         .toList();
 
-    final sessionPlayers = selectedPlayers.map((p) {
+    final isShortCourse = _selectedCourseDetails!.holes.length != 18;
+
+    final sessionPlayers = selectedPlayers.asMap().entries.map((entry) {
+      final idx = entry.key;
+      final p = entry.value;
       final teeId = _playerTeeIds[p.id] ??
           _selectedCourseDetails!.teeBoxes.first.teeBox.id;
       final teeObj = _selectedCourseDetails!.teeBoxes
@@ -389,9 +459,9 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
 
       final courseHcp = _computeCourseHcp(p, teeId);
       final teamId = _playerTeams[p.id] ?? 'none';
-      final foursomeGroup = _playerFoursomes[p.id] ?? 1;
-      final twoManTeamId = _playerTwoManTeams[p.id] ?? teamId;
-      final twoManTeamName = _twoManTeamNames[twoManTeamId];
+      final foursomeGroup = isShortCourse ? (idx < 4 ? 1 : 2) : (_playerFoursomes[p.id] ?? (idx < 4 ? 1 : 2));
+      final twoManTeamId = isShortCourse ? 'none' : (_playerTwoManTeams[p.id] ?? teamId);
+      final twoManTeamName = isShortCourse ? null : _twoManTeamNames[twoManTeamId];
 
       return PlayerSessionInfo(
         playerId: p.id,
@@ -417,12 +487,16 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
       );
     }).toList();
 
+    final sessionFormat = isShortCourse
+        ? 'Birdie Pot Only (Short Course)'
+        : (_isFinalRound ? 'modified_stableford' : _format);
+
     final session = ActiveRoundSession(
       courseId: _selectedCourseDetails!.course.id,
       courseName: _selectedCourseDetails!.course.name,
       roundNumber: _roundNumber,
-      format: _format,
-      isFinalRound: _isFinalRound,
+      format: sessionFormat,
+      isFinalRound: _isFinalRound && !isShortCourse,
       pointsPerSkin: _pointsPerSkin,
       currentHoleNumber: 1,
       players: sessionPlayers,
@@ -510,7 +584,12 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
                     children: [
                       Expanded(
                         child: Builder(builder: (ctx) {
-                          final roundOptions = [1, 2, 3, 4, 5, if (_roundNumber > 5) _roundNumber];
+                          final maxScheduled = _tripSchedule.isNotEmpty
+                              ? _tripSchedule.map((r) => r.roundNumber).reduce((a, b) => a > b ? a : b)
+                              : 7;
+                          final maxRound = [_roundNumber, maxScheduled, 7].reduce((a, b) => a > b ? a : b);
+                          final roundOptions = List.generate(maxRound, (i) => i + 1);
+
                           return DropdownButtonFormField<int>(
                             key: ValueKey('round_num_$_roundNumber'),
                             initialValue: _roundNumber,
@@ -520,20 +599,22 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
                               labelStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                             ),
                             items: roundOptions
-                                .map((r) => DropdownMenuItem(
-                                      value: r,
-                                      child: Text('Round $r', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                    ))
+                                .map((r) {
+                                  final matching = _tripSchedule.where((s) => s.roundNumber == r).firstOrNull;
+                                  final suffix = matching != null && matching.isShortCourse ? ' (${matching.holeCount}H Short)' : '';
+                                  return DropdownMenuItem(
+                                    value: r,
+                                    child: Text('Round $r$suffix', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                  );
+                                })
                                 .toList(),
                             onChanged: (v) async {
                               if (v != null) {
                                 setState(() {
                                   _roundNumber = v;
                                 });
-                                if (_allPlayers.length >= 8 && !_isFinalRound) {
-                                  await _generateAIPairingsInternal(_allPlayers, _pastSavedRounds, v);
-                                  if (mounted) setState(() {});
-                                }
+                                await _syncWithScheduleForRound(v, updateCourse: true);
+                                if (mounted) setState(() {});
                               }
                             },
                           );
@@ -541,197 +622,315 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
                       ),
                       const SizedBox(width: 14),
                       Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceElevated,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.cardBorder),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Scoring Format', style: TextStyle(fontSize: 13, color: Colors.white60)),
-                              const SizedBox(height: 2),
-                              Text(
-                                _isFinalRound ? 'Modified Stableford' : '2-Man Stableford',
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.cyanLight),
-                              ),
-                            ],
-                          ),
-                        ),
+                        child: Builder(builder: (ctx) {
+                          final matching = _tripSchedule.where((r) => r.roundNumber == _roundNumber).firstOrNull;
+                          final isShort = (matching != null && matching.isShortCourse) ||
+                              (_selectedCourseDetails != null && _selectedCourseDetails!.holes.length != 18);
+                          final formatTitle = isShort
+                              ? 'Birdie Pot Only'
+                              : (_isFinalRound ? 'Modified Stableford' : '2-Man Stableford');
+                          final formatSub = isShort
+                              ? 'Short Course (${matching?.holeCount ?? _selectedCourseDetails?.holes.length ?? 0}H)'
+                              : (_isFinalRound ? 'Draft Pairs' : 'Best Ball Points');
+
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isShort ? const Color(0xFF2E1065) : AppColors.surfaceElevated,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: isShort ? const Color(0xFFA855F7) : AppColors.cardBorder),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isShort ? 'COURSE TYPE' : 'Scoring Format',
+                                  style: TextStyle(fontSize: 12, color: isShort ? const Color(0xFFD8B4FE) : Colors.white60, fontWeight: FontWeight.w600),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  formatTitle,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w900,
+                                    color: isShort ? const Color(0xFFF3E8FF) : AppColors.cyanLight,
+                                  ),
+                                ),
+                                Text(
+                                  formatSub,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isShort ? const Color(0xFFD8B4FE) : Colors.white54,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
                       ),
                     ],
                   ),
                   const SizedBox(height: 14),
 
                   // Final Round Toggle / Modified rules banner
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: _isFinalRound ? Colors.red.withValues(alpha: 0.15) : AppColors.surfaceDark,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: _isFinalRound ? Colors.redAccent : AppColors.cardBorder),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _isFinalRound ? '🏆 FINAL CHAMPIONSHIP ROUND' : 'Regular Trip Round',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w900,
-                                  color: _isFinalRound ? Colors.redAccent : Colors.white,
+                  Builder(builder: (ctx) {
+                    final matching = _tripSchedule.where((r) => r.roundNumber == _roundNumber).firstOrNull;
+                    final isShort = (matching != null && matching.isShortCourse) ||
+                        (_selectedCourseDetails != null && _selectedCourseDetails!.holes.length != 18);
+
+                    if (isShort) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E1033),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFA855F7).withValues(alpha: 0.5)),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.info_outline, color: Color(0xFFD8B4FE), size: 20),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Short courses do not count in Stableford points or championship draft seeding.',
+                                style: TextStyle(fontSize: 13, color: Color(0xFFE9D5FF), fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _isFinalRound ? Colors.red.withValues(alpha: 0.15) : AppColors.surfaceDark,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: _isFinalRound ? Colors.redAccent : AppColors.cardBorder),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _isFinalRound ? '🏆 FINAL CHAMPIONSHIP ROUND' : 'Regular Trip Round',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w900,
+                                    color: _isFinalRound ? Colors.redAccent : Colors.white,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                _isFinalRound
-                                    ? 'Modified Stableford: Dbl Bogey = -1, Bogey = 0, Par = +1, Birdie = +2'
-                                    : 'Standard Stableford: Dbl Bogey = 0, Bogey = 1, Par = 2, Birdie = 3',
-                                style: const TextStyle(fontSize: 12, color: Colors.white70),
-                              ),
-                            ],
+                                Text(
+                                  _isFinalRound
+                                      ? 'Modified Stableford: Dbl Bogey = -1, Bogey = 0, Par = +1, Birdie = +2'
+                                      : 'Standard Stableford: Dbl Bogey = 0, Bogey = 1, Par = 2, Birdie = 3',
+                                  style: const TextStyle(fontSize: 12, color: Colors.white70),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        Switch(
-                          value: _isFinalRound,
-                          activeThumbColor: Colors.redAccent,
-                          onChanged: (val) {
-                            setState(() => _isFinalRound = val);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
+                          Switch(
+                            value: _isFinalRound,
+                            activeThumbColor: Colors.redAccent,
+                            onChanged: (val) {
+                              setState(() => _isFinalRound = val);
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 18),
 
-          // AI FOURSOMES & 2-MAN TEAMS CARD
-          Card(
-            margin: EdgeInsets.zero,
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'AI FOURSOMES & 2-MAN TEAMS',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.1,
-                                color: AppColors.cyanLight,
-                              ),
-                            ),
-                            SizedBox(height: 2),
-                            Text(
-                              'Equal playing time with all 7 others + Stableford teams',
-                              style: TextStyle(fontSize: 13, color: Colors.white70),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
+          // AI FOURSOMES & 2-MAN TEAMS CARD OR SHORT COURSE CARD
+          Builder(builder: (ctx) {
+            final matching = _tripSchedule.where((r) => r.roundNumber == _roundNumber).firstOrNull;
+            final isShort = (matching != null && matching.isShortCourse) ||
+                (_selectedCourseDetails != null && _selectedCourseDetails!.holes.length != 18);
+            final shortHoles = matching?.holeCount ?? _selectedCourseDetails?.holes.length ?? 0;
 
-                  // Actions
-                  Row(
+            if (isShort) {
+              return Card(
+                color: const Color(0xFF1E1033),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: const BorderSide(color: Color(0xFFA855F7), width: 1.5),
+                ),
+                margin: EdgeInsets.zero,
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () async {
-                            final messenger = ScaffoldMessenger.of(context);
-                            final selected = _allPlayers.where((p) => _selectedPlayerIds.contains(p.id)).toList();
-                            await _generateAIPairingsInternal(selected, _pastSavedRounds, _roundNumber);
-                            if (!mounted) return;
-                            setState(() {});
-                            messenger.showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'AI examined prior pairings & generated non-repeating 2-man teams!',
-                                  style: TextStyle(fontSize: 16),
-                                ),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.shuffle, size: 20, color: AppColors.lakeCyan),
-                          label: const Text('AI Shuffle Pairings', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: AppColors.lakeCyan),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: _openFinalRoundDraft,
-                          icon: const Icon(Icons.how_to_reg, size: 20),
-                          label: const Text('Partner Draft (#1..#8)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.duneSand,
-                            foregroundColor: const Color(0xFF06111D),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  if (_isScheduleFinalized)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0C241B),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFF34D399)),
-                      ),
-                      child: const Row(
+                      Row(
                         children: [
-                          Icon(Icons.lock, size: 16, color: Color(0xFF34D399)),
-                          SizedBox(width: 8),
-                          Expanded(
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFA855F7).withValues(alpha: 0.25),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFA855F7)),
+                            ),
                             child: Text(
-                              'Loaded locked-in teams & pairings from finalized Trip Schedule.',
-                              style: TextStyle(fontSize: 13, color: Color(0xFF6EE7B7), fontWeight: FontWeight.bold),
+                              '⛳ SHORT COURSE ($shortHoles HOLES)',
+                              style: const TextStyle(
+                                color: Color(0xFFE9D5FF),
+                                fontWeight: FontWeight.w900,
+                                fontSize: 12,
+                                letterSpacing: 1.1,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'BIRDIE POT ONLY',
+                            style: TextStyle(
+                              color: Color(0xFFC084FC),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
                             ),
                           ),
                         ],
                       ),
-                    ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'This course has fewer than 18 regulation holes. Per tournament rules, it is NOT used for 2-man pairings and does NOT count towards Stableford tournament standings.\n\nAll golfers play for the cash Birdie Pot (\$2/birdie per player) — all birdies made are automatically added to the trip pot!',
+                        style: TextStyle(fontSize: 14, color: Color(0xFFF3E8FF), height: 1.45),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
 
-                  if (_currentPairingPlan != null) ...[
-                    // Foursome 1
-                    _buildFoursomeCard(1, _currentPairingPlan!.foursome1),
-                    const SizedBox(height: 12),
-                    // Foursome 2
-                    _buildFoursomeCard(2, _currentPairingPlan!.foursome2),
-                  ] else
-                    const Padding(
-                      padding: EdgeInsets.all(12.0),
-                      child: Text('Tap "AI Shuffle Pairings" or "Partner Draft" to assign teams.', style: TextStyle(color: Colors.white70)),
+            return Card(
+              margin: EdgeInsets.zero,
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'AI FOURSOMES & 2-MAN TEAMS',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.1,
+                                  color: AppColors.cyanLight,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Equal playing time with all 7 others + Stableford teams',
+                                style: TextStyle(fontSize: 13, color: Colors.white70),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                ],
+                    const SizedBox(height: 14),
+
+                    // Actions
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () async {
+                              final messenger = ScaffoldMessenger.of(context);
+                              final selected = _allPlayers.where((p) => _selectedPlayerIds.contains(p.id)).toList();
+                              await _generateAIPairingsInternal(selected, _pastSavedRounds, _roundNumber);
+                              if (!mounted) return;
+                              setState(() {});
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'AI examined prior pairings & generated non-repeating 2-man teams!',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.shuffle, size: 20, color: AppColors.lakeCyan),
+                            label: const Text('AI Shuffle Pairings', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: AppColors.lakeCyan),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _openFinalRoundDraft,
+                            icon: const Icon(Icons.how_to_reg, size: 20),
+                            label: const Text('Partner Draft (#1..#8)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.duneSand,
+                              foregroundColor: const Color(0xFF06111D),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    if (matching?.pairingPlan != null)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0C241B),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF34D399)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.lock, size: 16, color: Color(0xFF34D399)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _isScheduleFinalized
+                                    ? 'Loaded locked-in teams & pairings from finalized Trip Schedule.'
+                                    : 'Synced with Trip Schedule (Round $_roundNumber pairings).',
+                                style: const TextStyle(fontSize: 13, color: Color(0xFF6EE7B7), fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    if (_currentPairingPlan != null) ...[
+                      // Foursome 1
+                      _buildFoursomeCard(1, _currentPairingPlan!.foursome1),
+                      const SizedBox(height: 12),
+                      // Foursome 2
+                      _buildFoursomeCard(2, _currentPairingPlan!.foursome2),
+                    ] else
+                      const Padding(
+                        padding: EdgeInsets.all(12.0),
+                        child: Text('Tap "AI Shuffle Pairings" or "Partner Draft" to assign teams.', style: TextStyle(color: Colors.white70)),
+                      ),
+                  ],
+                ),
               ),
-            ),
-          ),
+            );
+          }),
           const SizedBox(height: 18),
 
           // Players & Tees Selection

@@ -13,6 +13,7 @@ class ScheduledRound {
   final String? notes; // e.g. "Opening Round - The Bluffs"
   final bool isFinalRound;
   final RoundPairingPlan? pairingPlan;
+  final int holeCount; // 18 for regulation tournament play; < 18 (e.g. 12 or 10) for Birdie Pot only
 
   ScheduledRound({
     required this.id,
@@ -26,7 +27,10 @@ class ScheduledRound {
     this.notes,
     this.isFinalRound = false,
     this.pairingPlan,
+    this.holeCount = 18,
   });
+
+  bool get isShortCourse => holeCount != 18;
 
   String get formattedDate => DateFormat('EEE, MMM d, yyyy').format(date);
   String get shortDate => DateFormat('MMM d').format(date);
@@ -44,6 +48,7 @@ class ScheduledRound {
     bool? isFinalRound,
     RoundPairingPlan? pairingPlan,
     bool clearPairingPlan = false,
+    int? holeCount,
   }) {
     return ScheduledRound(
       id: id ?? this.id,
@@ -57,6 +62,7 @@ class ScheduledRound {
       notes: notes ?? this.notes,
       isFinalRound: isFinalRound ?? this.isFinalRound,
       pairingPlan: clearPairingPlan ? null : (pairingPlan ?? this.pairingPlan),
+      holeCount: holeCount ?? this.holeCount,
     );
   }
 
@@ -72,6 +78,8 @@ class ScheduledRound {
       'format': format,
       'notes': notes,
       'isFinalRound': isFinalRound,
+      'holeCount': holeCount,
+      'isShortCourse': isShortCourse,
       if (pairingPlan != null) 'pairingPlan': pairingPlan!.toJson(),
     };
   }
@@ -90,6 +98,7 @@ class ScheduledRound {
       format: json['format'] as String? ?? '2-Man Best Ball Net Stableford',
       notes: json['notes'] as String?,
       isFinalRound: json['isFinalRound'] as bool? ?? false,
+      holeCount: (json['holeCount'] as num?)?.toInt() ?? 18,
       pairingPlan: json['pairingPlan'] != null
           ? RoundPairingPlan.fromJson(json['pairingPlan'] as Map<String, dynamic>)
           : null,
