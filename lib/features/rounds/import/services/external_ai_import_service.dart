@@ -51,22 +51,44 @@ You are extracting player gross scores from a completed golf scorecard photo.
 
 I will attach the scorecard photo after this prompt. The expected players are: $players.
 
-First count all physical player score rows in the photo. The expected-player list is only a name-matching aid and is NOT a limit on the number of rows. The card may contain fewer or more rows than the expected-player list, including more than four rows.
+CRITICAL SCORECARD LAYOUT INSTRUCTIONS:
+1. TWO-ROW 18-HOLE SCORECARDS (18Birdies, Golfshot, digital apps, & folded paper cards):
+   - In many scorecard formats (including 18Birdies digital cards), each player's 18 holes are split into TWO STACKED ROWS OF 9 HOLES:
+     * TOP ROW: Front 9 (Holes 1 to 9), followed by the Front 9 subtotal (OUT).
+     * BOTTOM ROW directly beneath: Back 9 (Holes 10 to 18), followed by the Back 9 subtotal (IN).
+     * Right side: 18-hole total score and to-par indicator (e.g., +5 (76)).
+   - YOU MUST COMBINE BOTH ROWS FOR EACH PLAYER:
+     * Extract Holes 1 through 9 from the TOP row.
+     * Extract Holes 10 through 18 from the BOTTOM row directly underneath.
+     * Combine them into a single array of exactly $holeCount gross scores in hole order: [H1, H2, ..., H9, H10, ..., H18].
+     * NEVER stop after reading the first 9 holes.
+     * Do NOT include the 9-hole subtotal (OUT/IN) or the 18-hole total (e.g. 37, 39, 76) in the hole scores array.
+     * Sanity check: sum(H1..H9) must equal the front-9 subtotal; sum(H10..H18) must equal the back-9 subtotal.
 
-Read each physical player score row independently from top to bottom. Return one row for every visible player row, regardless of how many rows exist and even when a handwritten name is difficult to read. Never merge, reorder, or skip a score row. Each row must contain exactly $holeCount gross scores in hole order. Ignore printed par, yardage, handicap, OUT, IN, TOTAL, and NET rows or columns. Use the closest expected player name when confident; otherwise label it "Unknown Row 1", "Unknown Row 2", and so on. Do not guess an unreadable score; use null and explain it in warnings.
+2. SINGLE-ROW SCORECARDS:
+   - If all holes for a player are displayed across a single horizontal row, read all $holeCount gross scores in hole order from left to right.
 
-Return ONLY one valid JSON object with this exact structure, without Markdown or commentary:
+3. PLAYERS & ROWS:
+   - Count every visible player in the photo from top to bottom.
+   - The expected-player list ($players) is a name-matching aid, NOT a limit on the number of players.
+   - For every player found, return one row with their name and exactly $holeCount gross scores in hole order.
+   - Use the closest expected player name when confident; otherwise use the name visible on the card (or "Unknown Row 1", etc.).
+   - If a score cannot be determined, use null and explain in warnings.
+
+Return ONLY one valid JSON object with this exact structure, without Markdown fences or commentary:
 {
   "rows": [
     {
-      "playerName": "name associated with this physical row",
-      "scores": [exactly $holeCount integers or null values]
+      "playerName": "player name",
+      "scores": [exactly $holeCount gross scores in hole order]
     }
   ],
-  "warnings": ["short notes about uncertain names or scores"]
+  "warnings": ["short notes if any"]
 }
 
-Before answering, count the physical player rows again, confirm the JSON contains that same number of rows, and verify that each scores array contains exactly $holeCount positions.
+Before answering, verify:
+- Did you read BOTH the top row (Holes 1-9) AND bottom row (Holes 10-18) for each player?
+- Does every player in "rows" have exactly $holeCount gross scores in hole order?
 ''';
   }
 }

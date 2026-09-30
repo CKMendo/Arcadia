@@ -85,6 +85,9 @@ void main() {
 
       expect(prompt, contains('Neal Patel, Chet Mehta'));
       expect(prompt, contains('exactly 18 gross scores in hole order'));
+      expect(prompt, contains('TWO-ROW 18-HOLE SCORECARDS'));
+      expect(prompt, contains('TOP ROW: Front 9'));
+      expect(prompt, contains('BOTTOM ROW directly beneath: Back 9'));
       expect(prompt, contains('"rows"'));
       expect(prompt, contains('"playerName"'));
       expect(prompt, contains('"scores"'));
@@ -104,6 +107,30 @@ Neal P 4 3 5 4 4 3 5 4 4 4 3 5 4 4 3 5 4 4
       expect(draft.rows[0].scores.length, equals(18));
       expect(draft.rows[1].sourceLabel, contains('Neal'));
       expect(draft.rows[1].scores.length, equals(18));
+    });
+
+    test('RoundScorecardTextParser parses 2-row 18Birdies stacked scorecard into 18-hole player rows', () {
+      const parser = RoundScorecardTextParser();
+      // From 18Birdies screenshot:
+      // Chet M.: Front 9 = 5 3 5 5 4 5 4 3 3 (37), Back 9 = 5 3 5 3 4 5 4 5 5 (39), Total 76
+      // Neal P.: Front 9 = 5 3 5 6 4 4 7 4 4 (42), Back 9 = 4 3 4 6 4 5 4 4 5 (39), Total 81
+      const ocrOutput = '''
+Goose Creek Golf Course
+09/27/2026 18 Holes
+Chet M. 5 3 5 5 4 5 4 3 3 37
+5 3 5 3 4 5 4 5 5 39 76
+Neal P. 5 3 5 6 4 4 7 4 4 42
+4 3 4 6 4 5 4 4 5 39 81
+''';
+
+      final draft = parser.parse(ocrOutput, holeCount: 18);
+      expect(draft.rows.length, equals(2));
+      expect(draft.rows[0].sourceLabel, contains('Chet'));
+      expect(draft.rows[0].scores.length, equals(18));
+      expect(draft.rows[0].scores, equals([5, 3, 5, 5, 4, 5, 4, 3, 3, 5, 3, 5, 3, 4, 5, 4, 5, 5]));
+      expect(draft.rows[1].sourceLabel, contains('Neal'));
+      expect(draft.rows[1].scores.length, equals(18));
+      expect(draft.rows[1].scores, equals([5, 3, 5, 6, 4, 4, 7, 4, 4, 4, 3, 4, 6, 4, 5, 4, 4, 5]));
     });
 
     test('PlayerScoreRowMatcher matches OCR label to player candidate', () {
@@ -236,6 +263,8 @@ Neal P 4 3 5 4 4 3 5 4 4 4 3 5 4 4 3 5 4 4
       expect(find.text('Configure Gemini AI Keys'), findsOneWidget);
       expect(find.text('Primary Key (Gemini 3.8 Flash)'), findsOneWidget);
       expect(find.text('Backup Key (Gemini 3.7 Flash Failover)'), findsOneWidget);
+      expect(find.text('Copy Primary Key'), findsOneWidget);
+      expect(find.text('Copy Backup Key'), findsOneWidget);
       expect(find.text('Verify & Save'), findsOneWidget);
     });
 

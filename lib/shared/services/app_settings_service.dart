@@ -180,15 +180,18 @@ class AppSettingsService {
   /// (defaulting to Gemini 3.8 Flash, or specified model such as Gemini 3.7 Flash).
   static Future<bool> validateGeminiApiKey(
     String apiKey, {
-    String model = 'gemini-3.8-flash',
+    String model = 'gemini-2.0-flash',
   }) async {
     final trimmedKey = apiKey.trim();
     if (trimmedKey.isEmpty) return false;
 
     final modelsToTry = [
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-2.5-flash',
       model,
-      if (model != 'gemini-3.7-flash') 'gemini-3.7-flash',
-      'gemini-3.6-flash',
+      'gemini-3.8-flash',
+      'gemini-3.7-flash',
     ];
     for (final m in modelsToTry) {
       try {

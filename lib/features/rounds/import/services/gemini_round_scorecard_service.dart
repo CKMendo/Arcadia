@@ -9,10 +9,10 @@ class GeminiRoundScorecardService {
   // Built-in API key support or system property
   static String? apiKey;
 
-  static const String defaultModel = 'gemini-3.8-flash';
-  static const String primaryModel = 'gemini-3.8-flash';
-  static const String fallbackModel = 'gemini-3.7-flash';
-  static const String emergencyModel = 'gemini-3.6-flash';
+  static const String defaultModel = 'gemini-2.0-flash';
+  static const String primaryModel = 'gemini-2.0-flash';
+  static const String fallbackModel = 'gemini-1.5-flash';
+  static const String emergencyModel = 'gemini-2.5-flash';
 
   Future<RoundScoreImportDraft> analyze(
     String imagePath, {
@@ -38,16 +38,20 @@ class GeminiRoundScorecardService {
     final mimeType = imagePath.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
 
     final promptText = targetPlayerName == null
-        ? 'Read only the handwritten or entered player gross scores '
-          'from this completed golf scorecard photo. Inspect every '
-          'physical player row from top to bottom and return one '
-          'row per player with exactly $holeCount scores in hole '
-          'order. Count and return every physical row without stopping early. '
-          'Ignore printed par, yardage, handicap, OUT, IN, and total rows or '
-          'columns. Return ONLY one valid JSON object with {"rows": [{"playerName": "...", "scores": [...]}]}'
-        : 'Targeted recovery: find the physical score row belonging '
-          'to "$targetPlayerName" on this completed golf scorecard. Return exactly that one player row with '
-          '$holeCount gross scores in hole order. Return ONLY valid JSON: {"rows": [{"playerName": "...", "scores": [...]}]}';
+        ? 'Extract player gross scores from this completed golf scorecard photo.\n'
+          'LAYOUT INSTRUCTIONS:\n'
+          '1. Many digital scorecards (e.g. 18Birdies, Golfshot) and paper cards split 18 holes into TWO ROWS per player:\n'
+          '   - Top row: Front 9 (Holes 1 to 9), followed by Front 9 subtotal (OUT).\n'
+          '   - Bottom row: Back 9 (Holes 10 to 18), followed by Back 9 subtotal (IN).\n'
+          '   - For each player, COMBINE both rows into a single list of $holeCount gross scores in exact hole order (Hole 1 to $holeCount).\n'
+          '2. If all 18 holes are on a single horizontal row, read all 18 scores across.\n'
+          '3. Inspect every visible player from top to bottom and return one row per player with exactly $holeCount gross scores.\n'
+          '4. Do NOT include Front 9 / Back 9 subtotals (OUT/IN) or 18-hole total scores in the scores list.\n'
+          '5. Ignore printed par, yardage, handicap, and ratings.\n'
+          'Return ONLY one valid JSON object with {"rows": [{"playerName": "...", "scores": [...]}]}'
+        : 'Targeted recovery: find the player belonging to "$targetPlayerName" on this completed golf scorecard.\n'
+          'Note: 18 holes may be split across two stacked rows (Top = Front 9, Bottom = Back 9). Combine both into $holeCount gross scores in hole order.\n'
+          'Return exactly that one player row with $holeCount gross scores. Return ONLY valid JSON: {"rows": [{"playerName": "...", "scores": [...]}]}';
 
     final payload = {
       'contents': [

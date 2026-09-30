@@ -17,6 +17,7 @@ class ActiveScoringScreen extends StatefulWidget {
   final ActiveRoundSession session;
   final PlayerRepository? playerRepository;
   final bool initialGridView;
+  final VoidCallback? onExit;
 
   const ActiveScoringScreen({
     super.key,
@@ -24,6 +25,7 @@ class ActiveScoringScreen extends StatefulWidget {
     required this.session,
     this.playerRepository,
     this.initialGridView = true,
+    this.onExit,
   });
 
   @override
@@ -105,7 +107,11 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
         duration: Duration(seconds: 2),
       ),
     );
-    Navigator.pop(context);
+    if (widget.onExit != null) {
+      widget.onExit!();
+    } else if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
   }
 
   Future<void> _deleteRound() async {
@@ -134,7 +140,13 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
 
     if (confirm == true && mounted) {
       await widget.roundRepository.clearActiveDraft();
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        if (widget.onExit != null) {
+          widget.onExit!();
+        } else if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+      }
     }
   }
 

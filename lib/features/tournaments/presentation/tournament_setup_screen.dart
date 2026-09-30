@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../../database/app_database.dart';
 import '../../../shared/services/app_settings_service.dart';
@@ -534,6 +535,30 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                                         ],
                                       ),
                                     ),
+                                    if (hasAny) ...[
+                                      IconButton(
+                                        icon: const Icon(Icons.copy, size: 20, color: AppColors.cyanLight),
+                                        tooltip: hasPrimary && hasSecondary ? 'Copy Primary Key' : 'Copy Key',
+                                        onPressed: () {
+                                          final keyToCopy = hasPrimary ? primaryKey : secondaryKey;
+                                          if (keyToCopy != null && keyToCopy.isNotEmpty) {
+                                            Clipboard.setData(ClipboardData(text: keyToCopy));
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  hasPrimary && hasSecondary
+                                                      ? '✅ Copied Primary Gemini Key to clipboard!'
+                                                      : '✅ Copied Gemini Key to clipboard!',
+                                                ),
+                                                backgroundColor: const Color(0xFF0F382A),
+                                                duration: const Duration(seconds: 2),
+                                              ),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                      const SizedBox(width: 4),
+                                    ],
                                     FilledButton.tonal(
                                       style: FilledButton.styleFrom(
                                         backgroundColor: hasAny

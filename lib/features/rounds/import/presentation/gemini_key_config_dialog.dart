@@ -54,6 +54,27 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
     super.dispose();
   }
 
+  void _copyKey(String text, String label) {
+    final clean = text.trim();
+    if (clean.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No $label entered yet to copy.'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+    Clipboard.setData(ClipboardData(text: clean));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('✅ Copied $label to clipboard!'),
+        backgroundColor: const Color(0xFF0F382A),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   Future<void> _pasteInto(TextEditingController controller) async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     final text = data?.text?.trim();
@@ -85,14 +106,14 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
 
       bool primaryValid = true;
       if (primary.isNotEmpty) {
-        setState(() => _statusMessage = 'Testing Primary Key with Gemini 3.8 Flash...');
-        primaryValid = await AppSettingsService.validateGeminiApiKey(primary, model: 'gemini-3.8-flash');
+        setState(() => _statusMessage = 'Testing Primary Key with Google Gemini...');
+        primaryValid = await AppSettingsService.validateGeminiApiKey(primary);
       }
 
       bool secondaryValid = true;
       if (secondary.isNotEmpty) {
-        setState(() => _statusMessage = 'Testing Backup Key with Gemini 3.7 Flash...');
-        secondaryValid = await AppSettingsService.validateGeminiApiKey(secondary, model: 'gemini-3.7-flash');
+        setState(() => _statusMessage = 'Testing Backup Key with Google Gemini...');
+        secondaryValid = await AppSettingsService.validateGeminiApiKey(secondary);
       }
 
       if (!mounted) return;
@@ -242,6 +263,11 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
                                   setState(() => _obscurePrimary = !_obscurePrimary),
                             ),
                             IconButton(
+                              icon: const Icon(Icons.copy, color: AppColors.lakeCyan, size: 20),
+                              tooltip: 'Copy Primary Key',
+                              onPressed: () => _copyKey(_primaryController.text, 'Primary Key'),
+                            ),
+                            IconButton(
                               icon: const Icon(Icons.content_paste, color: AppColors.cyanLight, size: 20),
                               tooltip: 'Paste from Clipboard',
                               onPressed: () => _pasteInto(_primaryController),
@@ -309,6 +335,11 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
                                   setState(() => _obscureSecondary = !_obscureSecondary),
                             ),
                             IconButton(
+                              icon: const Icon(Icons.copy, color: AppColors.duneSand, size: 20),
+                              tooltip: 'Copy Backup Key',
+                              onPressed: () => _copyKey(_secondaryController.text, 'Backup Key'),
+                            ),
+                            IconButton(
                               icon: const Icon(Icons.content_paste, color: AppColors.cyanLight, size: 20),
                               tooltip: 'Paste from Clipboard',
                               onPressed: () => _pasteInto(_secondaryController),
@@ -316,6 +347,38 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
                           ],
                         ),
                       ),
+                    ),
+
+                    const SizedBox(height: 12),
+                    // Quick Copy Keys Row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.copy, size: 15),
+                            label: const Text('Copy Primary Key', style: TextStyle(fontSize: 11.5)),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.lakeCyan,
+                              side: const BorderSide(color: AppColors.lakeCyan),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                            ),
+                            onPressed: () => _copyKey(_primaryController.text, 'Primary Key'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.copy, size: 15),
+                            label: const Text('Copy Backup Key', style: TextStyle(fontSize: 11.5)),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.duneSand,
+                              side: const BorderSide(color: AppColors.duneSand),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                            ),
+                            onPressed: () => _copyKey(_secondaryController.text, 'Backup Key'),
+                          ),
+                        ),
+                      ],
                     ),
 
                     if (_statusMessage != null) ...[

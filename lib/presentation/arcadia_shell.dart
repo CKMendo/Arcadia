@@ -51,6 +51,7 @@ class _ArcadiaShellState extends State<ArcadiaShell> {
         playerRepository: widget.playerRepository,
         tournamentRepository: widget.tournamentRepository,
         roundRepository: widget.roundRepository,
+        onExit: () => setState(() => _currentIndex = 0),
       ),
       StandingsScreen(
         roundRepository: widget.roundRepository,
@@ -124,12 +125,14 @@ class _ScoringTab extends StatelessWidget {
   final PlayerRepository playerRepository;
   final TournamentRepository tournamentRepository;
   final RoundRepository roundRepository;
+  final VoidCallback onExit;
 
   const _ScoringTab({
     required this.courseRepository,
     required this.playerRepository,
     required this.tournamentRepository,
     required this.roundRepository,
+    required this.onExit,
   });
 
   @override
@@ -143,6 +146,7 @@ class _ScoringTab extends StatelessWidget {
             roundRepository: roundRepository,
             session: draft,
             playerRepository: playerRepository,
+            onExit: onExit,
           );
         }
 

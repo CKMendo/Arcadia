@@ -71,6 +71,45 @@ class RoundScorecardTextParser {
         ),
       );
     }
+
+    if (holeCount == 18 && rows.isEmpty) {
+      // Fallback: Check for 2-row 9-hole split scorecards (e.g. 18Birdies, folded cards)
+      final candidateLines = <_SplitScoreLine>[];
+      for (final rawLine in rawText.split(RegExp(r'[\r\n]+'))) {
+        final line = rawLine
+            .replaceAll(RegExp(r'[|•·]'), ' ')
+            .replaceAll(RegExp(r'\s+'), ' ')
+            .trim();
+        if (line.isEmpty || _isHeader(line, 9)) continue;
+        final matches = RegExp(r'(?<!\d)(?:20|1[0-9]|[1-9])(?!\d)').allMatches(line).toList();
+        if (matches.length >= 9) {
+          final numbers = matches.map((m) => int.parse(m.group(0)!)).toList();
+          var label = line.substring(0, matches.first.start).trim();
+          label = label.replaceAll(RegExp(r'[:|\-–—]+$'), '').trim();
+          candidateLines.add(_SplitScoreLine(label: label, line: line, numbers: numbers));
+        }
+      }
+
+      for (var i = 0; i + 1 < candidateLines.length; i += 2) {
+        final frontLine = candidateLines[i];
+        final backLine = candidateLines[i + 1];
+        final frontScores = frontLine.numbers.take(9).toList();
+        final backScores = backLine.numbers.take(9).toList();
+        if (_valid(frontScores) && _valid(backScores)) {
+          final label = frontLine.label.isNotEmpty
+              ? frontLine.label
+              : (backLine.label.isNotEmpty ? backLine.label : 'Detected player ${rows.length + 1}');
+          rows.add(
+            ImportedPlayerScoreRow(
+              sourceLabel: label,
+              sourceText: '${frontLine.line}\n${backLine.line}',
+              scores: [...frontScores, ...backScores].map<int?>((s) => s).toList(),
+            ),
+          );
+        }
+      }
+    }
+
     if (rows.isEmpty) {
       throw const FormatException(
         'The offline reader found text, but could not identify complete player '
@@ -135,4 +174,16 @@ class RoundScorecardTextParser {
 
   bool _valid(List<int> scores) =>
       scores.every((score) => score >= 1 && score <= 15);
+}
+
+class _SplitScoreLine {
+  final String label;
+  final String line;
+  final List<int> numbers;
+
+  const _SplitScoreLine({
+    required this.label,
+    required this.line,
+    required this.numbers,
+  });
 }
