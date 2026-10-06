@@ -649,7 +649,7 @@ function renderPairingsTab(container) {
                   <div class="team-members">${g.teamA.players.join(' & ')}</div>
                 </div>
 
-                <div class="vs-divider">MATCH PLAY &bull; 4-SOME ROTATION</div>
+                <div class="vs-divider">2-MAN MATCH PLAY &bull; 2 TEAMS PER TEE TIME</div>
 
                 <div class="two-man-team">
                   <div class="team-badge">${g.teamB.name} ${g.teamB.score ? `&bull; ${g.teamB.score} pts` : ''}</div>
