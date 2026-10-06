@@ -5,10 +5,32 @@ let refreshTimer = null;
 let countdownSecs = 15;
 
 document.addEventListener('DOMContentLoaded', () => {
+  initSplashScreen();
   initApp();
   setupTabs();
   setupRefresh();
 });
+
+function initSplashScreen() {
+  const overlay = document.getElementById('splashOverlay');
+  if (!overlay) return;
+
+  let dismissed = false;
+  const dismiss = () => {
+    if (dismissed) return;
+    dismissed = true;
+    overlay.classList.add('hidden');
+    setTimeout(() => {
+      if (overlay.parentNode) {
+        overlay.parentNode.removeChild(overlay);
+      }
+    }, 900);
+  };
+
+  overlay.addEventListener('click', dismiss);
+  overlay.addEventListener('touchstart', dismiss, { passive: true });
+  setTimeout(dismiss, 1900);
+}
 
 async function initApp() {
   await fetchTournamentData();
@@ -78,7 +100,7 @@ function setupTabs() {
   const tabButtons = document.querySelectorAll('.tab-btn');
 
   function activateTab(tabId) {
-    if (!['standings', 'roster', 'pairings', 'ledger', 'rules'].includes(tabId)) return;
+    if (!['standings', 'roster', 'pairings', 'courses', 'ledger', 'rules'].includes(tabId)) return;
     currentTab = tabId;
     tabButtons.forEach(b => {
       if (b.getAttribute('data-tab') === currentTab) {
@@ -100,7 +122,7 @@ function setupTabs() {
   });
 
   const hash = window.location.hash.replace('#', '');
-  if (hash && ['standings', 'roster', 'pairings', 'ledger', 'rules'].includes(hash)) {
+  if (hash && ['standings', 'roster', 'pairings', 'courses', 'ledger', 'rules'].includes(hash)) {
     activateTab(hash);
   }
 }
@@ -125,14 +147,15 @@ function renderBirdiePots() {
 
   // Course Pots
   coursePots.forEach(cp => {
+    const isShortCourse = cp.isShortCourse || /bootlegger|dozen|threetops|short/i.test(cp.courseName || '');
     html += `
-      <div class="pot-card" onclick="openBirdiePotModal('${cp.id}')">
+      <div class="pot-card ${isShortCourse ? 'short-course-pot-card' : ''}" onclick="openBirdiePotModal('${cp.id}')">
         <div>
           <div class="pot-header">
-            <span class="pot-badge">ROUND POT</span>
-            <span class="pot-click-hint">DETAILS &rarr;</span>
+            <span class="pot-badge ${isShortCourse ? 'badge-purple' : ''}">${isShortCourse ? '⛳ SHORT COURSE POT' : 'ROUND POT'}</span>
+            <span class="pot-click-hint" style="${isShortCourse ? 'color: var(--purple-light);' : ''}">DETAILS &rarr;</span>
           </div>
-          <div class="pot-amount">$${cp.roundPot.toFixed(2)}</div>
+          <div class="pot-amount" style="${isShortCourse ? 'color: var(--purple-light);' : ''}">$${cp.roundPot.toFixed(2)}</div>
           <div class="pot-name">${cp.courseName}</div>
           <div class="pot-sub">${cp.birdieCount} Birdies • Last: Hole ${cp.lastBirdieHole} (${cp.lastBirdieGolfers.join(', ')})</div>
         </div>
@@ -171,6 +194,8 @@ function renderTabContent() {
     renderRosterTab(container);
   } else if (currentTab === 'pairings') {
     renderPairingsTab(container);
+  } else if (currentTab === 'courses') {
+    renderCoursesTab(container);
   } else if (currentTab === 'ledger') {
     renderBirdieLedgerTab(container);
   } else if (currentTab === 'rules') {
@@ -454,6 +479,13 @@ function renderStandingsTab(container) {
         </tbody>
       </table>
     </div>
+
+    <div style="margin-top: 14px; padding: 12px 16px; background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 10px; font-size: 0.86rem; color: #d8b4fe; display: flex; align-items: center; gap: 10px;">
+      <span style="font-size: 1.2rem;">⛳</span>
+      <div>
+        <strong>Regulation Play Only:</strong> Stableford tournament standings and point totals reflect 18-hole regulation courses only. Short courses (e.g., Bootlegger, The Dozen) are excluded from Stableford points and count solely toward the Birdie Pot challenge.
+      </div>
+    </div>
   `;
 
   container.innerHTML = html;
@@ -475,7 +507,82 @@ function renderPairingsTab(container) {
   `;
 
   pairings.forEach(round => {
-    if (round.isFinalDraft) {
+    const isShort = round.isShortCourse || 
+      /bootlegger|dozen|threetops|short/i.test(round.title || '') || 
+      /bootlegger|dozen|threetops|short/i.test(round.courseName || '') || 
+      (round.holeCount && round.holeCount !== 18);
+
+    if (isShort) {
+      // SPECIAL SHORT COURSE CARD (NO 2-MAN TEAMS, BIRDIE POT ONLY)
+      const holesLabel = round.holeCount ? `${round.holeCount} HOLES` : 'SHORT COURSE';
+      html += `
+        <div class="pairing-round-card" style="border: 2px solid #a855f7; background: linear-gradient(145deg, #181028, #100b1e); box-shadow: 0 4px 20px rgba(168, 85, 247, 0.18);">
+          <div class="pairing-round-header" style="border-bottom: 1px solid rgba(168, 85, 247, 0.3);">
+            <div>
+              <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(168, 85, 247, 0.22); border: 1px solid #a855f7; color: #e9d5ff; padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px;">
+                ⛳ SHORT COURSE (${holesLabel}) &bull; BIRDIE POT ONLY
+              </div>
+              <div class="pairing-round-title" style="color: #f3e8ff;">${round.title}</div>
+              <div class="pairing-meta" style="color: #c084fc;">${round.date || 'Short Course'} &bull; Birdie Pot Challenge Only (Not Counted in Stableford)</div>
+            </div>
+          </div>
+          <div style="padding: 16px 20px; text-align: left; color: #e9d5ff;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <span style="font-size: 1.3rem;">🏌️‍♂️</span>
+              <strong style="font-size: 1.05rem; color: #fff;">Casual Group Play &bull; Birdie Pot Only</strong>
+            </div>
+            <p style="margin: 0 0 14px 0; font-size: 0.90rem; color: #d8b4fe; line-height: 1.5;">
+              Casual foursomes with no 2-man match teams. Excluded from 2-man pairings and Stableford standings. All birdies count for the cash Birdie Pot ($2/birdie per player: $1 round pot, $1 trip pot)!
+            </p>
+            ${round.groups && round.groups.length > 0 ? `
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;">
+                ${round.groups.map(g => {
+                  let playerList = g.players || [];
+                  if (!playerList || playerList.length === 0) {
+                    playerList = [];
+                    const extractP = (p, defaultHcp) => {
+                      if (!p) return;
+                      if (typeof p === 'string') {
+                        const match = tournamentData.tournament && tournamentData.tournament.roster 
+                          ? tournamentData.tournament.roster.find(r => r.nickname === p || r.name.includes(p)) 
+                          : null;
+                        playerList.push({ name: p, handicap: match ? match.handicapIndex : defaultHcp });
+                      } else {
+                        playerList.push({ name: p.name || p.fullName || p.nickname || 'Golfer', handicap: p.handicapIndex ?? p.handicap ?? defaultHcp });
+                      }
+                    };
+                    if (g.teamA) {
+                      if (Array.isArray(g.teamA.players)) g.teamA.players.forEach(p => extractP(p, 10));
+                      else { extractP(g.teamA.player1, 10); extractP(g.teamA.player2, 14); }
+                    }
+                    if (g.teamB) {
+                      if (Array.isArray(g.teamB.players)) g.teamB.players.forEach(p => extractP(p, 10));
+                      else { extractP(g.teamB.player1, 10); extractP(g.teamB.player2, 14); }
+                    }
+                  }
+                  return `
+                  <div style="background: rgba(30, 16, 51, 0.7); border: 1px solid rgba(168, 85, 247, 0.5); border-radius: 10px; padding: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid rgba(168, 85, 247, 0.3); padding-bottom: 6px;">
+                      <strong style="color: #f3e8ff; font-size: 0.88rem;">GROUP ${g.groupNumber} &bull; ⏱ ${g.teeTime}</strong>
+                      <span style="font-size: 0.72rem; color: #d8b4fe; background: rgba(168, 85, 247, 0.3); padding: 2px 6px; border-radius: 4px; font-weight: 800;">CASUAL FOURSOME</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                      ${playerList.map(p => `
+                        <div style="background: rgba(15, 8, 24, 0.8); border: 1px solid rgba(168, 85, 247, 0.25); border-radius: 6px; padding: 6px 8px; display: flex; justify-content: space-between; align-items: center;">
+                          <span style="font-size: 0.85rem; font-weight: 700; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.name}</span>
+                          <span style="font-size: 0.78rem; font-weight: 900; color: #c084fc; margin-left: 4px;">H${typeof p.handicap === 'number' ? p.handicap.toFixed(1) : p.handicap || ''}</span>
+                        </div>
+                      `).join('')}
+                    </div>
+                  </div>
+                `;
+                }).join('')}
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    } else if (round.isFinalDraft) {
       // SPECIAL "TBD BEFORE FINAL ROUND" BLANK PAIRING DISPLAY
       html += `
         <div class="tbd-banner-card">
@@ -555,6 +662,148 @@ function renderPairingsTab(container) {
       `;
     }
   });
+
+  container.innerHTML = html;
+}
+
+// -------------------------------------------------------------
+// COURSES TAB
+// -------------------------------------------------------------
+let courseFilter = 'all';
+
+function setCourseFilter(filter) {
+  courseFilter = filter;
+  const container = document.getElementById('tabContent');
+  if (container && currentTab === 'courses') {
+    renderCoursesTab(container);
+  }
+}
+
+function renderCoursesTab(container) {
+  if (!tournamentData) return;
+  const courses = (tournamentData.tournament && tournamentData.tournament.courses) || [];
+
+  const isShortCourseCheck = (c) => {
+    return c.isShortCourse === true ||
+      (c.holeCount && c.holeCount !== 18) ||
+      /bootlegger|dozen|threetops|short/i.test(c.name || '');
+  };
+
+  const filteredCourses = courses.filter(c => {
+    if (courseFilter === 'reg') return !isShortCourseCheck(c);
+    if (courseFilter === 'short') return isShortCourseCheck(c);
+    return true;
+  });
+
+  const shortCount = courses.filter(isShortCourseCheck).length;
+  const regCount = courses.length - shortCount;
+
+  let html = `
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Arcadia Cup Courses &amp; Venues</h2>
+        <p class="section-sub">Championship 18-hole courses and casual short courses featured across the trip.</p>
+      </div>
+    </div>
+
+    <div class="courses-filter-bar">
+      <button class="course-filter-chip ${courseFilter === 'all' ? 'active' : ''}" onclick="setCourseFilter('all')">
+        All Courses (${courses.length})
+      </button>
+      <button class="course-filter-chip ${courseFilter === 'reg' ? 'active' : ''}" onclick="setCourseFilter('reg')">
+        🏆 Regulation 18H (${regCount})
+      </button>
+      <button class="course-filter-chip purple-chip ${courseFilter === 'short' ? 'active' : ''}" onclick="setCourseFilter('short')">
+        ⛳ Short Courses (${shortCount})
+      </button>
+    </div>
+
+    <div class="courses-grid">
+  `;
+
+  filteredCourses.forEach(c => {
+    const isShort = isShortCourseCheck(c);
+    const holes = c.holeCount || (isShort ? (/dozen/i.test(c.name) ? 12 : 10) : 18);
+    const par = c.par || (isShort ? (/dozen/i.test(c.name) ? 36 : 30) : 72);
+    const yardage = c.yardage ? `${c.yardage.toLocaleString()} yds` : (isShort ? '~1,500 yds' : '6,800 yds');
+    const ratingSlope = (c.rating && c.slope) ? `${c.rating.toFixed(1)} / ${c.slope}` : (isShort ? 'Par 3 Course' : '73.5 / 137');
+
+    if (isShort) {
+      html += `
+        <div class="course-card is-short-course">
+          <div>
+            <div class="course-badge badge-short">
+              ⛳ SHORT COURSE (${holes} HOLES) &bull; BIRDIE POT ONLY
+            </div>
+            <h3 class="course-name" style="color: #f3e8ff;">${c.name}</h3>
+            <p class="course-desc">
+              Casual big-group / foursome challenge. Excluded from 2-man match pairings and Stableford standings. All birdies count for the cash Birdie Pot ($2/birdie per golfer)!
+            </p>
+            <div class="course-stats-grid">
+              <div class="course-stat-item">
+                <span class="course-stat-label">Holes</span>
+                <span class="course-stat-val" style="color: #c084fc;">${holes}H</span>
+              </div>
+              <div class="course-stat-item">
+                <span class="course-stat-label">Par</span>
+                <span class="course-stat-val" style="color: #c084fc;">${par}</span>
+              </div>
+              <div class="course-stat-item">
+                <span class="course-stat-label">Yardage</span>
+                <span class="course-stat-val" style="font-size: 0.92rem;">${yardage}</span>
+              </div>
+              <div class="course-stat-item">
+                <span class="course-stat-label">Type</span>
+                <span class="course-stat-val" style="font-size: 0.85rem; color: #a855f7;">Short</span>
+              </div>
+            </div>
+          </div>
+          <div class="course-notice-box short-notice">
+            💰 <strong>Birdie Pot Challenge:</strong> $1 to round pot, $1 to grand trip pot per birdie made. Casual 4-player groupings with no 2-man team match pressure.
+          </div>
+        </div>
+      `;
+    } else {
+      html += `
+        <div class="course-card">
+          <div>
+            <div class="course-badge badge-reg">
+              🏆 REGULATION (18 HOLES) &bull; CHAMPIONSHIP
+            </div>
+            <h3 class="course-name">${c.name}</h3>
+            <p class="course-desc">
+              Official Arcadia Cup tournament venue with 2-man team pairings and Net Stableford competition.
+            </p>
+            <div class="course-stats-grid">
+              <div class="course-stat-item">
+                <span class="course-stat-label">Holes</span>
+                <span class="course-stat-val">18H</span>
+              </div>
+              <div class="course-stat-item">
+                <span class="course-stat-label">Par</span>
+                <span class="course-stat-val">${par}</span>
+              </div>
+              <div class="course-stat-item">
+                <span class="course-stat-label">Yardage</span>
+                <span class="course-stat-val" style="font-size: 0.92rem;">${yardage}</span>
+              </div>
+              <div class="course-stat-item">
+                <span class="course-stat-label">Rating/Slope</span>
+                <span class="course-stat-val" style="font-size: 0.82rem;">${ratingSlope}</span>
+              </div>
+            </div>
+          </div>
+          <div class="course-notice-box reg-notice">
+            🏅 <strong>Tournament Play:</strong> 2-Man Best Ball Net Stableford. Points feed official Arcadia Cup leaderboards and captain draft seeding.
+          </div>
+        </div>
+      `;
+    }
+  });
+
+  html += `
+    </div>
+  `;
 
   container.innerHTML = html;
 }
