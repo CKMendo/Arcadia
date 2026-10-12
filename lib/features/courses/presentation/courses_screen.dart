@@ -359,6 +359,21 @@ class CoursesScreen extends StatelessWidget {
           itemCount: courses.length,
           itemBuilder: (context, index) {
             final course = courses[index];
+            final lowerName = course.name.toLowerCase();
+            final isShort = course.holeCount != 18 ||
+                lowerName.contains('bootlegger') ||
+                lowerName.contains('dozen') ||
+                lowerName.contains('threetops') ||
+                lowerName.contains('short') ||
+                lowerName.contains('par 3');
+            final hCount = isShort && course.holeCount == 18
+                ? (lowerName.contains('bootlegger')
+                    ? 10
+                    : (lowerName.contains('dozen')
+                        ? 12
+                        : (lowerName.contains('threetops') ? 9 : course.holeCount)))
+                : course.holeCount;
+
             return FutureBuilder<CourseDetails?>(
               future: courseRepository.getCourseDetails(course.id),
               builder: (context, detailsSnap) {
@@ -370,9 +385,13 @@ class CoursesScreen extends StatelessWidget {
                 return Card(
                   margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
                   clipBehavior: Clip.antiAlias,
+                  color: isShort ? AppColors.shortCoursePurpleBg : null,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
-                    side: const BorderSide(color: AppColors.cardBorder, width: 1.5),
+                    side: BorderSide(
+                      color: isShort ? AppColors.shortCoursePurple : AppColors.cardBorder,
+                      width: isShort ? 2.0 : 1.5,
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -392,13 +411,50 @@ class CoursesScreen extends StatelessWidget {
                                 gradient: LinearGradient(
                                   colors: [
                                     Colors.transparent,
-                                    Colors.black.withValues(alpha: 0.85),
+                                    isShort
+                                        ? const Color(0xFF1E0C30).withValues(alpha: 0.90)
+                                        : Colors.black.withValues(alpha: 0.85),
                                   ],
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
                                 ),
                               ),
                             ),
+                            if (isShort)
+                              Positioned(
+                                top: 12,
+                                left: 14,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.shortCoursePurpleBadge.withValues(alpha: 0.95),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppColors.shortCoursePurple, width: 1.5),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.shortCoursePurple.withValues(alpha: 0.45),
+                                        blurRadius: 8,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Text('⛳', style: TextStyle(fontSize: 13)),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'SHORT COURSE ($hCount HOLES) • BIRDIE POT ONLY',
+                                        style: const TextStyle(
+                                          color: Color(0xFFF3E8FF),
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 11,
+                                          letterSpacing: 0.8,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             Positioned(
                               bottom: 12,
                               left: 16,
@@ -424,9 +480,9 @@ class CoursesScreen extends StatelessWidget {
                                           ),
                                         ),
                                         Text(
-                                          '${course.city}, ${course.state} • ${course.holeCount} Holes${details != null ? ' • Par ${details.totalPar}' : ''}',
-                                          style: const TextStyle(
-                                            color: AppColors.duneLight,
+                                          '${course.city}, ${course.state} • $hCount Holes${details != null ? ' • Par ${details.totalPar}' : ''}${isShort ? ' • Casual / Birdie Pot' : ''}',
+                                          style: TextStyle(
+                                            color: isShort ? AppColors.shortCoursePurpleLight : AppColors.duneLight,
                                             fontSize: 15,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -469,16 +525,16 @@ class CoursesScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Row(
+                            Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'AVAILABLE TEE BOXES',
+                                  isShort ? 'AVAILABLE TEE BOXES • SHORT COURSE' : 'AVAILABLE TEE BOXES',
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w900,
                                     letterSpacing: 1.1,
-                                    color: AppColors.cyanLight,
+                                    color: isShort ? AppColors.shortCoursePurpleLight : AppColors.cyanLight,
                                   ),
                                 ),
                                 Text(
@@ -521,22 +577,22 @@ class CoursesScreen extends StatelessWidget {
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
-                                        '(${yds > 0 ? '$yds yds' : '18 holes'}${holeDistancesCount > 0 ? ' • $holeDistancesCount holes mapped' : ''})',
+                                        '(${yds > 0 ? '$yds yds' : '$hCount holes'}${holeDistancesCount > 0 ? ' • $holeDistancesCount holes mapped' : ''})',
                                         style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
                                       ),
                                       const Spacer(),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                         decoration: BoxDecoration(
-                                          color: AppColors.surfaceElevated,
+                                          color: isShort ? AppColors.shortCoursePurpleBadge : AppColors.surfaceElevated,
                                           borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(color: AppColors.cardBorder),
+                                          border: Border.all(color: isShort ? AppColors.shortCoursePurple : AppColors.cardBorder),
                                         ),
                                         child: Text(
                                           '${tee.courseRating.toStringAsFixed(1)} / ${tee.slopeRating}',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            color: AppColors.lakeCyan,
+                                            color: isShort ? AppColors.shortCoursePurpleGlow : AppColors.lakeCyan,
                                             fontSize: 14,
                                           ),
                                         ),
@@ -556,8 +612,8 @@ class CoursesScreen extends StatelessWidget {
                                     icon: const Icon(Icons.settings_outlined, size: 20),
                                     label: const Text('Edit Course & Tees', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                                     style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppColors.lakeCyan,
-                                      side: const BorderSide(color: AppColors.lakeCyan),
+                                      foregroundColor: isShort ? AppColors.shortCoursePurpleLight : AppColors.lakeCyan,
+                                      side: BorderSide(color: isShort ? AppColors.shortCoursePurple : AppColors.lakeCyan),
                                       padding: const EdgeInsets.symmetric(vertical: 12),
                                     ),
                                   ),

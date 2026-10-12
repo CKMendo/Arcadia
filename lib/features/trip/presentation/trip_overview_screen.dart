@@ -215,52 +215,31 @@ class TripOverviewScreen extends StatelessWidget {
                                 ),
                               ],
                             ),
-                            if (tournament != null && tournament.formatType != 'individual') ...[
                               const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.teamA.withValues(alpha: 0.35),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: AppColors.teamA, width: 1.5),
-                                    ),
-                                    child: Text(
-                                      tournament.teamAName,
-                                      style: const TextStyle(
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: AppColors.lakeDeep.withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppColors.lakeCyan, width: 1.3),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.groups, color: AppColors.cyanLight, size: 16),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      '2-MAN ROTATING TEAMS • NET STABLEFORD',
+                                      style: TextStyle(
                                         color: Colors.white,
-                                        fontSize: 15,
+                                        fontSize: 13,
                                         fontWeight: FontWeight.w900,
+                                        letterSpacing: 0.6,
                                       ),
                                     ),
-                                  ),
-                                  const Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 10.0),
-                                    child: Text(
-                                      'VS',
-                                      style: TextStyle(color: AppColors.duneSand, fontSize: 16, fontWeight: FontWeight.w900),
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.teamB.withValues(alpha: 0.35),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: AppColors.teamB, width: 1.5),
-                                    ),
-                                    child: Text(
-                                      tournament.teamBName,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ],
                           ],
                         ),
                       ),
@@ -544,29 +523,68 @@ class TripOverviewScreen extends StatelessWidget {
                     children: rounds.map((r) {
                       final playedDate =
                           DateTime.fromMillisecondsSinceEpoch(r.datePlayed);
+                      final lowerCourse = r.courseName.toLowerCase();
+                      final isShort = lowerCourse.contains('bootlegger') ||
+                          lowerCourse.contains('dozen') ||
+                          lowerCourse.contains('threetops') ||
+                          lowerCourse.contains('short') ||
+                          lowerCourse.contains('par 3');
+
                       return Card(
                         margin: const EdgeInsets.only(bottom: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(
+                            color: isShort ? AppColors.shortCoursePurple : AppColors.cardBorder,
+                            width: isShort ? 1.8 : 1.0,
+                          ),
+                        ),
                         child: ListTile(
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           leading: Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: AppColors.surfaceElevated,
+                              color: isShort ? AppColors.shortCoursePurpleBadge : AppColors.surfaceElevated,
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppColors.cardBorder),
+                              border: Border.all(color: isShort ? AppColors.shortCoursePurple : AppColors.cardBorder),
                             ),
-                            child: const Icon(Icons.sports_golf,
-                                color: AppColors.lakeCyan, size: 28),
+                            child: Icon(Icons.sports_golf,
+                                color: isShort ? AppColors.shortCoursePurpleLight : AppColors.lakeCyan, size: 28),
                           ),
-                          title: Text(
-                            'Round ${r.roundNumber}: ${r.courseName}',
-                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 19),
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Round ${r.roundNumber}: ${r.courseName}',
+                                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 19),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (isShort) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.shortCoursePurpleBadge,
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: AppColors.shortCoursePurple),
+                                  ),
+                                  child: const Text('SHORT COURSE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFF3E8FF))),
+                                ),
+                              ],
+                            ],
                           ),
                           subtitle: Padding(
                             padding: const EdgeInsets.only(top: 4.0),
                             child: Text(
-                              '${dateFormat.format(playedDate)} • Winner: ${r.winnerName ?? 'Completed'}',
-                              style: const TextStyle(fontSize: 16, color: Colors.white70, fontWeight: FontWeight.w600),
+                              isShort
+                                  ? '${dateFormat.format(playedDate)} • Casual Play / Birdie Pot'
+                                  : '${dateFormat.format(playedDate)} • Winner: ${r.winnerName ?? 'Completed'}',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: isShort ? AppColors.shortCoursePurpleGlow : Colors.white70,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                           trailing: PopupMenuButton<String>(
@@ -1064,6 +1082,11 @@ class TripOverviewScreen extends StatelessWidget {
                           roundRepository: roundRepository,
                           session: draft,
                           playerRepository: playerRepository,
+                          onExit: () {
+                            if (Navigator.of(context).canPop()) {
+                              Navigator.of(context).pop();
+                            }
+                          },
                         ),
                       ),
                     );
@@ -1096,6 +1119,11 @@ class TripOverviewScreen extends StatelessWidget {
                           roundRepository: roundRepository,
                           session: draft,
                           playerRepository: playerRepository,
+                          onExit: () {
+                            if (Navigator.of(context).canPop()) {
+                              Navigator.of(context).pop();
+                            }
+                          },
                         ),
                       ),
                     );
@@ -1329,6 +1357,11 @@ class TripOverviewScreen extends StatelessWidget {
             roundRepository: roundRepository,
             session: session,
             playerRepository: playerRepository,
+            onExit: () {
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
+            },
           ),
         ),
       );

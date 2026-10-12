@@ -649,7 +649,7 @@ class _CourseImportDialogState extends State<CourseImportDialog> with SingleTick
               const Icon(Icons.check_circle, color: Color(0xFF34D399), size: 20),
               const SizedBox(width: 8),
               Expanded(
-                child: Text('✅ Scorecard scanned with Gemini 3.8/3.7: ${parsed.name} (${parsed.holeCount} holes)!'),
+                child: Text('✅ Scorecard scanned with Gemini 3.8/3.6: ${parsed.name} (${parsed.holeCount} holes)!'),
               ),
             ],
           ),

@@ -41,7 +41,7 @@ class AppSettingsService {
     return null;
   }
 
-  /// Retrieves the Secondary Gemini API key (for Gemini 3.7 Flash fallback).
+  /// Retrieves the Secondary Gemini API key (for Gemini 3.6 Flash fallback).
   static Future<String?> getGeminiSecondaryApiKey() async {
     try {
       final saved = await CredentialsBackupService.getCredential(_keyGeminiSecondaryApiKey);
@@ -177,7 +177,7 @@ class AppSettingsService {
   }
 
   /// Tests a Gemini API key using the centralized GeminiOcrService
-  /// (Gemini 3.8 Flash primary, Gemini 3.7 Flash backup, Gemini 3.6 fallback).
+  /// (Gemini 3.8 Flash primary, Gemini 3.6 Flash backup, Gemini 3.5 Flash-Lite fallback).
   static Future<bool> validateGeminiApiKey(
     String apiKey, {
     String? model,

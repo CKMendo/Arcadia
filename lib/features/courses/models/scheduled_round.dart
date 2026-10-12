@@ -30,7 +30,24 @@ class ScheduledRound {
     this.holeCount = 18,
   });
 
-  bool get isShortCourse => holeCount != 18;
+  bool get isShortCourse {
+    if (holeCount != 18) return true;
+    final lower = courseName.toLowerCase();
+    return lower.contains('bootlegger') ||
+        lower.contains('dozen') ||
+        lower.contains('threetops') ||
+        lower.contains('short') ||
+        lower.contains('par 3');
+  }
+
+  int get actualHoleCount {
+    if (holeCount != 18) return holeCount;
+    final lower = courseName.toLowerCase();
+    if (lower.contains('bootlegger')) return 10;
+    if (lower.contains('dozen')) return 12;
+    if (lower.contains('threetops')) return 9;
+    return holeCount;
+  }
 
   String get formattedDate => DateFormat('EEE, MMM d, yyyy').format(date);
   String get shortDate => DateFormat('MMM d').format(date);
@@ -78,27 +95,46 @@ class ScheduledRound {
       'format': format,
       'notes': notes,
       'isFinalRound': isFinalRound,
-      'holeCount': holeCount,
+      'holeCount': actualHoleCount,
       'isShortCourse': isShortCourse,
       if (pairingPlan != null) 'pairingPlan': pairingPlan!.toJson(),
     };
   }
 
   factory ScheduledRound.fromJson(Map<String, dynamic> json) {
+    final cName = json['courseName'] as String? ?? 'Arcadia Course';
+    final rawHoleCount = (json['holeCount'] as num?)?.toInt() ?? 18;
+    final lowerName = cName.toLowerCase();
+    final normalizedHoleCount = (rawHoleCount == 18 &&
+            (lowerName.contains('bootlegger') ||
+                lowerName.contains('dozen') ||
+                lowerName.contains('threetops') ||
+                lowerName.contains('short') ||
+                lowerName.contains('par 3')))
+        ? (lowerName.contains('bootlegger')
+            ? 10
+            : (lowerName.contains('dozen')
+                ? 12
+                : (lowerName.contains('threetops') ? 9 : rawHoleCount)))
+        : rawHoleCount;
+
     return ScheduledRound(
       id: json['id'] as String? ?? 'round_${DateTime.now().millisecondsSinceEpoch}',
       roundNumber: (json['roundNumber'] as num?)?.toInt() ?? 1,
       courseId: json['courseId'] as String? ?? '',
-      courseName: json['courseName'] as String? ?? 'Arcadia Course',
+      courseName: cName,
       date: json['date'] != null
           ? DateTime.fromMillisecondsSinceEpoch(json['date'] as int)
           : DateTime.now(),
       teeTimeGroup1: json['teeTimeGroup1'] as String? ?? '9:30 AM',
       teeTimeGroup2: json['teeTimeGroup2'] as String? ?? '9:42 AM',
-      format: json['format'] as String? ?? '2-Man Best Ball Net Stableford',
+      format: json['format'] as String? ??
+          (normalizedHoleCount != 18
+              ? 'Casual Play • Birdie Pot Only (${normalizedHoleCount}H)'
+              : '2-Man Best Ball Net Stableford'),
       notes: json['notes'] as String?,
       isFinalRound: json['isFinalRound'] as bool? ?? false,
-      holeCount: (json['holeCount'] as num?)?.toInt() ?? 18,
+      holeCount: normalizedHoleCount,
       pairingPlan: json['pairingPlan'] != null
           ? RoundPairingPlan.fromJson(json['pairingPlan'] as Map<String, dynamic>)
           : null,

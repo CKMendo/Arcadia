@@ -481,17 +481,17 @@ class _TournamentSetupScreenState extends State<TournamentSetupScreen> {
                               final hasAny = hasPrimary || hasSecondary;
 
                               final title = (hasPrimary && hasSecondary)
-                                  ? 'Gemini 3.8 + 3.7 Dual Keys Active'
+                                  ? 'Gemini 3.8 + 3.6 Dual Keys Active'
                                   : hasPrimary
                                       ? 'Gemini 3.8 Flash API Key'
                                       : hasSecondary
-                                          ? 'Gemini 3.7 Backup Key Active'
+                                          ? 'Gemini 3.6 Backup Key Active'
                                           : 'Gemini Keys Not Configured';
 
                               final subtitle = (hasPrimary && hasSecondary)
-                                  ? 'Primary 3.8 (...${primaryKey.length > 4 ? primaryKey.substring(primaryKey.length - 4) : primaryKey}) • Backup 3.7 (...${secondaryKey.length > 4 ? secondaryKey.substring(secondaryKey.length - 4) : secondaryKey})'
+                                  ? 'Primary 3.8 (...${primaryKey.length > 4 ? primaryKey.substring(primaryKey.length - 4) : primaryKey}) • Backup 3.6 (...${secondaryKey.length > 4 ? secondaryKey.substring(secondaryKey.length - 4) : secondaryKey})'
                                   : hasPrimary
-                                      ? 'Primary active (...${primaryKey.length > 4 ? primaryKey.substring(primaryKey.length - 4) : primaryKey}). Tap to add a 3.7 backup key.'
+                                      ? 'Primary active (...${primaryKey.length > 4 ? primaryKey.substring(primaryKey.length - 4) : primaryKey}). Tap to add a 3.6 backup key.'
                                       : hasSecondary
                                           ? 'Backup active (...${secondaryKey.length > 4 ? secondaryKey.substring(secondaryKey.length - 4) : secondaryKey}). Tap to add 3.8 primary key.'
                                           : 'Required for automatic scorecard vision scanning.';

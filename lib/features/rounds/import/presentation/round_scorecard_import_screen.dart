@@ -58,12 +58,14 @@ class _RoundScorecardImportScreenState
   _RoundImportReader? _activeReader;
   _RoundImportReader _selectedReader = _RoundImportReader.offline;
   ExternalAiAssistant? _externalAssistant;
+  int _scorecardHoleCount = 18;
   final Map<String, int?> _rowByPlayerId = <String, int?>{};
   final Map<String, double> _matchConfidenceByPlayerId = <String, double>{};
 
   @override
   void initState() {
     super.initState();
+    _scorecardHoleCount = 18;
     for (final player in widget.players) {
       _rowByPlayerId[player.id] = null;
     }
@@ -86,7 +88,7 @@ class _RoundScorecardImportScreenState
       final openedInstalledApp = await _externalAiService.copyPromptAndOpen(
         assistant: assistant,
         prompt: _externalAiService.roundPrompt(
-          holeCount: widget.holeCount,
+          holeCount: _scorecardHoleCount,
           playerNames: widget.players
               .map((player) => player.fullName)
               .toList(growable: false),
@@ -112,84 +114,39 @@ class _RoundScorecardImportScreenState
     final clipboard = await Clipboard.getData(Clipboard.kTextPlain);
     if (!mounted) return;
     final expectedPrompt = _externalAiService.roundPrompt(
-      holeCount: widget.holeCount,
+      holeCount: _scorecardHoleCount,
       playerNames: widget.players
           .map((player) => player.fullName)
           .toList(growable: false),
     );
     final clipboardText = clipboard?.text?.trim() ?? '';
     final clipboardStillHasPrompt = clipboardText == expectedPrompt.trim();
-    final controller = TextEditingController(
-      text: clipboardStillHasPrompt ? '' : clipboardText,
-    );
+
     final response = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.surfaceDark,
-        title: Text(
-          'Paste ${assistant.label} response',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: SizedBox(
-          width: 520,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (clipboardStillHasPrompt) ...[
-                Card(
-                  color: AppColors.cardDark,
-                  child: ListTile(
-                    leading: const Icon(Icons.warning_amber_outlined, color: Colors.amber),
-                    title: const Text('Clipboard still contains the AI prompt', style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text(
-                      'Return to ${assistant.label}, copy its completed response, then paste it here.',
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-              ],
-              TextField(
-                controller: controller,
-                minLines: 8,
-                maxLines: 16,
-                keyboardType: TextInputType.multiline,
-                style: const TextStyle(fontSize: 14, fontFamily: 'monospace'),
-                decoration: InputDecoration(
-                  hintText: 'Paste the complete JSON response here...',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  filled: true,
-                  fillColor: AppColors.surfaceElevated,
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.lakeCyan),
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(controller.text.trim()),
-            icon: const Icon(Icons.content_paste_go, color: Color(0xFF06111D)),
-            label: const Text('Import Response', style: TextStyle(color: Color(0xFF06111D), fontWeight: FontWeight.bold)),
-          ),
-        ],
+      builder: (dialogContext) => _PasteAiResponseDialog(
+        assistant: assistant,
+        initialText: clipboardStillHasPrompt ? '' : clipboardText,
+        clipboardStillHasPrompt: clipboardStillHasPrompt,
       ),
     );
-    controller.dispose();
-    if (response == null || !mounted) return;
+
+    if (response == null || !mounted || response.trim().isEmpty) return;
     try {
       final draft = _geminiService.parseResponse(
         response,
-        holeCount: widget.holeCount,
+        holeCount: _scorecardHoleCount,
       );
       _applyDetectedDraft(draft);
     } on FormatException catch (error) {
+      if (!mounted) return;
       setState(() => _importError = error.message);
       _showMessage(error.message);
+    } catch (error) {
+      if (!mounted) return;
+      final msg = error.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+      setState(() => _importError = 'Import error: $msg');
+      _showMessage('Import error: $msg');
     }
   }
 
@@ -199,7 +156,7 @@ class _RoundScorecardImportScreenState
     await Clipboard.setData(
       ClipboardData(
         text: _externalAiService.roundPrompt(
-          holeCount: widget.holeCount,
+          holeCount: _scorecardHoleCount,
           playerNames: widget.players
               .map((player) => player.fullName)
               .toList(growable: false),
@@ -335,13 +292,13 @@ class _RoundScorecardImportScreenState
     });
     try {
       final draft = switch (reader) {
-        _RoundImportReader.offline => _offlineParser.parse(
-          (await _offlineService.recognize(image.path)).text,
-          holeCount: widget.holeCount,
+        _RoundImportReader.offline => await _offlineService.analyzeScorecard(
+          image.path,
+          holeCount: _scorecardHoleCount,
         ),
         _RoundImportReader.gemini => await _geminiService.analyze(
           image.path,
-          holeCount: widget.holeCount,
+          holeCount: _scorecardHoleCount,
         ),
       };
       if (!mounted) return;
@@ -409,22 +366,11 @@ class _RoundScorecardImportScreenState
       _matchConfidenceByPlayerId.clear();
       for (final player in widget.players) {
         final match = matches[player.id];
-        _rowByPlayerId[player.id] = match?.rowIndex;
-        if (match != null) {
+        if (match != null && match.confidence >= 0.60) {
+          _rowByPlayerId[player.id] = match.rowIndex;
           _matchConfidenceByPlayerId[player.id] = match.confidence;
-        }
-      }
-
-      final usedRows = _rowByPlayerId.values.whereType<int>().toSet();
-      var nextRow = 0;
-      for (final player in widget.players) {
-        if (_rowByPlayerId[player.id] != null) continue;
-        while (nextRow < draft.rows.length && usedRows.contains(nextRow)) {
-          nextRow++;
-        }
-        if (nextRow < draft.rows.length) {
-          _rowByPlayerId[player.id] = nextRow;
-          usedRows.add(nextRow);
+        } else {
+          _rowByPlayerId[player.id] = null;
         }
       }
     });
@@ -467,7 +413,12 @@ class _RoundScorecardImportScreenState
         _showMessage('Each detected row can only be assigned to one player.');
         return;
       }
-      scores[player.id] = List<int?>.from(draft.rows[rowIndex].scores);
+      final rowScores = draft.rows[rowIndex].scores;
+      scores[player.id] = List<int?>.from(
+        rowScores.length > widget.holeCount
+            ? rowScores.take(widget.holeCount)
+            : rowScores,
+      );
     }
 
     if (scores.isEmpty) {
@@ -509,6 +460,43 @@ class _RoundScorecardImportScreenState
                     'Capture or select a scorecard photo. Use FREE ON-DEVICE offline OCR, or choose Gemini, ChatGPT, or Claude.',
                     style: const TextStyle(fontSize: 15, color: Colors.white70, height: 1.35),
                   ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          color: AppColors.surfaceDark,
+          shape: RoundedRectangleBorder(
+            side: const BorderSide(color: AppColors.lakeCyan, width: 1.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                const Icon(Icons.table_rows_outlined, color: AppColors.lakeCyan, size: 22),
+                const SizedBox(width: 10),
+                const Text(
+                  'Card Format:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+                ),
+                const Spacer(),
+                SegmentedButton<int>(
+                  segments: [
+                    const ButtonSegment<int>(
+                      value: 18,
+                      label: Text('18 Holes (2 Rows)', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                    if (widget.holeCount != 18)
+                      ButtonSegment<int>(
+                        value: widget.holeCount,
+                        label: Text('${widget.holeCount} Holes'),
+                      ),
+                  ],
+                  selected: {_scorecardHoleCount},
+                  onSelectionChanged: (set) => setState(() => _scorecardHoleCount = set.first),
                 ),
               ],
             ),
@@ -666,6 +654,29 @@ class _RoundScorecardImportScreenState
           ],
         ),
         _buildImportSummary(draft),
+        const SizedBox(height: 10),
+        Card(
+          color: const Color(0xFF0F2838),
+          shape: RoundedRectangleBorder(
+            side: const BorderSide(color: AppColors.lakeCyan, width: 1.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Padding(
+            padding: EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Icon(Icons.touch_app_outlined, color: AppColors.lakeCyan, size: 26),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Match each score row below to the correct player from your roster using the dropdown.',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
         if (draft.warnings.isNotEmpty) ...[
           const SizedBox(height: 8),
           for (final warning in draft.warnings)
@@ -702,7 +713,7 @@ class _RoundScorecardImportScreenState
     final completeRowCount = draft.rows
         .where(
           (row) =>
-              row.enteredScoreCount == widget.holeCount && !row.hasInvalidScore,
+              row.enteredScoreCount >= 9 && !row.hasInvalidScore,
         )
         .length;
     return Card(
@@ -756,7 +767,7 @@ class _RoundScorecardImportScreenState
                   style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.cyanLight, fontSize: 15),
                 ),
                 Text(
-                  'OCR: ${row.sourceLabel}',
+                  'OCR Name: ${row.sourceLabel}',
                   style: const TextStyle(color: Colors.white54, fontSize: 13),
                 ),
               ],
@@ -769,16 +780,32 @@ class _RoundScorecardImportScreenState
               return DropdownButtonFormField<String?>(
                 key: ValueKey('row_${rowIndex}_player_$safePlayerId'),
                 initialValue: safePlayerId,
-                decoration: const InputDecoration(
-                  labelText: 'Player for this row',
-                  prefixIcon: Icon(Icons.person_outline, color: AppColors.lakeCyan),
+                decoration: InputDecoration(
+                  labelText: safePlayerId == null
+                      ? '👉 Tap to Assign Player for this Row'
+                      : 'Assigned Player',
+                  labelStyle: TextStyle(
+                    color: safePlayerId == null ? AppColors.cyanLight : Colors.greenAccent,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  prefixIcon: Icon(
+                    safePlayerId == null ? Icons.touch_app : Icons.check_circle,
+                    color: safePlayerId == null ? AppColors.lakeCyan : Colors.greenAccent,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(
+                      color: safePlayerId == null ? AppColors.lakeCyan : Colors.greenAccent.withValues(alpha: 0.6),
+                      width: 1.5,
+                    ),
+                  ),
                   filled: true,
                   fillColor: AppColors.surfaceElevated,
                 ),
                 items: [
                   const DropdownMenuItem<String?>(
                     value: null,
-                    child: Text('Unassigned / Ignore Row'),
+                    child: Text('Unassigned / Not In This Group'),
                   ),
                   ...widget.players.map(
                     (player) => DropdownMenuItem<String?>(
@@ -805,12 +832,7 @@ class _RoundScorecardImportScreenState
             }),
             const SizedBox(height: 8),
             Text(
-              '${_playerPreviewText(row)}'
-              '${confidence == null
-                  ? ''
-                  : confidence >= 0.85
-                  ? ' • Strong name match'
-                  : ' • Verify player match'}',
+              _playerPreviewText(row),
               style: TextStyle(
                 color: confidence != null && confidence >= 0.85 ? Colors.greenAccent : Colors.white70,
                 fontSize: 13,
@@ -832,17 +854,11 @@ class _RoundScorecardImportScreenState
   }
 
   String _playerPreviewText(ImportedPlayerScoreRow row) {
-    final coursePar = widget.parByHole.values.fold<int>(
-      0,
-      (sum, par) => sum + par,
-    );
-    final difference = row.totalScore - coursePar;
-    final relative = difference == 0
-        ? 'E'
-        : difference > 0
-        ? '+$difference'
-        : '$difference';
-    return '${row.enteredScoreCount}/${widget.holeCount} scores • Gross ${row.totalScore} • $relative';
+    final frontNine = row.scores.take(9).whereType<int>();
+    final backNine = row.scores.skip(9).take(9).whereType<int>();
+    final frontTotal = frontNine.fold<int>(0, (sum, s) => sum + s);
+    final backTotal = backNine.fold<int>(0, (sum, s) => sum + s);
+    return '${row.enteredScoreCount} holes read • Gross Total: ${row.totalScore} (Front: $frontTotal | Back: $backTotal)';
   }
 
   Widget _buildGeminiKeyStatusCard() {
@@ -860,20 +876,20 @@ class _RoundScorecardImportScreenState
         final hasAny = hasPrimary || hasSecondary;
 
         final title = (hasPrimary && hasSecondary)
-            ? 'Gemini 3.8 + 3.7 Ready (Dual Keys)'
+            ? 'Gemini 3.8 + 3.6 Ready (Dual Keys)'
             : hasPrimary
                 ? 'Gemini 3.8 Flash Ready'
                 : hasSecondary
-                    ? 'Gemini 3.7 Backup Key Ready'
+                    ? 'Gemini 3.6 Backup Key Ready'
                     : 'Gemini API Key Required';
 
         final subtitle = (hasPrimary && hasSecondary)
-            ? 'Primary 3.8 (...${primaryKey.length > 4 ? primaryKey.substring(primaryKey.length - 4) : primaryKey}) • Backup 3.7 (...${secondaryKey.length > 4 ? secondaryKey.substring(secondaryKey.length - 4) : secondaryKey})'
+            ? 'Primary 3.8 (...${primaryKey.length > 4 ? primaryKey.substring(primaryKey.length - 4) : primaryKey}) • Backup 3.6 (...${secondaryKey.length > 4 ? secondaryKey.substring(secondaryKey.length - 4) : secondaryKey})'
             : hasPrimary
-                ? 'Primary active (...${primaryKey.length > 4 ? primaryKey.substring(primaryKey.length - 4) : primaryKey}). Tap to add a 3.7 backup key.'
+                ? 'Primary active (...${primaryKey.length > 4 ? primaryKey.substring(primaryKey.length - 4) : primaryKey}). Tap to add a 3.6 backup key.'
                 : hasSecondary
                     ? 'Backup active (...${secondaryKey.length > 4 ? secondaryKey.substring(secondaryKey.length - 4) : secondaryKey}). Tap to configure 3.8 primary key.'
-                    : 'Configure Primary (3.8) & Backup (3.7) keys for AI scorecard scan, or use FREE ON-DEVICE OCR.';
+                    : 'Configure Primary (3.8) & Backup (3.6) keys for AI scorecard scan, or use FREE ON-DEVICE OCR.';
 
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1387,3 +1403,128 @@ class _ScoreEntryBoxState extends State<_ScoreEntryBox> {
     );
   }
 }
+
+class _PasteAiResponseDialog extends StatefulWidget {
+  final ExternalAiAssistant assistant;
+  final String initialText;
+  final bool clipboardStillHasPrompt;
+
+  const _PasteAiResponseDialog({
+    required this.assistant,
+    required this.initialText,
+    required this.clipboardStillHasPrompt,
+  });
+
+  @override
+  State<_PasteAiResponseDialog> createState() => _PasteAiResponseDialogState();
+}
+
+class _PasteAiResponseDialogState extends State<_PasteAiResponseDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialText);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pasteFromClipboard() async {
+    final clip = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = clip?.text?.trim();
+    if (text != null && text.isNotEmpty) {
+      setState(() {
+        _controller.text = text;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.surfaceDark,
+      title: Text(
+        'Paste ${widget.assistant.label} response',
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+      content: SizedBox(
+        width: 520,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (widget.clipboardStillHasPrompt) ...[
+              Card(
+                color: AppColors.cardDark,
+                child: ListTile(
+                  leading: const Icon(Icons.warning_amber_outlined, color: Colors.amber),
+                  title: const Text('Clipboard still contains the AI prompt', style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text(
+                    'Return to ${widget.assistant.label}, copy its completed response, then paste it here.',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: _pasteFromClipboard,
+                  icon: const Icon(Icons.paste, size: 18, color: AppColors.lakeCyan),
+                  label: const Text(
+                    'PASTE CLIPBOARD',
+                    style: TextStyle(
+                      color: AppColors.lakeCyan,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            TextField(
+              controller: _controller,
+              minLines: 8,
+              maxLines: 16,
+              keyboardType: TextInputType.multiline,
+              style: const TextStyle(fontSize: 14, fontFamily: 'monospace'),
+              decoration: InputDecoration(
+                hintText: 'Paste the complete JSON response here...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                filled: true,
+                fillColor: AppColors.surfaceElevated,
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton.icon(
+          style: FilledButton.styleFrom(backgroundColor: AppColors.lakeCyan),
+          onPressed: () =>
+              Navigator.of(context).pop(_controller.text.trim()),
+          icon: const Icon(Icons.content_paste_go, color: Color(0xFF06111D)),
+          label: const Text(
+            'Import Response',
+            style: TextStyle(
+              color: Color(0xFF06111D),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+

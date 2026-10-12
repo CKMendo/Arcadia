@@ -28,10 +28,10 @@ void main() {
 
       // 4. Save Gemini Primary & Secondary API keys
       await AppSettingsService.setGeminiPrimaryApiKey('AIzaSy_Primary_38_Key');
-      await AppSettingsService.setGeminiSecondaryApiKey('AIzaSy_Secondary_37_Key');
+      await AppSettingsService.setGeminiSecondaryApiKey('AIzaSy_Secondary_36_Key');
 
       expect(await AppSettingsService.getGeminiPrimaryApiKey(), 'AIzaSy_Primary_38_Key');
-      expect(await AppSettingsService.getGeminiSecondaryApiKey(), 'AIzaSy_Secondary_37_Key');
+      expect(await AppSettingsService.getGeminiSecondaryApiKey(), 'AIzaSy_Secondary_36_Key');
       expect(await AppSettingsService.hasAnyGeminiApiKey(), isTrue);
 
       // 5. Update website links

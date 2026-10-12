@@ -306,7 +306,15 @@ class ActiveRoundSession {
   }
 
   int get holeCount => holes.length;
-  bool get isShortCourse => holeCount != 18;
+  bool get isShortCourse {
+    if (holeCount != 18) return true;
+    final lower = courseName.toLowerCase();
+    return lower.contains('bootlegger') ||
+        lower.contains('dozen') ||
+        lower.contains('threetops') ||
+        lower.contains('short') ||
+        lower.contains('par 3');
+  }
 
   HoleSessionInfo getHole(int holeNumber) {
     return holes.firstWhere(

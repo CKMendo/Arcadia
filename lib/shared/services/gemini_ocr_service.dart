@@ -16,19 +16,24 @@ class GeminiOcrService {
   GeminiOcrService._();
 
   static const String primaryModel = 'gemini-3.8-flash';
-  static const String backupModel = 'gemini-3.7-flash';
-  static const String fallbackModel = 'gemini-3.6-flash';
+  static const String backupModel = 'gemini-3.6-flash';
+  static const String fallbackModel = 'gemini-3.5-flash-lite';
 
   static const String primaryModelLabel = 'Gemini 3.8 Flash';
-  static const String backupModelLabel = 'Gemini 3.7 Flash';
-  static const String fallbackModelLabel = 'Gemini 3.6 Flash';
+  static const String backupModelLabel = 'Gemini 3.6 Flash';
+  static const String fallbackModelLabel = 'Gemini 3.5 Flash-Lite';
 
   /// Validates a Gemini API key using the unified Gemini 3 family models.
   static Future<bool> validateApiKey(String apiKey) async {
     final trimmedKey = apiKey.trim();
     if (trimmedKey.isEmpty) return false;
 
-    final modelsToTry = [primaryModel, backupModel, fallbackModel];
+    final modelsToTry = [
+      primaryModel,
+      backupModel,
+      fallbackModel,
+      'gemini-flash-lite-latest',
+    ];
     final pingPayload = jsonEncode({
       'contents': [
         {
@@ -99,7 +104,7 @@ class GeminiOcrService {
     if ((primaryKey == null || primaryKey.isEmpty) &&
         (secondaryKey == null || secondaryKey.isEmpty)) {
       throw const FormatException(
-        'Gemini API key not configured. Tap Configure Key below to set your Primary (3.8) and Backup (3.7) keys, '
+        'Gemini API key not configured. Tap Configure Key below to set your Primary (3.8) and Backup (3.6) keys, '
         'or use FREE ON-DEVICE OCR.',
       );
     }
@@ -127,29 +132,33 @@ class GeminiOcrService {
       }
     };
 
-    // Execution plan:
-    // 1) Gemini 3.8 Flash with Primary Key
-    // 2) Gemini 3.8 Flash with Secondary Key (if Primary hits 503/429)
-    // 3) Gemini 3.7 Flash with Secondary Key (as requested: "if 3.8 is not working, 3.7 should be used")
-    // 4) Gemini 3.7 Flash with Primary Key
-    // 5) Gemini 3.6 Flash (emergency fleet fallback if Google servers are busy)
-    final plan = <_GeminiAttemptPlan>[
-      if (primaryKey != null && primaryKey.isNotEmpty)
-        _GeminiAttemptPlan(model: primaryModel, apiKey: primaryKey, label: 'Gemini 3.8 (Primary Key)'),
-      if (secondaryKey != null && secondaryKey.isNotEmpty && secondaryKey != primaryKey)
-        _GeminiAttemptPlan(model: primaryModel, apiKey: secondaryKey, label: 'Gemini 3.8 (Secondary Key)'),
-      if (secondaryKey != null && secondaryKey.isNotEmpty)
-        _GeminiAttemptPlan(model: backupModel, apiKey: secondaryKey, label: 'Gemini 3.7 (Secondary Key)'),
-      if (primaryKey != null && primaryKey.isNotEmpty)
-        _GeminiAttemptPlan(model: backupModel, apiKey: primaryKey, label: 'Gemini 3.7 (Primary Key)'),
-      if (secondaryKey != null && secondaryKey.isNotEmpty)
-        _GeminiAttemptPlan(model: fallbackModel, apiKey: secondaryKey, label: 'Gemini 3.6 (Secondary Key)'),
-      if (primaryKey != null && primaryKey.isNotEmpty)
-        _GeminiAttemptPlan(model: fallbackModel, apiKey: primaryKey, label: 'Gemini 3.6 (Primary Key)'),
+    // Resilient fleet plan prioritizing high availability & speed without deprecated models:
+    // 1. Primary Model: gemini-3.8-flash (Primary Key, then Secondary Key)
+    // 2. Backup Model: gemini-3.6-flash (Primary Key, then Secondary Key)
+    // 3. Fallback Model: gemini-3.5-flash-lite (Primary Key, then Secondary Key)
+    // 4. Fleet Fallback: gemini-flash-lite-latest (Primary Key, then Secondary Key)
+    // 5. Preview Fallback: gemini-3-flash-preview (Primary Key, then Secondary Key)
+    final fleetModels = [
+      (model: primaryModel, label: primaryModelLabel),
+      (model: backupModel, label: backupModelLabel),
+      (model: fallbackModel, label: fallbackModelLabel),
+      (model: 'gemini-flash-lite-latest', label: 'Gemini Flash-Lite Latest'),
+      (model: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview'),
     ];
+
+    final plan = <_GeminiAttemptPlan>[];
+    for (final item in fleetModels) {
+      if (primaryKey != null && primaryKey.isNotEmpty) {
+        plan.add(_GeminiAttemptPlan(model: item.model, apiKey: primaryKey, label: '${item.label} (Primary Key)'));
+      }
+      if (secondaryKey != null && secondaryKey.isNotEmpty && secondaryKey != primaryKey) {
+        plan.add(_GeminiAttemptPlan(model: item.model, apiKey: secondaryKey, label: '${item.label} (Secondary Key)'));
+      }
+    }
 
     String? lastErrorDetail;
     int lastStatusCode = 0;
+    const attemptTimeout = Duration(seconds: 14);
 
     for (final step in plan) {
       final url = Uri.parse(
@@ -163,7 +172,7 @@ class GeminiOcrService {
               headers: {'Content-Type': 'application/json'},
               body: jsonEncode(payload),
             )
-            .timeout(timeout);
+            .timeout(attemptTimeout);
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -183,7 +192,7 @@ class GeminiOcrService {
 
           final wasFallback = step.model != primaryModel;
           final fallbackNotice = wasFallback
-              ? 'Gemini 3.8 Flash was unavailable; automatically analyzed using ${step.model == backupModel ? 'Gemini 3.7 Flash' : 'Gemini 3.6 Flash'}.'
+              ? 'Gemini 3.8 Flash was unavailable; automatically analyzed using ${step.model == backupModel ? 'Gemini 3.6 Flash' : step.model}.'
               : null;
 
           return GeminiOcrResult(
@@ -204,33 +213,52 @@ class GeminiOcrService {
             extractedMsg = parsed['error']['message'] ?? errorBody;
           }
         } catch (_) {}
-        lastErrorDetail = extractedMsg;
+        lastErrorDetail = _sanitizeError(extractedMsg);
 
         if (response.statusCode == 503 || response.statusCode == 429) {
-          await Future.delayed(const Duration(milliseconds: 600));
+          await Future.delayed(const Duration(milliseconds: 1000));
         }
+      } on SocketException catch (e) {
+        debugPrint('Gemini network socket failure: $e');
+        throw const FormatException(
+          'Unable to connect to Google Gemini (Network/DNS error). '
+          'Please check your internet connection or Wi-Fi, or switch to FREE ON-DEVICE OCR.',
+        );
       } catch (e) {
-        lastErrorDetail = e.toString();
-        await Future.delayed(const Duration(milliseconds: 400));
+        final errStr = e.toString();
+        if (errStr.contains('SocketException') || errStr.contains('Failed host lookup')) {
+          throw const FormatException(
+            'Unable to connect to Google Gemini (Network/DNS error). '
+            'Please check your internet connection or Wi-Fi, or switch to FREE ON-DEVICE OCR.',
+          );
+        }
+        lastErrorDetail = _sanitizeError(errStr);
+        await Future.delayed(const Duration(milliseconds: 500));
       }
     }
 
     if (lastStatusCode == 503) {
       throw const FormatException(
         'Google Gemini is currently experiencing high demand (503 UNAVAILABLE). '
-        'Tried Gemini 3.8 and Gemini 3.7 with both configured API keys. '
-        'Please wait a moment and tap RE-READ WITH GEMINI, or switch to FREE ON-DEVICE OCR.',
+        'Google AI servers are temporarily overloaded. '
+        'Please switch to FREE ON-DEVICE OCR (which works offline with zero server wait) '
+        'or wait a moment and tap RE-READ WITH GEMINI.',
       );
     } else if (lastStatusCode == 429) {
       throw const FormatException(
         'Gemini API request rate limit reached (429 RESOURCE_EXHAUSTED). '
-        'Tried both configured API keys. Please wait a moment and tap RE-READ WITH GEMINI.',
+        'Tried all configured keys and models. Please wait a moment and tap RE-READ WITH GEMINI, '
+        'or switch to FREE ON-DEVICE OCR.',
       );
     } else {
       throw FormatException(
-        'Gemini API error ($lastStatusCode): ${lastErrorDetail ?? 'Service temporarily unavailable.'}',
+        'Gemini API error ($lastStatusCode): ${_sanitizeError(lastErrorDetail ?? 'Service temporarily unavailable.')}',
       );
     }
+  }
+
+  static String _sanitizeError(String msg) {
+    return msg.replaceAll(RegExp(r'key=[A-Za-z0-9_\-\.]+'), 'key=[REDACTED]');
   }
 
   /// SCORING OCR: Analyzes completed golf scorecard photo and extracts player gross scores.
@@ -247,19 +275,34 @@ class GeminiOcrService {
     final mimeType = imagePath.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
 
     final promptText = targetPlayerName == null
-        ? 'Extract player gross scores from this completed golf scorecard photo.\n'
-          'LAYOUT INSTRUCTIONS:\n'
-          '1. Many digital scorecards (e.g. 18Birdies, Golfshot) and paper cards split 18 holes into TWO ROWS per player:\n'
-          '   - Top row: Front 9 (Holes 1 to 9), followed by Front 9 subtotal (OUT).\n'
-          '   - Bottom row: Back 9 (Holes 10 to 18), followed by Back 9 subtotal (IN).\n'
-          '   - For each player, COMBINE both rows into a single list of $holeCount gross scores in exact hole order (Hole 1 to $holeCount).\n'
-          '2. If all 18 holes are on a single horizontal row, read all 18 scores across.\n'
-          '3. Inspect every visible player from top to bottom and return one row per player with exactly $holeCount gross scores.\n'
-          '4. Do NOT include Front 9 / Back 9 subtotals (OUT/IN) or 18-hole total scores in the scores list.\n'
-          '5. Ignore printed par, yardage, handicap, and ratings.\n'
-          'Return ONLY one valid JSON object with {"rows": [{"playerName": "...", "scores": [...]}]}'
-        : 'Targeted recovery: find the player belonging to "$targetPlayerName" on this completed golf scorecard.\n'
-          'Note: 18 holes may be split across two stacked rows (Top = Front 9, Bottom = Back 9). Combine both into $holeCount gross scores in hole order.\n'
+        ? 'Extract player gross scores from this completed 18Birdies golf scorecard photo.\n\n'
+          'CRITICAL 18BIRDIES SCORECARD FORMATS:\n'
+          'Format 1 (Card View - Two Rows per Player):\n'
+          '   Every player\'s 18 holes are split across TWO STACKED ROWS OF 9 HOLES:\n'
+          '   - Player name is on the left under their avatar (e.g., "Hiren B.", "Chet M.", "Neal P.").\n'
+          '   - TOP ROW: Exactly 9 scores (Holes 1 to 9 / Front 9), followed by the Front 9 subtotal (e.g. 44, 47) and To Par badge.\n'
+          '   - BOTTOM ROW directly underneath: Back 9 scores (Holes 10 to 18), followed by Back 9 subtotal (e.g. 39, 45).\n'
+          '   - Combine both into a single array of $holeCount gross scores in hole order: [H1, H2, ..., H9, H10, ..., H18].\n'
+          '   - If a hole has no score or is blank, use null for that hole.\n\n'
+          'Format 2 (Table View - Gross & Net Rows):\n'
+          '   - Each player has a "Gross" row and a "Net" row.\n'
+          '   - CRITICAL: Extract ONLY the "Gross" row scores! Ignore the "Net" row completely! DO NOT combine Gross and Net rows together!\n'
+          '   - If only 9 holes are visible in the table (Holes 1 to 9), return the visible 9 gross scores padded to $holeCount with nulls (or the full $holeCount if all are shown).\n\n'
+          'GENERAL RULES:\n'
+          '1. SHAPES & SYMBOLS:\n'
+          '   - Numbers inside dark circles are birdies/pars; numbers inside grey/black boxes are bogeys/doubles.\n'
+          '   - Always read the gross score number inside each shape or circle.\n'
+          '2. SUB-TOTALS & TOTALS:\n'
+          '   - DO NOT include subtotals (e.g. 37, 39, 42, 44, 45, 47) or final totals (e.g. 76, 81, 86, 89) in the hole scores list.\n'
+          '3. IGNORE NON-SCORE SECTIONS:\n'
+          '   - Ignore the partially visible card peeking in on the far right edge of the screen.\n'
+          '   - Ignore the "Share to" menu sheet at the bottom of the screenshot.\n\n'
+          'Return ONLY one valid JSON object adhering strictly to this schema:\n'
+          '{"rows": [{"playerName": "...", "scores": [exactly $holeCount integers or nulls]}]}'
+        : 'Targeted recovery: find the player belonging to "$targetPlayerName" on this completed 18Birdies golf scorecard.\n'
+          'Note: If 18 holes are split across two stacked rows (Top = Front 9 Holes 1-9, Bottom = Back 9 Holes 10-18), combine both into $holeCount gross scores in hole order: [H1..H18].\n'
+          'If the scorecard has separate Gross and Net rows, extract ONLY the Gross row.\n'
+          'Do not include subtotals (37, 39) or totals (76, 81).\n'
           'Return exactly that one player row with $holeCount gross scores. Return ONLY valid JSON: {"rows": [{"playerName": "...", "scores": [...]}]}';
 
     final result = await generateWithFallback(
@@ -351,15 +394,29 @@ Ensure all holes have their par (3, 4, or 5) and stroke index (handicap ranking 
   }) {
     final json = AiResponseJsonDecoder.decodeObject(response);
     final rows = <ImportedPlayerScoreRow>[];
-    final rawRows = json['rows'];
+    final rawRows = json['rows'] ?? json['players'] ?? json['data'] ?? json['scorecard'] ?? json['results'];
     if (rawRows is List) {
       for (final raw in rawRows.whereType<Map>()) {
         final row = raw.map((key, value) => MapEntry(key.toString(), value));
-        final scores = row['scores'] is List
-            ? (row['scores'] as List)
-                .map((value) => value is num ? value.round() : null)
-                .toList()
-            : <int?>[];
+        final rawScores = row['scores'] ?? row['grossScores'] ?? row['gross_scores'] ?? row['holeScores'] ?? row['holes'] ?? row['score'];
+        final scores = <int?>[];
+        if (rawScores is List) {
+          scores.addAll(
+            rawScores.map((value) => value is num ? value.round() : null),
+          );
+        } else if (rawScores is Map) {
+          // If keys are hole numbers like "1", "2", ...
+          final sortedKeys = rawScores.keys.toList()
+            ..sort((a, b) {
+              final aNum = int.tryParse(a.toString()) ?? 0;
+              final bNum = int.tryParse(b.toString()) ?? 0;
+              return aNum.compareTo(bNum);
+            });
+          for (final key in sortedKeys) {
+            final val = rawScores[key];
+            scores.add(val is num ? val.round() : null);
+          }
+        }
         final paddedScores = <int?>[
           ...scores.take(holeCount),
           ...List<int?>.filled(
@@ -367,10 +424,11 @@ Ensure all holes have their par (3, 4, or 5) and stroke index (handicap ranking 
             null,
           ),
         ];
+        final nameCandidate = row['playerName'] ?? row['player'] ?? row['name'] ?? row['player_name'] ?? row['sourceLabel'] ?? row['label'];
         rows.add(
           ImportedPlayerScoreRow(
-            sourceLabel: row['playerName']?.toString().trim().isNotEmpty == true
-                ? row['playerName'].toString().trim()
+            sourceLabel: nameCandidate != null && nameCandidate.toString().trim().isNotEmpty
+                ? nameCandidate.toString().trim()
                 : 'Detected row ${rows.length + 1}',
             scores: paddedScores,
             sourceText: jsonEncode(row),
@@ -395,11 +453,119 @@ Ensure all holes have their par (3, 4, or 5) and stroke index (handicap ranking 
       );
     }
 
+    // Filter out explicit Net rows if Gross or standard rows are present
+    final nonNetRows = rows.where((r) => !RegExp(r'\bnet\b', caseSensitive: false).hasMatch(r.sourceLabel)).toList();
+    final effectiveRows = nonNetRows.isNotEmpty ? nonNetRows : rows;
+
+    final finalRows = _mergeTwoRowScoresIfNeeded(effectiveRows, holeCount);
+
     return RoundScoreImportDraft(
       holeCount: holeCount,
-      rows: rows,
+      rows: finalRows,
       warnings: warnings,
     );
+  }
+
+  static List<ImportedPlayerScoreRow> _mergeTwoRowScoresIfNeeded(
+    List<ImportedPlayerScoreRow> rows,
+    int holeCount,
+  ) {
+    if (holeCount != 18 || rows.length < 2) return rows;
+
+    // Check if rows represent split 9-hole rows (each has <= 10 non-null scores)
+    final allArePartial = rows.every((r) => r.enteredScoreCount <= 10);
+    if (!allArePartial) return rows;
+
+    final merged = <ImportedPlayerScoreRow>[];
+
+    // Case 1: Pair rows by player name if names match after stripping front/back qualifiers
+    final nameGroups = <String, List<ImportedPlayerScoreRow>>{};
+    for (final r in rows) {
+      final key = _normalizePlayerKey(r.sourceLabel);
+      nameGroups.putIfAbsent(key, () => []).add(r);
+    }
+
+    final allPairs = nameGroups.values.every((group) => group.length == 2);
+    if (allPairs && nameGroups.isNotEmpty) {
+      for (final entry in nameGroups.entries) {
+        final pair = entry.value;
+        final frontScores = pair[0].scores.take(9).toList();
+        final backScores = pair[1].scores.take(9).toList();
+        final combined = <int?>[
+          ...frontScores,
+          ...List<int?>.filled((9 - frontScores.length).clamp(0, 9), null),
+          ...backScores,
+          ...List<int?>.filled((9 - backScores.length).clamp(0, 9), null),
+        ];
+        merged.add(
+          ImportedPlayerScoreRow(
+            sourceLabel: _cleanPlayerName(pair[0].sourceLabel),
+            scores: combined,
+            sourceText: '${pair[0].sourceText}\n${pair[1].sourceText}',
+          ),
+        );
+      }
+      return merged;
+    }
+
+    // Case 2: Even number of rows (e.g. 2, 4, 6) -> merge consecutive pairs [0]+[1], [2]+[3]
+    // only if the two rows do not represent distinct named players.
+    if (rows.length % 2 == 0) {
+      var canMergePairs = true;
+      for (var i = 0; i < rows.length; i += 2) {
+        final frontName = _cleanPlayerName(rows[i].sourceLabel);
+        final backName = _cleanPlayerName(rows[i + 1].sourceLabel);
+        if (frontName.isNotEmpty &&
+            backName.isNotEmpty &&
+            !frontName.startsWith('Detected player') &&
+            !backName.startsWith('Detected player') &&
+            _normalizePlayerKey(frontName) != _normalizePlayerKey(backName)) {
+          canMergePairs = false;
+          break;
+        }
+      }
+
+      if (canMergePairs) {
+        for (var i = 0; i < rows.length; i += 2) {
+          final front = rows[i];
+          final back = rows[i + 1];
+          final frontScores = front.scores.take(9).toList();
+          final backScores = back.scores.take(9).toList();
+          final combined = <int?>[
+            ...frontScores,
+            ...List<int?>.filled((9 - frontScores.length).clamp(0, 9), null),
+            ...backScores,
+            ...List<int?>.filled((9 - backScores.length).clamp(0, 9), null),
+          ];
+          merged.add(
+            ImportedPlayerScoreRow(
+              sourceLabel: _cleanPlayerName(front.sourceLabel),
+              scores: combined,
+              sourceText: '${front.sourceText}\n${back.sourceText}',
+            ),
+          );
+        }
+        return merged;
+      }
+    }
+
+    return rows;
+  }
+
+  static String _normalizePlayerKey(String name) {
+    return name
+        .toLowerCase()
+        .replaceAll(RegExp(r'\b(front|back|f9|b9|out|in|1-9|10-18|holes?)\b'), '')
+        .replaceAll(RegExp(r'[^a-z0-9]'), '')
+        .trim();
+  }
+
+  static String _cleanPlayerName(String name) {
+    return name
+        .replaceAll(RegExp(r'\s*[\(\[\{][^\)\]\}]*(?:front|back|f9|b9|out|in|1-9|10-18|hole)[^\)\]\}]*[\)\]\}]', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\b(?:front\s*9?|back\s*9?|f9|b9|out|in)\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'[:|\-–—_]+$'), '')
+        .trim();
   }
 }
 

@@ -6,6 +6,7 @@ import '../models/active_round_session.dart';
 
 class RoundRepository {
   final AppDatabase _db;
+  AppDatabase get database => _db;
   final Uuid _uuid = const Uuid();
   void Function()? onDataChanged;
 
@@ -184,6 +185,7 @@ class RoundRepository {
 
   Future<void> clearActiveDraft() async {
     await (_db.delete(_db.activeRoundDraft)..where((t) => t.id.equals(1))).go();
+    onDataChanged?.call();
   }
 
   /// Propagates player profile updates (names, nicknames, initials, handicaps)

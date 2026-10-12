@@ -143,7 +143,7 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
               ? 'Both Primary and Backup keys'
               : !primaryValid
                   ? 'Primary Key (Gemini 3.8)'
-                  : 'Backup Key (Gemini 3.7)';
+                  : 'Backup Key (Gemini 3.6)';
           _statusMessage = '⚠️ Keys saved! Note: $failedDesc could not reach Google API. Ensure API is enabled in Google Cloud Console.';
           _isSuccess = false;
         });
@@ -199,7 +199,7 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
                     const Text(
                       'Arcadia uses Gemini 3.8 Flash as the primary OCR engine. '
                       'If 3.8 is unavailable or experiencing high demand (503), '
-                      'the app automatically fails over to Gemini 3.7 Flash.',
+                      'the app automatically fails over to Gemini 3.6 Flash.',
                       style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
                     ),
                     const SizedBox(height: 10),
@@ -333,7 +333,7 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
                         SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            'Backup Key (Gemini 3.7 Flash Failover)',
+                            'Backup Key (Gemini 3.6 Flash Failover)',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
@@ -345,7 +345,7 @@ class _GeminiKeyConfigDialogState extends State<GeminiKeyConfigDialog> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Used for Gemini 3.7 Flash if 3.8 is busy or quota is reached. Can be from a second Google project or account.',
+                      'Used for Gemini 3.6 Flash if 3.8 is busy or quota is reached. Can be from a second Google project or account.',
                       style: TextStyle(color: Colors.white60, fontSize: 11.5),
                     ),
                     const SizedBox(height: 6),

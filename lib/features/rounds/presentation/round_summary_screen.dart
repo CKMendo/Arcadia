@@ -2,9 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../database/app_database.dart';
+import '../../../presentation/arcadia_shell.dart';
 import '../../../shared/theme/app_colors.dart';
 import '../../../shared/widgets/player_avatar.dart';
+import '../../courses/repository/course_repository.dart';
 import '../../players/repository/player_repository.dart';
+import '../../tournaments/repository/tournament_repository.dart';
 import '../models/active_round_session.dart';
 import '../repository/round_repository.dart';
 import 'active_scoring_screen.dart';
@@ -44,8 +47,32 @@ class RoundSummaryScreen extends StatelessWidget {
         final skinsWon = session.totalSkinsByPlayer();
         final birdiePot = session.roundBirdiePot();
 
+        final isShort = session.isShortCourse;
+
         return Scaffold(
           appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, size: 28),
+              tooltip: 'Back to Trip',
+              onPressed: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                } else {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (_) => ArcadiaShell(
+                        database: roundRepository.database,
+                        playerRepository: playerRepository ?? PlayerRepository(roundRepository.database),
+                        courseRepository: CourseRepository(roundRepository.database),
+                        tournamentRepository: TournamentRepository(roundRepository.database),
+                        roundRepository: roundRepository,
+                      ),
+                    ),
+                    (route) => false,
+                  );
+                }
+              },
+            ),
             title: Text('Round ${session.roundNumber} Recap', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
             actions: [
               IconButton(
@@ -71,26 +98,40 @@ class RoundSummaryScreen extends StatelessWidget {
               // Winner / Leader Card with Large Fonts
               Card(
                 margin: EdgeInsets.zero,
-                color: AppColors.cardDark,
+                color: isShort ? AppColors.shortCoursePurpleBg : AppColors.cardDark,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: isShort ? AppColors.shortCoursePurple : AppColors.lakeCyan.withValues(alpha: 0.6),
+                    width: isShort ? 2.0 : 1.5,
+                  ),
+                ),
                 child: Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF0F2742), Color(0xFF0A1420)],
+                    gradient: LinearGradient(
+                      colors: isShort
+                          ? [const Color(0xFF26123D), const Color(0xFF130922)]
+                          : [const Color(0xFF0F2742), const Color(0xFF0A1420)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    border: Border.all(color: AppColors.lakeCyan.withValues(alpha: 0.6), width: 1.5),
                   ),
                   child: Column(
                     children: [
-                      const Icon(Icons.military_tech, color: AppColors.lakeCyan, size: 48),
+                      Icon(
+                        isShort ? Icons.golf_course : Icons.military_tech,
+                        color: isShort ? AppColors.shortCoursePurpleLight : AppColors.lakeCyan,
+                        size: 48,
+                      ),
                       const SizedBox(height: 8),
                       Text(
-                        sortedPlayers.isNotEmpty
-                            ? '${sortedPlayers.first.nickname} Leads Stableford (${session.effectivePlayerStableford(sortedPlayers.first.playerId)} pts)!'
-                            : 'Round Complete',
+                        isShort
+                            ? 'Short Course Round Completed!'
+                            : (sortedPlayers.isNotEmpty
+                                ? '${sortedPlayers.first.nickname} Leads Stableford (${session.effectivePlayerStableford(sortedPlayers.first.playerId)} pts)!'
+                                : 'Round Complete'),
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w900,
@@ -100,8 +141,14 @@ class RoundSummaryScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        '${session.courseName} • ${session.holeCount} Holes • ${session.isFinalRound ? 'Modified Stableford' : '2-Man Stableford'}',
-                        style: const TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.w600),
+                        isShort
+                            ? '${session.courseName} • ${session.holeCount} Holes • Casual Play / Birdie Pot Only'
+                            : '${session.courseName} • ${session.holeCount} Holes • ${session.isFinalRound ? 'Modified Stableford' : '2-Man Stableford'}',
+                        style: TextStyle(
+                          color: isShort ? const Color(0xFFE9D5FF) : Colors.white70,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -226,21 +273,25 @@ class RoundSummaryScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Row(
+                      Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'STABLEFORD & NET SCORES',
+                            isShort ? 'ROUND SCORES (BIRDIE POT ONLY)' : 'STABLEFORD & NET SCORES',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 1.1,
-                              color: AppColors.cyanLight,
+                              color: isShort ? AppColors.shortCoursePurpleLight : AppColors.cyanLight,
                             ),
                           ),
                           Text(
-                            '2-Man Best Ball',
-                            style: TextStyle(color: AppColors.duneSand, fontWeight: FontWeight.w700, fontSize: 13),
+                            isShort ? 'Casual Play • No 2-Man Teams' : '2-Man Best Ball',
+                            style: TextStyle(
+                              color: isShort ? const Color(0xFFD8B4FE) : AppColors.duneSand,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
                           ),
                         ],
                       ),
@@ -262,12 +313,14 @@ class RoundSummaryScreen extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: rank == 1
-                                ? AppColors.lakeCyan.withValues(alpha: 0.15)
+                                ? (isShort
+                                    ? AppColors.shortCoursePurple.withValues(alpha: 0.2)
+                                    : AppColors.lakeCyan.withValues(alpha: 0.15))
                                 : AppColors.surfaceElevated,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: rank == 1
-                                  ? AppColors.lakeCyan
+                                  ? (isShort ? AppColors.shortCoursePurple : AppColors.lakeCyan)
                                   : AppColors.cardBorder,
                               width: rank == 1 ? 1.5 : 1.0,
                             ),
@@ -278,7 +331,9 @@ class RoundSummaryScreen extends StatelessWidget {
                                 '$rank',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w900,
-                                  color: rank == 1 ? AppColors.lakeCyan : Colors.white70,
+                                  color: rank == 1
+                                      ? (isShort ? AppColors.shortCoursePurpleLight : AppColors.lakeCyan)
+                                      : Colors.white70,
                                   fontSize: 24,
                                 ),
                               ),
@@ -305,7 +360,7 @@ class RoundSummaryScreen extends StatelessWidget {
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
-                                        if (teamId != 'none') ...[
+                                        if (!isShort && teamId != 'none') ...[
                                           const SizedBox(width: 6),
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -331,18 +386,33 @@ class RoundSummaryScreen extends StatelessWidget {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  Text(
-                                    '$pts pts',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 22,
-                                      color: AppColors.duneSand,
+                                  if (isShort) ...[
+                                    Text(
+                                      'Net $net',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 20,
+                                        color: AppColors.shortCoursePurpleLight,
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    '$skinCount skins',
-                                    style: const TextStyle(fontSize: 13, color: Colors.white60),
-                                  ),
+                                    Text(
+                                      'Gross $gross',
+                                      style: const TextStyle(fontSize: 13, color: Colors.white60),
+                                    ),
+                                  ] else ...[
+                                    Text(
+                                      '$pts pts',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 22,
+                                        color: AppColors.duneSand,
+                                      ),
+                                    ),
+                                    Text(
+                                      '$skinCount skins',
+                                      style: const TextStyle(fontSize: 13, color: Colors.white60),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ],
@@ -496,6 +566,11 @@ class RoundSummaryScreen extends StatelessWidget {
             roundRepository: roundRepository,
             session: unlocked,
             playerRepository: playerRepository,
+            onExit: () {
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
+            },
           ),
         ),
       );
@@ -528,13 +603,30 @@ class RoundSummaryScreen extends StatelessWidget {
     if (confirmed == true) {
       await roundRepository.deleteSavedRound(roundId);
       if (context.mounted) {
-        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Round ${session.roundNumber} deleted'),
             backgroundColor: Colors.redAccent,
+            duration: const Duration(milliseconds: 750),
           ),
         );
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        } else {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (_) => ArcadiaShell(
+                database: roundRepository.database,
+                playerRepository: playerRepository ?? PlayerRepository(roundRepository.database),
+                courseRepository: CourseRepository(roundRepository.database),
+                tournamentRepository: TournamentRepository(roundRepository.database),
+                roundRepository: roundRepository,
+              ),
+            ),
+            (route) => false,
+          );
+        }
       }
     }
   }

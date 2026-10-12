@@ -9,6 +9,9 @@ import '../../players/repository/player_repository.dart';
 import '../import/presentation/round_scorecard_import_screen.dart';
 import '../import/services/player_score_row_matcher.dart';
 import '../models/active_round_session.dart';
+import '../../../presentation/arcadia_shell.dart';
+import '../../courses/repository/course_repository.dart';
+import '../../tournaments/repository/tournament_repository.dart';
 import '../repository/round_repository.dart';
 import 'round_summary_screen.dart';
 
@@ -101,16 +104,31 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
 
   void _exitRound() {
     _saveDraft();
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Round draft saved. You can resume anytime from Options.', style: TextStyle(fontSize: 16)),
-        duration: Duration(seconds: 2),
+        content: Text('Round draft saved.', style: TextStyle(fontSize: 16)),
+        duration: Duration(milliseconds: 750),
       ),
     );
     if (widget.onExit != null) {
       widget.onExit!();
-    } else if (Navigator.canPop(context)) {
-      Navigator.pop(context);
+    }
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else if (widget.onExit == null) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => ArcadiaShell(
+            database: widget.roundRepository.database,
+            playerRepository: widget.playerRepository ?? PlayerRepository(widget.roundRepository.database),
+            courseRepository: CourseRepository(widget.roundRepository.database),
+            tournamentRepository: TournamentRepository(widget.roundRepository.database),
+            roundRepository: widget.roundRepository,
+          ),
+        ),
+        (route) => false,
+      );
     }
   }
 
@@ -141,10 +159,32 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
     if (confirm == true && mounted) {
       await widget.roundRepository.clearActiveDraft();
       if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Draft round deleted.'),
+            backgroundColor: Colors.redAccent,
+            duration: Duration(milliseconds: 750),
+          ),
+        );
         if (widget.onExit != null) {
           widget.onExit!();
-        } else if (Navigator.canPop(context)) {
-          Navigator.pop(context);
+        }
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        } else if (widget.onExit == null) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (_) => ArcadiaShell(
+                database: widget.roundRepository.database,
+                playerRepository: widget.playerRepository ?? PlayerRepository(widget.roundRepository.database),
+                courseRepository: CourseRepository(widget.roundRepository.database),
+                tournamentRepository: TournamentRepository(widget.roundRepository.database),
+                roundRepository: widget.roundRepository,
+              ),
+            ),
+            (route) => false,
+          );
         }
       }
     }
@@ -188,15 +228,27 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
     if (confirm == true && mounted) {
       final roundId = await widget.roundRepository.saveCompletedRound(widget.session);
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => RoundSummaryScreen(
-              roundRepository: widget.roundRepository,
-              roundId: roundId,
-              playerRepository: widget.playerRepository,
+        if (Navigator.canPop(context)) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => RoundSummaryScreen(
+                roundRepository: widget.roundRepository,
+                roundId: roundId,
+                playerRepository: widget.playerRepository,
+              ),
             ),
-          ),
-        );
+          );
+        } else {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => RoundSummaryScreen(
+                roundRepository: widget.roundRepository,
+                roundId: roundId,
+                playerRepository: widget.playerRepository,
+              ),
+            ),
+          );
+        }
       }
     }
   }
@@ -488,7 +540,9 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          'Live Leaderboard • ${widget.session.courseName}',
+                          widget.session.isShortCourse
+                              ? 'Live Scores • Birdie Pot (No Teams)'
+                              : 'Live Leaderboard • ${widget.session.courseName}',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
@@ -601,10 +655,12 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
                                     ],
                                   ),
                                   Text(
-                                    '$pts pts • $skinCount skins',
-                                    style: const TextStyle(
-                                      color: AppColors.duneSand,
-                                      fontSize: 15,
+                                    widget.session.isShortCourse
+                                        ? 'Birdie Pot Only • No 2-Man Teams'
+                                        : '$pts pts • $skinCount skins',
+                                    style: TextStyle(
+                                      color: widget.session.isShortCourse ? AppColors.shortCoursePurpleLight : AppColors.duneSand,
+                                      fontSize: widget.session.isShortCourse ? 13 : 15,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -782,9 +838,28 @@ class _ActiveScoringScreenState extends State<ActiveScoringScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '${widget.session.courseName} • R${widget.session.roundNumber}',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${widget.session.courseName} • R${widget.session.roundNumber}',
+                    style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (widget.session.isShortCourse) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.shortCoursePurpleBadge,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: AppColors.shortCoursePurple),
+                    ),
+                    child: const Text('SHORT COURSE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFFF3E8FF))),
+                  ),
+                ],
+              ],
             ),
             if (isEditingLocked)
               const Text(

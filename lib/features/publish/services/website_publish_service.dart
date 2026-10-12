@@ -452,8 +452,22 @@ class WebsitePublishService {
     if (schedule.isNotEmpty) {
       for (final round in schedule) {
         final matchingSession = sessions.where((s) => s.roundNumber == round.roundNumber).firstOrNull;
+        final lowerCourse = round.courseName.toLowerCase();
+        final isShortCourse = round.isShortCourse || round.holeCount != 18 ||
+            lowerCourse.contains('bootlegger') ||
+            lowerCourse.contains('dozen') ||
+            lowerCourse.contains('threetops') ||
+            lowerCourse.contains('short') ||
+            lowerCourse.contains('par 3');
+        final actualHCount = isShortCourse && round.holeCount == 18
+            ? (lowerCourse.contains('bootlegger')
+                ? 10
+                : (lowerCourse.contains('dozen')
+                    ? 12
+                    : (lowerCourse.contains('threetops') ? 9 : round.holeCount)))
+            : round.holeCount;
 
-        if (round.isShortCourse) {
+        if (isShortCourse) {
           final scGroups = <Map<String, dynamic>>[];
           if (round.pairingPlan != null) {
             scGroups.add({
@@ -482,7 +496,7 @@ class WebsitePublishService {
             'courseName': round.courseName,
             'date': 'Round ${round.roundNumber}',
             'format': 'Birdie Pot Only (Short Course)',
-            'holeCount': round.holeCount,
+            'holeCount': actualHCount,
             'isShortCourse': true,
             'groups': scGroups,
           });
@@ -608,13 +622,31 @@ class WebsitePublishService {
     }
 
     final courseList = courses.isNotEmpty
-        ? courses.map((c) => {
-            'id': c.id,
-            'name': c.name,
-            'par': 72,
-            'rating': 73.5,
-            'slope': 137,
-            'yardage': 6800,
+        ? courses.map((c) {
+            final lower = c.name.toLowerCase();
+            final isShort = c.holeCount != 18 ||
+                lower.contains('bootlegger') ||
+                lower.contains('dozen') ||
+                lower.contains('threetops') ||
+                lower.contains('short') ||
+                lower.contains('par 3');
+            final hCount = isShort && c.holeCount == 18
+                ? (lower.contains('bootlegger')
+                    ? 10
+                    : (lower.contains('dozen')
+                        ? 12
+                        : (lower.contains('threetops') ? 9 : c.holeCount)))
+                : c.holeCount;
+            return {
+              'id': c.id,
+              'name': c.name,
+              'par': isShort ? (hCount == 10 ? 30 : (hCount == 12 ? 40 : (hCount == 9 ? 27 : 36))) : 72,
+              'rating': isShort ? (hCount == 10 ? 27.0 : (hCount == 12 ? 45.0 : 35.0)) : 73.5,
+              'slope': isShort ? 90 : 137,
+              'yardage': isShort ? (hCount == 10 ? 1065 : (hCount == 12 ? 2600 : 2000)) : 6800,
+              'holeCount': hCount,
+              'isShortCourse': isShort,
+            };
           }).toList()
         : [
             {

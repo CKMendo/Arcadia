@@ -217,8 +217,7 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
         }
       }
 
-      final isShort = matchingScheduled.isShortCourse ||
-          (_selectedCourseDetails != null && _selectedCourseDetails!.holes.length != 18);
+      final isShort = _isShortCourse(_selectedCourseDetails);
 
       _isFinalRound = matchingScheduled.isFinalRound;
 
@@ -294,6 +293,8 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
 
     await _syncWithScheduleForRound(_roundNumber, updateCourse: true);
 
+    if (!mounted) return;
+
     setState(() {
       _isLoading = false;
     });
@@ -364,23 +365,60 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
     }
   }
 
+  bool _isShortCourse(CourseDetails? details) {
+    if (details == null) {
+      final matching = _tripSchedule.where((r) => r.roundNumber == _roundNumber).firstOrNull;
+      return matching?.isShortCourse ?? false;
+    }
+    if (details.holes.length != 18) return true;
+    final name = details.course.name.toLowerCase();
+    return name.contains('bootlegger') || name.contains('dozen') || name.contains('threetops') || name.contains('short');
+  }
+
   Future<void> _onCourseChanged(String? courseId) async {
     if (courseId == null) return;
     final details = await widget.courseRepository.getCourseDetails(courseId);
-    final isShort = (details?.holes.length ?? 0) != 18;
-    setState(() {
-      _selectedCourseId = courseId;
-      _selectedCourseDetails = details;
-      if (details != null) {
-        _assignDefaultTees(_allPlayers, details);
+    final isShort = _isShortCourse(details);
+
+    _selectedCourseId = courseId;
+    _selectedCourseDetails = details;
+    if (details != null) {
+      _assignDefaultTees(_allPlayers, details);
+    }
+
+    if (isShort) {
+      _currentPairingPlan = null;
+      _playerTwoManTeams.clear();
+      _twoManTeamNames.clear();
+      _playerFoursomes.clear();
+      if (_allPlayers.length >= 8) {
+        final sorted = List<Player>.from(_allPlayers)
+          ..sort((a, b) => a.handicapIndex.compareTo(b.handicapIndex));
+        final g1 = [sorted[0], sorted[1], sorted[6], sorted[7]];
+        final g2 = [sorted[2], sorted[3], sorted[4], sorted[5]];
+        for (final p in g1) {
+          _playerFoursomes[p.id] = 1;
+          _playerTwoManTeams[p.id] = 'none';
+        }
+        for (final p in g2) {
+          _playerFoursomes[p.id] = 2;
+          _playerTwoManTeams[p.id] = 'none';
+        }
       }
-      if (isShort) {
-        _currentPairingPlan = null;
-        _playerFoursomes.clear();
-        _playerTwoManTeams.clear();
-        _twoManTeamNames.clear();
+    } else {
+      // 18-hole regulation course
+      final matchingScheduled = _tripSchedule.where((r) => r.roundNumber == _roundNumber).firstOrNull;
+      if (matchingScheduled != null && matchingScheduled.courseId == courseId && matchingScheduled.pairingPlan != null) {
+        final plan = matchingScheduled.pairingPlan!.withLatestPlayers(_allPlayers);
+        _applyPairingPlan(plan);
+      } else if (_allPlayers.length >= 8 && !_isFinalRound) {
+        await _generateAIPairingsInternal(_allPlayers, _pastSavedRounds, _roundNumber);
       }
-    });
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   int _computeCourseHcp(Player player, String teeBoxId) {
@@ -452,7 +490,7 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
         .where((p) => _selectedPlayerIds.contains(p.id))
         .toList();
 
-    final isShortCourse = _selectedCourseDetails!.holes.length != 18;
+    final isShortCourse = _isShortCourse(_selectedCourseDetails);
 
     final sessionPlayers = selectedPlayers.asMap().entries.map((entry) {
       final idx = entry.key;
@@ -465,7 +503,7 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
           .teeBox;
 
       final courseHcp = _computeCourseHcp(p, teeId);
-      final teamId = _playerTeams[p.id] ?? 'none';
+      final teamId = isShortCourse ? 'none' : (_playerTeams[p.id] ?? 'none');
       final foursomeGroup = isShortCourse ? (idx < 4 ? 1 : 2) : (_playerFoursomes[p.id] ?? (idx < 4 ? 1 : 2));
       final twoManTeamId = isShortCourse ? 'none' : (_playerTwoManTeams[p.id] ?? teamId);
       final twoManTeamName = isShortCourse ? null : _twoManTeamNames[twoManTeamId];
@@ -513,15 +551,22 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
     await widget.roundRepository.saveActiveDraft(session);
 
     if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => ActiveScoringScreen(
-            roundRepository: widget.roundRepository,
-            session: session,
-            playerRepository: widget.playerRepository,
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => ActiveScoringScreen(
+              roundRepository: widget.roundRepository,
+              session: session,
+              playerRepository: widget.playerRepository,
+              onExit: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
           ),
-        ),
-      );
+        );
+      }
     }
   }
 
@@ -569,18 +614,24 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
                           ? _selectedCourseId
                           : _courses.first.id;
                       return DropdownButtonFormField<String>(
+                        isExpanded: true,
                         key: ValueKey('round_setup_course_${validCourseId}_${_courses.length}'),
                         initialValue: validCourseId,
-                        style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                         decoration: const InputDecoration(
                           labelText: 'Select Course',
                           labelStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           prefixIcon: Icon(Icons.golf_course, color: AppColors.lakeCyan, size: 28),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                         ),
                         items: _courses.map((c) {
                           return DropdownMenuItem(
                             value: c.id,
-                            child: Text('${c.name} (${c.holeCount}h)', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            child: Text(
+                              '${c.name} (${c.holeCount}h)',
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           );
                         }).toList(),
                         onChanged: _onCourseChanged,
@@ -598,20 +649,27 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
                           final roundOptions = List.generate(maxRound, (i) => i + 1);
 
                           return DropdownButtonFormField<int>(
+                            isExpanded: true,
                             key: ValueKey('round_num_$_roundNumber'),
                             initialValue: _roundNumber,
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                             decoration: const InputDecoration(
                               labelText: 'Round #',
-                              labelStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              labelStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                             ),
                             items: roundOptions
                                 .map((r) {
                                   final matching = _tripSchedule.where((s) => s.roundNumber == r).firstOrNull;
-                                  final suffix = matching != null && matching.isShortCourse ? ' (${matching.holeCount}H Short)' : '';
+                                  final suffix = matching != null && matching.isShortCourse ? ' (Short)' : '';
                                   return DropdownMenuItem(
                                     value: r,
-                                    child: Text('Round $r$suffix', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                    child: Text(
+                                      'Round $r$suffix',
+                                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
                                   );
                                 })
                                 .toList(),
@@ -630,14 +688,13 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
                       const SizedBox(width: 14),
                       Expanded(
                         child: Builder(builder: (ctx) {
-                          final matching = _tripSchedule.where((r) => r.roundNumber == _roundNumber).firstOrNull;
-                          final isShort = (matching != null && matching.isShortCourse) ||
-                              (_selectedCourseDetails != null && _selectedCourseDetails!.holes.length != 18);
+                          final isShort = _isShortCourse(_selectedCourseDetails);
+                          final shortHoles = _selectedCourseDetails?.holes.length ?? 10;
                           final formatTitle = isShort
                               ? 'Birdie Pot Only'
                               : (_isFinalRound ? 'Modified Stableford' : '2-Man Stableford');
                           final formatSub = isShort
-                              ? 'Short Course (${matching?.holeCount ?? _selectedCourseDetails?.holes.length ?? 0}H)'
+                              ? 'Short Course (${shortHoles}H)'
                               : (_isFinalRound ? 'Draft Pairs' : 'Best Ball Points');
 
                           return Container(
@@ -681,9 +738,7 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
 
                   // Final Round Toggle / Modified rules banner
                   Builder(builder: (ctx) {
-                    final matching = _tripSchedule.where((r) => r.roundNumber == _roundNumber).firstOrNull;
-                    final isShort = (matching != null && matching.isShortCourse) ||
-                        (_selectedCourseDetails != null && _selectedCourseDetails!.holes.length != 18);
+                    final isShort = _isShortCourse(_selectedCourseDetails);
 
                     if (isShort) {
                       return Container(
@@ -758,10 +813,8 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
 
           // AI FOURSOMES & 2-MAN TEAMS CARD OR SHORT COURSE CARD
           Builder(builder: (ctx) {
-            final matching = _tripSchedule.where((r) => r.roundNumber == _roundNumber).firstOrNull;
-            final isShort = (matching != null && matching.isShortCourse) ||
-                (_selectedCourseDetails != null && _selectedCourseDetails!.holes.length != 18);
-            final shortHoles = matching?.holeCount ?? _selectedCourseDetails?.holes.length ?? 0;
+            final isShort = _isShortCourse(_selectedCourseDetails);
+            final shortHoles = _selectedCourseDetails?.holes.length ?? 10;
 
             if (isShort) {
               return Card(
@@ -807,9 +860,9 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      const Text(
-                        'Most likely, all 8 players will play together at one time as a big group. For golf course tee times, players are grouped into the two balanced notation foursomes below (2 Lower HC + 2 Higher HC). Excluded from 2-man teams and Stableford standings. All birdies made count for the cash Birdie Pot (\$2/birdie per player)!',
-                        style: TextStyle(fontSize: 13.5, color: Color(0xFFF3E8FF), height: 1.4),
+                      Text(
+                        'Most likely, all 8 players will play ${_selectedCourseDetails?.course.name ?? "this short course"} ($shortHoles holes) together as a single group. For golf course tee times, players are grouped into the two balanced notation foursomes below (2 Lower HC + 2 Higher HC). Excluded from 2-man teams and Stableford standings. All birdies made count for the cash Birdie Pot (\$2/birdie per player)!',
+                        style: const TextStyle(fontSize: 13.5, color: Color(0xFFF3E8FF), height: 1.4),
                       ),
                       if (_currentPairingPlan != null) ...[
                         const SizedBox(height: 14),
@@ -832,6 +885,8 @@ class _NewRoundSetupScreenState extends State<NewRoundSetupScreen> {
                 ),
               );
             }
+
+            final matching = _tripSchedule.where((r) => r.roundNumber == _roundNumber).firstOrNull;
 
             return Card(
               margin: EdgeInsets.zero,

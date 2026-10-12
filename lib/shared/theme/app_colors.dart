@@ -51,4 +51,12 @@ class AppColors {
   // Teams (Coastal Cup: Team Lake vs Team Bluff)
   static const Color teamA = Color(0xFF0EA5E9); // Lake Azure
   static const Color teamB = Color(0xFFF97316); // Bluff Sunset Tangerine
+
+  // Short Course Royal Purple Palette (< 18 Holes / Birdie Pot Only)
+  static const Color shortCoursePurple = Color(0xFFA855F7);        // Primary Vibrant Purple (#A855F7)
+  static const Color shortCoursePurpleLight = Color(0xFFC084FC);   // Light Lavender Purple (#C084FC)
+  static const Color shortCoursePurpleGlow = Color(0xFFE9D5FF);    // Pale Lavender Text Glow (#E9D5FF)
+  static const Color shortCoursePurpleBg = Color(0xFF1E1035);      // Deep Purple Card Background (#1E1035)
+  static const Color shortCoursePurpleBorder = Color(0xFF9333EA);  // Purple Border (#9333EA)
+  static const Color shortCoursePurpleBadge = Color(0xFF581C87);   // Dark Violet Badge Background (#581C87)
 }

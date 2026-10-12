@@ -46,49 +46,51 @@ class ExternalAiImportService {
     required List<String> playerNames,
   }) {
     final players = playerNames.join(', ');
+    final is18Holes = holeCount >= 18;
     return '''
 You are extracting player gross scores from a completed golf scorecard photo.
 
-I will attach the scorecard photo after this prompt. The expected players are: $players.
+I will attach the scorecard photo after this prompt. Expected players: $players.
 
-CRITICAL SCORECARD LAYOUT INSTRUCTIONS:
-1. TWO-ROW 18-HOLE SCORECARDS (18Birdies, Golfshot, digital apps, & folded paper cards):
-   - In many scorecard formats (including 18Birdies digital cards), each player's 18 holes are split into TWO STACKED ROWS OF 9 HOLES:
-     * TOP ROW: Front 9 (Holes 1 to 9), followed by the Front 9 subtotal (OUT).
-     * BOTTOM ROW directly beneath: Back 9 (Holes 10 to 18), followed by the Back 9 subtotal (IN).
-     * Right side: 18-hole total score and to-par indicator (e.g., +5 (76)).
-   - YOU MUST COMBINE BOTH ROWS FOR EACH PLAYER:
-     * Extract Holes 1 through 9 from the TOP row.
-     * Extract Holes 10 through 18 from the BOTTOM row directly underneath.
-     * Combine them into a single array of exactly $holeCount gross scores in hole order: [H1, H2, ..., H9, H10, ..., H18].
-     * NEVER stop after reading the first 9 holes.
-     * Do NOT include the 9-hole subtotal (OUT/IN) or the 18-hole total (e.g. 37, 39, 76) in the hole scores array.
-     * Sanity check: sum(H1..H9) must equal the front-9 subtotal; sum(H10..H18) must equal the back-9 subtotal.
+${is18Holes ? '''CRITICAL 18BIRDIES TWO-ROW SCORECARD FORMAT (TWO-ROW 18-HOLE SCORECARDS):
+All scorecard photos in this app are in the 18Birdies two-row layout:
+1. TWO ROWS PER PLAYER:
+   For EACH player, their 18 holes are split across TWO STACKED ROWS OF 9 BOXES:
+   - Player avatar and name are on the left (e.g., "Chet M.", "Neal P.").
+   - TOP ROW: Front 9 (Holes 1 to 9), followed by the 9-hole subtotal (e.g., 37 or 42) and To Par badge (+5).
+   - BOTTOM ROW directly beneath: Back 9 (Holes 10 to 18), followed by the 9-hole subtotal (e.g., 39).
+   
+2. COMBINE BOTH ROWS INTO ONE 18-HOLE ARRAY:
+   - Extract Holes 1 through 9 from the TOP row.
+   - Extract Holes 10 through 18 from the BOTTOM row directly underneath.
+   - Combine both into a SINGLE array of exactly 18 gross scores in hole order:
+     [H1, H2, H3, H4, H5, H6, H7, H8, H9, H10, H11, H12, H13, H14, H15, H16, H17, H18]
+   - CRITICAL: Both rows belong to the SAME player! DO NOT treat top and bottom rows as separate players!
+   - Every player must have exactly 18 scores.
+   - Do NOT include the 9-hole subtotals (37, 39, 42) or final totals (76, 81) in the scores array.
 
-2. SINGLE-ROW SCORECARDS:
-   - If all holes for a player are displayed across a single horizontal row, read all $holeCount gross scores in hole order from left to right.
+3. SCORE SHAPES & SYMBOLS:
+   - Numbers inside dark circles are birdies/pars; numbers in grey squares are bogeys/doubles.
+   - Always read the gross score number inside each shape.
 
-3. PLAYERS & ROWS:
-   - Count every visible player in the photo from top to bottom.
-   - The expected-player list ($players) is a name-matching aid, NOT a limit on the number of players.
-   - For every player found, return one row with their name and exactly $holeCount gross scores in hole order.
-   - Use the closest expected player name when confident; otherwise use the name visible on the card (or "Unknown Row 1", etc.).
-   - If a score cannot be determined, use null and explain in warnings.
+4. MATHEMATICAL SANITY CHECK:
+   - Sum of holes 1 to 9 MUST equal the front-9 subtotal (e.g. 5+3+5+5+4+5+4+3+3 = 37).
+   - Sum of holes 10 to 18 MUST equal the back-9 subtotal (e.g. 5+3+5+3+4+5+4+5+5 = 39).
 
-Return ONLY one valid JSON object with this exact structure, without Markdown fences or commentary:
+5. IGNORE NON-SCORE ELEMENTS:
+   - Ignore the partially visible second card peeking in on the far right edge of the screen.
+   - Ignore the "Share to" menu sheet at the bottom of the screenshot.''' : '''Read each physical player score row from top to bottom. Each player row must contain exactly $holeCount gross scores in hole order. Ignore printed par, yardage, handicap, OUT, IN, and total rows.'''}
+
+Return ONLY one valid JSON object adhering strictly to this schema, without Markdown commentary:
 {
   "rows": [
     {
       "playerName": "player name",
-      "scores": [exactly $holeCount gross scores in hole order]
+      "scores": [exactly ${is18Holes ? 18 : holeCount} gross scores in hole order]
     }
   ],
   "warnings": ["short notes if any"]
 }
-
-Before answering, verify:
-- Did you read BOTH the top row (Holes 1-9) AND bottom row (Holes 10-18) for each player?
-- Does every player in "rows" have exactly $holeCount gross scores in hole order?
 ''';
   }
 }

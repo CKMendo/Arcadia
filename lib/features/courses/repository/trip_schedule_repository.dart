@@ -46,26 +46,38 @@ class TripScheduleRepository {
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_keyScheduledRounds);
+      List<ScheduledRound> rounds = [];
       if (raw != null && raw.isNotEmpty) {
         final list = jsonDecode(raw) as List<dynamic>;
-        final rounds = list
+        rounds = list
             .map((item) => ScheduledRound.fromJson(item as Map<String, dynamic>))
             .toList();
-        _sortRounds(rounds);
-        return rounds;
+      } else if (!_isTestEnv) {
+        // Self-healing from file layers if SharedPreferences was wiped
+        final backupList = await _loadScheduleFromFileLayers();
+        if (backupList != null && backupList.isNotEmpty) {
+          rounds = backupList;
+        }
       }
 
-      if (_isTestEnv) return [];
-
-      // Self-healing from file layers if SharedPreferences was wiped
-      final backupList = await _loadScheduleFromFileLayers();
-      if (backupList != null && backupList.isNotEmpty) {
-        final encoded = jsonEncode(backupList.map((r) => r.toJson()).toList());
+      var modified = false;
+      for (var i = 0; i < rounds.length; i++) {
+        final r = rounds[i];
+        if (r.isShortCourse && (r.holeCount != r.actualHoleCount || !r.format.toLowerCase().contains('birdie pot'))) {
+          rounds[i] = r.copyWith(
+            holeCount: r.actualHoleCount,
+            format: 'Casual Play • Birdie Pot Only (${r.actualHoleCount}H)',
+          );
+          modified = true;
+        }
+      }
+      if (modified) {
+        final encoded = jsonEncode(rounds.map((r) => r.toJson()).toList());
         await prefs.setString(_keyScheduledRounds, encoded);
-        return backupList;
       }
 
-      return [];
+      _sortRounds(rounds);
+      return rounds;
     } catch (e) {
       return [];
     }
@@ -381,8 +393,9 @@ class TripScheduleRepository {
           shortCourseIndex: shortCourseIdx++,
         );
         updatedSchedule.add(round.copyWith(
+          holeCount: round.actualHoleCount,
           pairingPlan: shortPlan,
-          format: 'Casual Play • Birdie Pot Only (${round.holeCount}H)',
+          format: 'Casual Play • Birdie Pot Only (${round.actualHoleCount}H)',
         ));
       } else {
         final plan = planMap[round.roundNumber];

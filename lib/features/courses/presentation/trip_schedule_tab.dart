@@ -290,72 +290,74 @@ class TripScheduleTab extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: isShort
-                            ? const Color(0xFFA855F7).withValues(alpha: 0.25)
-                            : (round.isFinalRound
-                                ? AppColors.duneSand.withValues(alpha: 0.3)
-                                : AppColors.lakeCyan.withValues(alpha: 0.2)),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
                           color: isShort
-                              ? const Color(0xFFA855F7)
+                              ? const Color(0xFFA855F7).withValues(alpha: 0.25)
                               : (round.isFinalRound
-                                  ? AppColors.duneSand
-                                  : AppColors.lakeCyan),
+                                  ? AppColors.duneSand.withValues(alpha: 0.3)
+                                  : AppColors.lakeCyan.withValues(alpha: 0.2)),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isShort
+                                ? const Color(0xFFA855F7)
+                                : (round.isFinalRound
+                                    ? AppColors.duneSand
+                                    : AppColors.lakeCyan),
+                          ),
+                        ),
+                        child: Text(
+                          'ROUND ${round.roundNumber}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.1,
+                            color: isShort
+                                ? const Color(0xFFE9D5FF)
+                                : (round.isFinalRound
+                                    ? AppColors.duneSand
+                                    : AppColors.cyanLight),
+                          ),
                         ),
                       ),
-                      child: Text(
-                        'ROUND ${round.roundNumber}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.1,
-                          color: isShort
-                              ? const Color(0xFFE9D5FF)
-                              : (round.isFinalRound
-                                  ? AppColors.duneSand
-                                  : AppColors.cyanLight),
+                      if (isShort) ...[
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF3B154D),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFA855F7)),
+                            ),
+                            child: Text(
+                              '⛳ SHORT COURSE (${round.holeCount}H) • BIRDIE POT ONLY',
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFF3E8FF)),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    if (isShort) ...[
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Container(
+                      ] else if (round.isFinalRound) ...[
+                        const SizedBox(width: 8),
+                        Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF3B154D),
+                            color: const Color(0xFF26190C),
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFFA855F7)),
+                            border: Border.all(color: AppColors.duneSand.withValues(alpha: 0.5)),
                           ),
-                          child: Text(
-                            '⛳ SHORT COURSE (${round.holeCount}H) • BIRDIE POT ONLY',
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFF3E8FF)),
-                            overflow: TextOverflow.ellipsis,
+                          child: const Text(
+                            '🏆 CHAMPIONSHIP',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.duneLight),
                           ),
                         ),
-                      ),
-                    ] else if (round.isFinalRound) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF26190C),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: AppColors.duneSand.withValues(alpha: 0.5)),
-                        ),
-                        child: const Text(
-                          '🏆 CHAMPIONSHIP',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.duneLight),
-                        ),
-                      ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert, color: Colors.white70, size: 24),
