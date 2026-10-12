@@ -105,7 +105,6 @@ function setupTabs() {
     tabButtons.forEach(b => {
       if (b.getAttribute('data-tab') === currentTab) {
         b.classList.add('active');
-        b.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
       } else {
         b.classList.remove('active');
       }
