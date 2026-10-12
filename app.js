@@ -105,7 +105,6 @@ function setupTabs() {
     tabButtons.forEach(b => {
       if (b.getAttribute('data-tab') === currentTab) {
         b.classList.add('active');
-        b.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
       } else {
         b.classList.remove('active');
       }
@@ -897,114 +896,441 @@ function renderBirdieLedgerTab(container) {
 // -------------------------------------------------------------
 // RULES TAB
 // -------------------------------------------------------------
+let currentCalcBirdies = 5;
+
+function setRuleBirdies(count) {
+  currentCalcBirdies = parseInt(count, 10) || 1;
+  const slider = document.getElementById('calcSlider');
+  if (slider) slider.value = currentCalcBirdies;
+  updateRuleCalcDisplay();
+}
+
+function onRuleSliderChange(val) {
+  currentCalcBirdies = parseInt(val, 10) || 1;
+  updateRuleCalcDisplay();
+}
+
+function updateRuleCalcDisplay() {
+  const badge = document.getElementById('calcBirdieCount');
+  const perGolfer = document.getElementById('calcPerGolfer');
+  const totalColl = document.getElementById('calcTotalCollected');
+  const roundPot = document.getElementById('calcRoundPot');
+  const tripPot = document.getElementById('calcTripPot');
+
+  const b = currentCalcBirdies;
+  const costPerGolfer = b * 2;
+  const total = 8 * costPerGolfer;
+  const roundWin = total / 2;
+  const tripAddition = total / 2;
+
+  if (badge) badge.textContent = `${b} ${b === 1 ? 'Birdie' : 'Birdies'}`;
+  if (perGolfer) perGolfer.textContent = `$${costPerGolfer.toFixed(2)}`;
+  if (totalColl) totalColl.textContent = `$${total.toFixed(2)}`;
+  if (roundPot) roundPot.textContent = `$${roundWin.toFixed(2)}`;
+  if (tripPot) tripPot.textContent = `$${tripAddition.toFixed(2)}`;
+}
+
 function renderRulesTab(container) {
-  let html = `
-    <div class="section-header">
-      <div>
-        <h2 class="section-title">Official Tournament Format & Rules</h2>
-        <p class="section-sub">Detailed breakdown of scoring, AI pairings, partner draft, and Birdie Pot rules.</p>
-      </div>
-    </div>
-
-    <div class="rules-container">
-      <div class="rule-card">
-        <div class="rule-header">
-          <div class="rule-num">1</div>
-          <div class="rule-title">AI-Driven 4-Somes & Partner Rotation</div>
+  container.innerHTML = `
+    <div class="rules-wrapper">
+      <!-- HERO TOURNAMENT CARD -->
+      <div class="rules-hero-card">
+        <div class="rules-crest-wrap">
+          <img src="assets/arcadia_cup_crest.jpg" alt="Arcadia Cup Crest" class="rules-crest-img">
         </div>
-        <p style="color: var(--text-main); margin-bottom: 10px;">
-          The 8 golfers are divided into two 4-somes per round. An AI optimization engine maximizes randomness while guaranteeing equal playing time with all 7 other participants over the trip.
-        </p>
+        <div class="rules-hero-titles">
+          <h2>ARCADIA CUP 2027</h2>
+          <div class="rules-hero-subtitle">Official Tournament Rules &amp; Betting Purse Nuances</div>
+          <div class="rules-hero-meta">
+            8-Player Roster &bull; 2-Man Net Best Ball &bull; Partner Selection Draft &bull; Birdie Pots
+          </div>
+        </div>
       </div>
 
-      <div class="rule-card">
-        <div class="rule-header">
-          <div class="rule-num">2</div>
-          <div class="rule-title">2-Man Net Best Ball Stableford (Rounds 1 to N-1)</div>
-        </div>
-        <p style="color: var(--text-main); margin-bottom: 12px;">
-          Within each 4-some, an AI-randomized 2-man team plays a net-adjusted Stableford system. On each hole, the team takes the higher Stableford point score of the two partners.
-        </p>
-        <table class="points-table">
-          <thead>
-            <tr><th>Result</th><th>Net Score</th><th>Points Awarded</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Double Eagle / Albatross</td><td>3 under net</td><td><strong>+5 pts</strong></td></tr>
-            <tr><td>Eagle</td><td>2 under net</td><td><strong>+4 pts</strong></td></tr>
-            <tr><td>Birdie</td><td>1 under net</td><td><strong>+3 pts</strong></td></tr>
-            <tr><td>Par</td><td>Even net</td><td><strong>+2 pts</strong></td></tr>
-            <tr><td>Bogey</td><td>1 over net</td><td><strong>+1 pt</strong></td></tr>
-            <tr><td>Double Bogey or worse</td><td>2+ over net</td><td><strong>0 pts (Max 0)</strong></td></tr>
-          </tbody>
-        </table>
+      <!-- QUICK NAVIGATION JUMP PILLS -->
+      <div class="rules-quick-nav">
+        <a class="rules-nav-pill" href="#rule-rotation">👥 1. Foursomes &amp; Rotation</a>
+        <a class="rules-nav-pill" href="#rule-stableford">⛳ 2. 2-Man Best Ball</a>
+        <a class="rules-nav-pill" href="#rule-crediting">🎖️ 3. Score Crediting</a>
+        <a class="rules-nav-pill" href="#rule-draft">🤝 4. Final Partner Draft</a>
+        <a class="rules-nav-pill" href="#rule-modified">⚠️ 5. Modified Stableford</a>
+        <a class="rules-nav-pill" href="#rule-trophy">🏆 6. Champion &amp; Tiebreaks</a>
+        <a class="rules-nav-pill" href="#rule-birdie-pot" style="border-color: var(--gold); color: var(--gold-light);">💰 Birdie Pot Stakes</a>
+        <a class="rules-nav-pill" href="#rule-calculator" style="border-color: var(--gold); color: var(--gold-light);">🧮 Pot Calculator</a>
       </div>
 
-      <div class="rule-card">
-        <div class="rule-header">
-          <div class="rule-num">3</div>
-          <div class="rule-title">End of Round Scoring Credit</div>
+      <!-- RULE 1: AI BALANCED FOURSOMES & PARTNER ROTATION -->
+      <section class="rules-card" id="rule-rotation">
+        <div class="rules-card-header">
+          <div class="rules-card-title-wrap">
+            <div class="rules-num-badge">1</div>
+            <h3 class="rules-card-title">AI 4-Somes &amp; Balanced Partner Rotation</h3>
+          </div>
+          <span class="rules-badge badge-cyan">EQUAL PLAYING TIME GUARANTEE</span>
         </div>
-        <p style="color: var(--text-main);">
-          Both players on the 2-man team are credited with the team's total Stableford points for their cumulative tournament standing. If a team shoots 45 points, each teammate records 45 points.
+        <p class="rules-lead-text">
+          The 8 golfers are split into two 4-somes for every tournament round. An algorithmic optimization engine tracks group history across the entire trip to ensure fair, equal rotation.
         </p>
-      </div>
+        <div class="rules-bullets-list">
+          <div class="rules-bullet-item">
+            <span class="rules-bullet-dot">&bull;</span>
+            <div><strong>Maximizes Randomness &amp; Variety:</strong> Pairing schedules are calculated mathematically to prevent repeat foursomes while keeping competition fresh.</div>
+          </div>
+          <div class="rules-bullet-item">
+            <span class="rules-bullet-dot">&bull;</span>
+            <div><strong>Equal Rotation Across the Trip:</strong> By the conclusion of preliminary play, every golfer will have shared a 4-some with every single one of the 7 other participants.</div>
+          </div>
+        </div>
+      </section>
 
-      <div class="rule-card">
-        <div class="rule-header">
-          <div class="rule-num">4</div>
-          <div class="rule-title">Final Round Selection Draft (#1 to #8)</div>
+      <!-- RULE 2: 2-MAN BEST BALL STABLEFORD -->
+      <section class="rules-card" id="rule-stableford">
+        <div class="rules-card-header">
+          <div class="rules-card-title-wrap">
+            <div class="rules-num-badge">2</div>
+            <h3 class="rules-card-title">2-Man Best Ball Net Stableford (Rounds 1 to N-1)</h3>
+          </div>
+          <span class="rules-badge badge-gold">NET ADJUSTED</span>
         </div>
-        <p style="color: var(--text-main); margin-bottom: 8px;">
-          Entering the final round, cumulative points are ranked from #1 to #8:
+        <p class="rules-lead-text">
+          Within each 4-some, a 2-man team is determined. That 2-man team plays a Stableford points system on a net-adjusted basis (handicap strokes received per hole according to the course scorecard handicap allocation).
         </p>
-        <ul style="padding-left: 20px; color: var(--text-muted); line-height: 1.6;">
-          <li><strong style="color: var(--gold);">#1 Seed Captain:</strong> Chooses first from #5, #6, #7, or #8.</li>
-          <li><strong style="color: var(--gold);">#2 Seed Captain:</strong> Chooses next from the remaining 3 players.</li>
-          <li><strong style="color: var(--gold);">#3 Seed Captain:</strong> Chooses next from the remaining 2 players.</li>
-          <li><strong style="color: var(--gold);">#4 Seed Captain:</strong> Paired with the final remaining player.</li>
-        </ul>
-      </div>
 
-      <div class="rule-card">
-        <div class="rule-header">
-          <div class="rule-num" style="background: #e57373; color: #fff;">5</div>
-          <div class="rule-title">Final Round Modified Stableford (Penalty Scoring)</div>
+        <div style="font-size: 0.82rem; font-weight: 800; color: var(--gold-light); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 14px;">
+          Standard Stableford Point Scale (Preliminary Rounds):
         </div>
-        <p style="color: var(--text-main); margin-bottom: 12px;">
-          The final championship round institutes penalties for bad holes to ramp up the drama:
-        </p>
-        <table class="points-table">
-          <thead>
-            <tr><th>Result</th><th>Net Score</th><th>Points Awarded</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Double Bogey or worse</td><td>2+ over net</td><td><strong style="color: #ef5350;">-1 pt (Penalty)</strong></td></tr>
-            <tr><td>Bogey</td><td>1 over net</td><td><strong>0 pts</strong></td></tr>
-            <tr><td>Par</td><td>Even net</td><td><strong>+1 pt</strong></td></tr>
-            <tr><td>Birdie</td><td>1 under net</td><td><strong style="color: var(--cyan);">+2 pts</strong></td></tr>
-            <tr><td>Eagle</td><td>2 under net</td><td><strong style="color: var(--gold);">+3 pts</strong></td></tr>
-          </tbody>
-        </table>
-      </div>
+        <div class="rules-points-table-wrap">
+          <table class="rules-points-table">
+            <thead>
+              <tr>
+                <th>Score</th>
+                <th>Relation to Net Par</th>
+                <th style="text-align: right;">Points Awarded</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Double Eagle / Albatross</strong></td>
+                <td>3 Under Net Par</td>
+                <td class="points-val">+5 pts</td>
+              </tr>
+              <tr>
+                <td><strong>Eagle</strong></td>
+                <td>2 Under Net Par</td>
+                <td class="points-val">+4 pts</td>
+              </tr>
+              <tr>
+                <td><strong>Birdie</strong></td>
+                <td>1 Under Net Par</td>
+                <td class="points-val">+3 pts</td>
+              </tr>
+              <tr>
+                <td><strong>Par</strong></td>
+                <td>Even Net Par</td>
+                <td class="points-val">+2 pts</td>
+              </tr>
+              <tr>
+                <td><strong>Bogey</strong></td>
+                <td>1 Over Net Par</td>
+                <td class="points-val">+1 pt</td>
+              </tr>
+              <tr>
+                <td><strong>Double Bogey or Worse</strong></td>
+                <td>2+ Over Net Par</td>
+                <td class="points-val" style="color: var(--text-muted);">0 pts (Floor)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <div class="rule-card">
-        <div class="rule-header">
-          <div class="rule-num" style="background: var(--gold); color: #000;">💰</div>
-          <div class="rule-title">The Birdie Pot Game Rules</div>
+        <div class="rules-bullets-list">
+          <div class="rules-bullet-item">
+            <span class="rules-bullet-dot">&bull;</span>
+            <div><strong>2-Man Best Ball Mechanic:</strong> On every hole, the team score is the higher of the two partners' Stableford points: <code>Team Points = MAX(Player A, Player B)</code>.</div>
+          </div>
+          <div class="rules-bullet-item">
+            <span class="rules-bullet-dot">&bull;</span>
+            <div><strong>No Negative Floor in Preliminaries:</strong> If both players struggle on a hole, the floor is 0 points—no point deductions occur in rounds 1 through N-1.</div>
+          </div>
         </div>
-        <p style="color: var(--text-main); line-height: 1.6;">
-          • <strong>$2.00 / Birdie:</strong> For every birdie made in the round across all 8 golfers, every player owes $2.00.<br/>
-          • <strong>50/50 Split:</strong> $1.00 goes to that Round's Pot, $1.00 goes to the Cumulative Trip Pot.<br/>
-          • <strong>Round Pot Winner:</strong> The player with the LAST birdie made in that round wins the entire round pot!<br/>
-          • <strong>Cumulative Trip Pot Winner:</strong> The player with the LAST birdie made of the trip wins the entire accumulated trip pot!<br/>
-          • <strong>Ties:</strong> If multiple players birdie that same last hole, the pot is divided equally.
+      </section>
+
+      <!-- RULE 3: END OF ROUND TEAM SCORE RECORDING -->
+      <section class="rules-card" id="rule-crediting">
+        <div class="rules-card-header">
+          <div class="rules-card-title-wrap">
+            <div class="rules-num-badge">3</div>
+            <h3 class="rules-card-title">Equal Team Credit for Leaderboard Standings</h3>
+          </div>
+          <span class="rules-badge badge-cyan">EQUAL TEAM REWARD</span>
+        </div>
+        <p class="rules-lead-text">
+          At the conclusion of each round, both players on the 2-man team are credited with the team's total Stableford points toward their cumulative individual tournament standing.
         </p>
-      </div>
+        <div style="background: rgba(77, 208, 225, 0.08); border-left: 3px solid var(--cyan); padding: 12px 14px; border-radius: var(--radius-sm); font-size: 0.88rem; color: #b2ebf2; line-height: 1.45;">
+          💡 <strong>Example:</strong> If Player A and Player B team up and shoot a combined 45 Stableford points, each of the two players is credited with 45 points on their individual trip leaderboard.
+        </div>
+      </section>
+
+      <!-- RULE 4: FINAL ROUND PARTNER SELECTION DRAFT -->
+      <section class="rules-card" id="rule-draft">
+        <div class="rules-card-header">
+          <div class="rules-card-title-wrap">
+            <div class="rules-num-badge">4</div>
+            <h3 class="rules-card-title">Final Round Partner Selection Draft</h3>
+          </div>
+          <span class="rules-badge badge-gold">SEEDS #1–#8 DRAFT</span>
+        </div>
+        <p class="rules-lead-text">
+          Entering the final championship round, cumulative Stableford points are tallied and all 8 golfers are ranked from Seed #1 through Seed #8. The top 4 seeds become Captains.
+        </p>
+
+        <div class="draft-ladder-grid">
+          <div class="draft-step-card">
+            <div class="draft-step-num">1</div>
+            <div class="draft-step-title">#1 Captain Picks First</div>
+            <div class="draft-step-desc">The tournament leader gets first pick from the entire draft pool (Seeds #5, #6, #7, or #8).</div>
+          </div>
+          <div class="draft-step-card">
+            <div class="draft-step-num">2</div>
+            <div class="draft-step-title">#2 Captain Picks Next</div>
+            <div class="draft-step-desc">Chooses their partner from the remaining 3 players in the draft pool.</div>
+          </div>
+          <div class="draft-step-card">
+            <div class="draft-step-num">3</div>
+            <div class="draft-step-title">#3 Captain Picks Next</div>
+            <div class="draft-step-desc">Chooses their partner from the remaining 2 players in the draft pool.</div>
+          </div>
+          <div class="draft-step-card">
+            <div class="draft-step-num">4</div>
+            <div class="draft-step-title">#4 Captain Paired</div>
+            <div class="draft-step-desc">Automatically paired with the last remaining player from the pool.</div>
+          </div>
+        </div>
+
+        <div class="rules-bullets-list">
+          <div class="rules-bullet-item">
+            <span class="rules-bullet-dot">&bull;</span>
+            <div><strong>Championship Head-to-Head Pairings:</strong> Team 1 faces Team 4 in Foursome 1, while Team 2 faces Team 3 in Foursome 2.</div>
+          </div>
+          <div class="rules-bullet-item">
+            <span class="rules-bullet-dot">&bull;</span>
+            <div><strong>Strategic Partner Synergy:</strong> The #1 seed can draft for pure complement (e.g., a high-handicap player who strokes on hard holes) or momentum.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RULE 5: FINAL ROUND MODIFIED STABLEFORD -->
+      <section class="rules-card" id="rule-modified">
+        <div class="rules-card-header">
+          <div class="rules-card-title-wrap">
+            <div class="rules-num-badge" style="background: #ef4444; color: #fff;">5</div>
+            <h3 class="rules-card-title">Final Round Modified Stableford (Penalty Scoring)</h3>
+          </div>
+          <span class="rules-badge badge-red">PENALTY POINT SCORING</span>
+        </div>
+        <p class="rules-lead-text">
+          In the championship round, the scoring system shifts to <strong>Modified Stableford</strong>. To maximize tension and reward clutch play, severe penalties are introduced for blow-up holes.
+        </p>
+
+        <div style="font-size: 0.82rem; font-weight: 800; color: #f87171; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 14px;">
+          Championship Modified Stableford Point Scale:
+        </div>
+        <div class="rules-points-table-wrap">
+          <table class="rules-points-table">
+            <thead>
+              <tr>
+                <th>Score</th>
+                <th>Relation to Net Par</th>
+                <th style="text-align: right;">Points Awarded</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Double Eagle / Albatross</strong></td>
+                <td>3 Under Net Par</td>
+                <td class="points-val">+4 pts</td>
+              </tr>
+              <tr>
+                <td><strong>Eagle</strong></td>
+                <td>2 Under Net Par</td>
+                <td class="points-val">+3 pts</td>
+              </tr>
+              <tr>
+                <td><strong>Birdie</strong></td>
+                <td>1 Under Net Par</td>
+                <td class="points-val">+2 pts</td>
+              </tr>
+              <tr>
+                <td><strong>Par</strong></td>
+                <td>Even Net Par</td>
+                <td class="points-val">+1 pt</td>
+              </tr>
+              <tr>
+                <td><strong>Bogey</strong></td>
+                <td>1 Over Net Par</td>
+                <td class="points-val" style="color: var(--text-muted);">0 pts</td>
+              </tr>
+              <tr>
+                <td><strong>Double Bogey or Worse</strong></td>
+                <td>2+ Over Net Par</td>
+                <td class="points-val penalty">&minus;1 pt (Penalty!)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="background: rgba(239, 68, 68, 0.12); border-left: 3px solid #ef4444; padding: 12px 14px; border-radius: var(--radius-sm); font-size: 0.88rem; color: #fca5a5; line-height: 1.45;">
+          ⚠️ <strong>Active Negative Points:</strong> Double bogeys or worse actively subtract 1 point from your total, adding intense pressure down the stretch on every shot!
+        </div>
+      </section>
+
+      <!-- RULE 6: TROPHY & TIEBREAKERS -->
+      <section class="rules-card" id="rule-trophy">
+        <div class="rules-card-header">
+          <div class="rules-card-title-wrap">
+            <div class="rules-num-badge" style="background: var(--gold); color: #000;">6</div>
+            <h3 class="rules-card-title">Arcadia Cup Champion &amp; Tiebreaker Protocol</h3>
+          </div>
+          <span class="rules-badge badge-gold">TOURNAMENT TROPHY</span>
+        </div>
+        <p class="rules-lead-text">
+          After all rounds are entered into the system, the player with the highest cumulative Stableford points across all rounds of the trip is crowned the <strong>Arcadia Cup Champion</strong>.
+        </p>
+
+        <div style="font-size: 0.82rem; font-weight: 800; color: var(--gold-light); text-transform: uppercase; letter-spacing: 0.05em; margin: 14px 0 8px;">
+          Official Tiebreaker Protocol (1st Place):
+        </div>
+        <div class="rules-bullets-list">
+          <div class="rules-bullet-item">
+            <span class="rules-bullet-dot">1.</span>
+            <div><strong>Final Round Score:</strong> Higher Modified Stableford score recorded in the final championship round.</div>
+          </div>
+          <div class="rules-bullet-item">
+            <span class="rules-bullet-dot">2.</span>
+            <div><strong>Final Round Back-9:</strong> If still tied, higher score across holes 10–18 of the final round.</div>
+          </div>
+          <div class="rules-bullet-item">
+            <span class="rules-bullet-dot">3.</span>
+            <div><strong>Lower Handicap Index:</strong> If still tied, player with the lower official handicap index takes the trophy.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- THE BIRDIE POT GAME SECTION -->
+      <section class="birdie-pot-rules-card" id="rule-birdie-pot">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.8rem;">💰</span>
+            <div>
+              <span class="pot-badge" style="background: var(--gold); color: #000; font-weight: 900;">HIGH-STAKES BETTING PURSE</span>
+              <h3 style="font-size: 1.6rem; color: var(--gold-light); font-weight: 900; margin-top: 4px;">THE BIRDIE POT GAME</h3>
+            </div>
+          </div>
+          <div style="font-size: 1.25rem; font-weight: 900; color: var(--gold-light); background: rgba(0,0,0,0.4); padding: 8px 16px; border-radius: var(--radius-sm); border: 1px solid var(--line-gold);">
+            $2.00 / Birdie / Player
+          </div>
+        </div>
+
+        <p style="font-size: 0.95rem; color: #fff; line-height: 1.5; margin-bottom: 18px;">
+          Every gross birdie made by ANY golfer in the field creates immediate cash in both that round's purse and the Grand Trip Cumulative Pot. Here is the full breakdown of how the pots work:
+        </p>
+
+        <div class="pot-rule-block">
+          <h4>🪙 1. The $2.00 Per Birdie Entry Contribution</h4>
+          <p>
+            For <strong>EVERY birdie</strong> made in that round across all 8 golfers, <strong>EVERY player contributes $2.00</strong>. If 5 birdies are made across the two foursomes, every player puts in $10.00 ($80.00 total collected).
+          </p>
+        </div>
+
+        <div class="pot-rule-block">
+          <h4>⚖️ 2. The 50 / 50 Pot Split</h4>
+          <p>
+            Every $2.00 contribution is split evenly down the middle:<br>
+            &bull; <strong>$1.00 goes directly to that Round's Pot</strong> (paid out at the 19th hole that day).<br>
+            &bull; <strong>$1.00 goes into the Grand Trip Cumulative Pot</strong> (accumulates across the entire trip).
+          </p>
+        </div>
+
+        <div class="pot-rule-block">
+          <h4>🎯 3. Last Birdie Made Wins That Round's Pot!</h4>
+          <p>
+            <strong>THE LAST BIRDIE MADE FOR THAT ROUND WINS THE ENTIRE ROUND POT!</strong><br>
+            The golfer who records a birdie on the highest hole number of the round sweeps the full round cash payout.
+          </p>
+        </div>
+
+        <div class="pot-rule-block">
+          <h4>🏆 4. Last Birdie of the Trip Wins the Grand Cumulative Pot!</h4>
+          <p>
+            <strong>THE LAST BIRDIE MADE AT THE END OF THE TRIP WINS THE ENTIRE CUMULATIVE POT!</strong><br>
+            This huge pot builds every day and is claimed by whoever makes the latest birdie on the closing holes of the final round.
+          </p>
+        </div>
+
+        <div class="pot-rule-block">
+          <h4>⛳ 5. Short Course / Par-3 Dedicated Pots</h4>
+          <p>
+            When the trip visits short courses (e.g., The Dozen, The Bootlegger), a separate, dedicated Short Course Pot is tracked to keep standard 18-hole championship rounds separate.
+          </p>
+        </div>
+
+        <div class="pot-rule-block">
+          <h4>🤝 6. Tie Splitting on the Last Birdie Hole</h4>
+          <p>
+            If 2 or more golfers record a birdie on the exact same final birdie hole, the pot is divided equally among those players.
+          </p>
+        </div>
+
+        <!-- INTERACTIVE CALCULATOR -->
+        <div class="calc-wrapper" id="rule-calculator">
+          <div class="calc-title">
+            <span>🧮</span>
+            <span>Interactive Birdie Pot Quick Calculator</span>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">
+            Adjust the birdie slider or tap a quick number below to see how money flows between players and pots in real time:
+          </p>
+
+          <div class="calc-controls">
+            <div class="calc-slider-wrap">
+              <input type="range" id="calcSlider" min="1" max="15" value="${currentCalcBirdies}" oninput="onRuleSliderChange(this.value)">
+              <span class="calc-birdie-badge" id="calcBirdieCount">${currentCalcBirdies} Birdies</span>
+            </div>
+            <div class="calc-quick-btns">
+              <button class="calc-btn" type="button" onclick="setRuleBirdies(2)">2 Birdies</button>
+              <button class="calc-btn" type="button" onclick="setRuleBirdies(4)">4 Birdies</button>
+              <button class="calc-btn" type="button" onclick="setRuleBirdies(6)">6 Birdies</button>
+              <button class="calc-btn" type="button" onclick="setRuleBirdies(8)">8 Birdies</button>
+              <button class="calc-btn" type="button" onclick="setRuleBirdies(10)">10 Birdies</button>
+            </div>
+          </div>
+
+          <div class="calc-results-grid">
+            <div class="calc-result-card">
+              <div class="calc-result-label">Cost / Golfer</div>
+              <div class="calc-result-val" id="calcPerGolfer">$${(currentCalcBirdies * 2).toFixed(2)}</div>
+            </div>
+            <div class="calc-result-card">
+              <div class="calc-result-label">Total Collected</div>
+              <div class="calc-result-val" id="calcTotalCollected">$${(8 * currentCalcBirdies * 2).toFixed(2)}</div>
+            </div>
+            <div class="calc-result-card highlight">
+              <div class="calc-result-label">Round Pot (Won Today)</div>
+              <div class="calc-result-val" id="calcRoundPot">$${(8 * currentCalcBirdies).toFixed(2)}</div>
+            </div>
+            <div class="calc-result-card highlight">
+              <div class="calc-result-label">Added to Trip Pot</div>
+              <div class="calc-result-val" id="calcTripPot">$${(8 * currentCalcBirdies).toFixed(2)}</div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   `;
 
-  container.innerHTML = html;
+  window.setRuleBirdies = setRuleBirdies;
+  window.onRuleSliderChange = onRuleSliderChange;
 }
 
 // -------------------------------------------------------------

@@ -6,7 +6,20 @@
   <title>Arcadia Cup 2027 — Official Tournament Summary, Standings & Roster</title>
   <meta name="description" content="Live summary, cumulative standings, 8-player roster, tee time pairings, and birdie pot breakdown for the 2027 Arcadia Bluffs Golf Trip.">
   <link rel="icon" type="image/jpeg" href="assets/arcadia_cup_crest.jpg">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=2027grid2">
+  <style>
+    .nav-tabs {
+      display: grid !important;
+      grid-template-columns: repeat(3, 1fr) !important;
+      gap: 6px !important;
+    }
+    .tab-btn {
+      width: 100% !important;
+      flex: unset !important;
+      box-sizing: border-box !important;
+      white-space: nowrap !important;
+    }
+  </style>
 </head>
 <body>
 
@@ -74,11 +87,11 @@
       </button>
       <button class="tab-btn" data-tab="roster" role="tab" type="button">
         <span class="tab-icon">👥</span>
-        <span class="tab-label">Players &amp; Roster</span>
+        <span class="tab-label">Roster</span>
       </button>
       <button class="tab-btn" data-tab="pairings" role="tab" type="button">
         <span class="tab-icon">⛳</span>
-        <span class="tab-label">Pairings &amp; Tees</span>
+        <span class="tab-label">Pairings</span>
       </button>
       <button class="tab-btn" data-tab="courses" role="tab" type="button">
         <span class="tab-icon">🗺️</span>
@@ -104,6 +117,6 @@
   <div id="modalContainer"></div>
 
   <!-- SCRIPT -->
-  <script src="app.js"></script>
+  <script src="app.js?v=2027grid2"></script>
 </body>
 </html>
