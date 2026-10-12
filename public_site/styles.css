@@ -280,8 +280,8 @@ body {
 }
 
 .nav-tabs {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
   gap: 8px;
   background: rgba(8, 24, 18, 0.95);
   backdrop-filter: blur(16px);
@@ -1267,26 +1267,20 @@ body {
   }
 
   .nav-tabs {
-    padding: 6px 8px;
-    gap: 8px;
-    border-radius: var(--radius-full);
-    scrollbar-width: none;
-  }
-
-  .nav-tabs::-webkit-scrollbar {
-    display: none;
+    padding: 6px 6px;
+    gap: 5px;
+    border-radius: var(--radius-sm);
   }
 
   .tab-btn {
-    flex: 0 0 auto;
-    padding: 8px 13px;
-    font-size: 0.8rem;
-    gap: 6px;
-    border-radius: var(--radius-full);
+    padding: 8px 2px;
+    font-size: 0.74rem;
+    gap: 3px;
+    border-radius: var(--radius-sm);
   }
 
   .tab-icon {
-    font-size: 0.92rem;
+    font-size: 0.88rem;
   }
 
   .main-wrapper {
@@ -1419,26 +1413,20 @@ body {
   }
 
   .nav-tabs {
-    padding: 7px 10px;
-    gap: 8px;
-    border-radius: var(--radius-full);
-    scrollbar-width: none;
-  }
-
-  .nav-tabs::-webkit-scrollbar {
-    display: none;
+    padding: 8px 6px;
+    gap: 6px;
+    border-radius: var(--radius-sm);
   }
 
   .tab-btn {
-    flex: 0 0 auto;
-    font-size: 0.84rem;
-    padding: 9px 15px;
-    gap: 6px;
-    border-radius: var(--radius-full);
+    padding: 10px 4px;
+    font-size: 0.8rem;
+    gap: 4px;
+    border-radius: var(--radius-sm);
   }
 
   .tab-icon {
-    font-size: 0.96rem;
+    font-size: 0.95rem;
   }
 
   .roster-grid {
